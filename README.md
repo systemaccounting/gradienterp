@@ -1,6 +1,6 @@
 <div align="center">
   <br>
-  <img src="docs/images/art/gradientERP-nabla.svg" alt="∇" width="160">
+  <img src="docs/images/art/gradientERP-nabla.svg" alt="∇" width="176">
   <br><br>
   ERP as the agentic cross-firm optimization protocol in the cloud
   <br><br>

@@ -26,4 +26,20 @@ jobs:
           terraform_version: "1.10.5"
           terraform_wrapper: false
 
+      # The provider zips, one per version the lock files name, downloaded once and cached. The lock
+      # files carry the macs' h1: checksums, and init checks a mirrored zip against their zh:
+      # checksums, which cover linux, so nothing here writes a lock file back.
+      - uses: actions/cache@v6
+        with:
+          path: ${{ runner.temp }}/terraform-providers
+          key: terraform-providers-linux_amd64-${{ hashFiles('**/.terraform.lock.hcl') }}
+          restore-keys: terraform-providers-linux_amd64-
+
+      - name: the provider mirror
+        run: |
+          bash .github/workflows/tf-provider-mirror.sh "$RUNNER_TEMP/terraform-providers"
+          printf 'provider_installation {\n  filesystem_mirror {\n    path = "%s"\n  }\n  direct {}\n}\n' \
+            "$RUNNER_TEMP/terraform-providers" > "$RUNNER_TEMP/terraform.rc"
+          echo "TF_CLI_CONFIG_FILE=$RUNNER_TEMP/terraform.rc" >> "$GITHUB_ENV"
+
       - run: bash .github/workflows/tf-validate-all.sh
