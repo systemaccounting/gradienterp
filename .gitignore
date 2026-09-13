@@ -4,12 +4,14 @@ logs/
 # scratch: requirement drafts, issue drafts, captures, receipts, screenshots
 tmp/
 
-# only the doc-split set commits: README (why) / AGENTS (how) / TODO (open work),
+# only the doc-split set commits: README (why) / AGENTS (how) / TODO (open work), CLAUDE.md (the
+# project's instructions to a coding agent),
 # plus the load-bearing md classes: agent system prompts (container-baked), kb.md files (the
 # KB playbook sources scripts/sync_playbooks.sh harvests), and the legal documents under docs/
 # the app links as GitHub pages. everything else is interim scratch.
 *.md
 !AGENTS.md
+!CLAUDE.md
 !README.md
 !TODO.md
 !kb.md
