@@ -1,0 +1,231 @@
+{
+  "stripe": {
+    "endpoint": "https://mcp.stripe.com",
+    "authorization_server": "https://access.stripe.com/.well-known/oauth-authorization-server/mcp",
+    "registration_endpoint": "https://access.stripe.com/mcp/oauth2/register",
+    "token_endpoint_auth_method": "none",
+    "scopes": [
+      "mcp"
+    ],
+    "prefix": "stripe",
+    "write_tools": [
+      "stripe_api_write",
+      "manage_stripe_accounts"
+    ],
+    "key_header": {
+      "name": "Authorization",
+      "prefix": "Bearer"
+    },
+    "use": "payments: the webhook, links, products, tax, disputes, the account read back"
+  },
+  "square": {
+    "endpoint": "https://mcp.squareup.com/mcp",
+    "authorization_server": "https://mcp.squareup.com/.well-known/oauth-authorization-server",
+    "registration_endpoint": "https://mcp.squareup.com/register",
+    "token_endpoint_auth_method": "client_secret_post",
+    "scopes": [],
+    "prefix": "square",
+    "use": "payments and POS: catalog, orders, payouts, the register a caf\u00e9 already runs"
+  },
+  "paypal": {
+    "endpoint": "https://mcp.paypal.com/mcp",
+    "authorization_server": "https://mcp.paypal.com/.well-known/oauth-authorization-server",
+    "registration_endpoint": "https://mcp.paypal.com/register",
+    "token_endpoint_auth_method": "client_secret_post",
+    "scopes": [],
+    "prefix": "paypal",
+    "use": "payments: invoices, disputes, payouts"
+  },
+  "xero": {
+    "endpoint": "https://mcp.xero.com/mcp",
+    "authorization_server": "https://identity.xero.com/.well-known/oauth-authorization-server",
+    "client_by": "owner",
+    "new_app_url": "https://developer.xero.com/app/manage",
+    "callback_field": "Redirect URI",
+    "token_endpoint_auth_method": "client_secret_post",
+    "scopes": [
+      "openid",
+      "profile",
+      "email",
+      "offline_access",
+      "accounting.invoices",
+      "accounting.payments",
+      "accounting.banktransactions",
+      "accounting.manualjournals",
+      "accounting.reports.aged.read",
+      "accounting.reports.balancesheet.read",
+      "accounting.reports.profitandloss.read",
+      "accounting.reports.trialbalance.read",
+      "accounting.contacts",
+      "accounting.settings"
+    ],
+    "prefix": "xero",
+    "use": "accounting: a firm migrating in reads its old books; its accountant reads ours out"
+  },
+  "notion": {
+    "endpoint": "https://mcp.notion.com/mcp",
+    "authorization_server": "https://mcp.notion.com/.well-known/oauth-authorization-server",
+    "registration_endpoint": "https://mcp.notion.com/register",
+    "token_endpoint_auth_method": "client_secret_post",
+    "scopes": [
+      "default"
+    ],
+    "prefix": "notion",
+    "use": "the firm's own notes and playbooks"
+  },
+  "linear": {
+    "endpoint": "https://mcp.linear.app/mcp",
+    "authorization_server": "https://mcp.linear.app/.well-known/oauth-authorization-server",
+    "registration_endpoint": "https://mcp.linear.app/register",
+    "token_endpoint_auth_method": "client_secret_post",
+    "scopes": [
+      "read",
+      "write"
+    ],
+    "prefix": "linear",
+    "write_tools": [
+      "create_attachment",
+      "create_attachment_from_upload",
+      "create_issue_label",
+      "delete_attachment",
+      "delete_comment",
+      "delete_diff_comment",
+      "delete_status_update",
+      "mark_notification",
+      "merge_diff",
+      "prepare_attachment_upload",
+      "resolve_diff_thread",
+      "restore_issue_label",
+      "restore_project_label",
+      "retire_issue_label",
+      "retire_project_label",
+      "save_comment",
+      "save_diff_comment",
+      "save_document",
+      "save_issue",
+      "save_issue_label",
+      "save_milestone",
+      "save_project",
+      "save_project_label",
+      "save_release",
+      "save_release_note",
+      "save_status_update",
+      "share_issue",
+      "submit_diff_review",
+      "unshare_issue"
+    ],
+    "use": "a firm that tracks work there: tasks mirrored or read"
+  },
+  "atlassian": {
+    "endpoint": "https://mcp.atlassian.com/v1/mcp",
+    "authorization_server": "https://mcp.atlassian.com/.well-known/oauth-authorization-server",
+    "registration_endpoint": "https://mcp.atlassian.com/v1/register",
+    "token_endpoint_auth_method": "client_secret_post",
+    "scopes": [],
+    "prefix": "atlassian",
+    "use": "a firm that tracks work in Jira or writes in Confluence"
+  },
+  "github": {
+    "endpoint": "https://api.githubcopilot.com/mcp/",
+    "authorization_server": "https://github.com/.well-known/oauth-authorization-server/login/oauth",
+    "client_by": "owner",
+    "new_app_url": "https://github.com/settings/applications/new",
+    "callback_field": "Redirect URI",
+    "token_endpoint_auth_method": "client_secret_post",
+    "scopes": [
+      "repo",
+      "read:org",
+      "read:user"
+    ],
+    "prefix": "github",
+    "key_header": {
+      "name": "Authorization",
+      "prefix": "Bearer"
+    },
+    "use": "the operator gerp: the public repo's issues"
+  },
+  "hubspot": {
+    "endpoint": "https://mcp.hubspot.com/anthropic",
+    "authorization_server": "https://mcp.hubspot.com/.well-known/oauth-authorization-server",
+    "client_by": "owner",
+    "new_app_url": "https://app.hubspot.com/developer",
+    "callback_field": "Redirect URL",
+    "token_endpoint_auth_method": "client_secret_post",
+    "scopes": [],
+    "prefix": "hubspot",
+    "use": "a firm's CRM: the pipeline that becomes agreements"
+  },
+  "gong": {
+    "endpoint": "https://mcp.gong.io/mcp",
+    "authorization_server": "https://mcp.gong.io/.well-known/oauth-authorization-server",
+    "registration_endpoint": "https://app.gong.io/oauth2/register",
+    "token_endpoint_auth_method": "client_secret_post",
+    "scopes": [
+      "mcp:read",
+      "mcp:write"
+    ],
+    "prefix": "gong",
+    "use": "a firm's calls and deals"
+  },
+  "zapier": {
+    "endpoint": "https://mcp.zapier.com/api/mcp/mcp",
+    "authorization_server": "https://mcp.zapier.com/.well-known/oauth-authorization-server",
+    "registration_endpoint": "https://mcp.zapier.com/api/v1/oauth/register",
+    "token_endpoint_auth_method": "client_secret_post",
+    "scopes": [
+      "openid",
+      "profile",
+      "email"
+    ],
+    "prefix": "zapier",
+    "key_header": {
+      "name": "Authorization",
+      "prefix": "Bearer"
+    },
+    "use": "the long tail: whatever the firm already glued together"
+  },
+  "canva": {
+    "endpoint": "https://mcp.canva.com/mcp",
+    "authorization_server": "https://mcp.canva.com/.well-known/oauth-authorization-server",
+    "registration_endpoint": "https://mcp.canva.com/register",
+    "token_endpoint_auth_method": "client_secret_post",
+    "scopes": [],
+    "prefix": "canva",
+    "use": "artwork and documents into the cabinet"
+  },
+  "figma": {
+    "endpoint": "https://mcp.figma.com/mcp",
+    "authorization_server": "https://api.figma.com/.well-known/oauth-authorization-server",
+    "registration_endpoint": "https://api.figma.com/v1/oauth/mcp/register",
+    "token_endpoint_auth_method": "client_secret_post",
+    "scopes": [
+      "mcp:connect"
+    ],
+    "prefix": "figma",
+    "use": "design files into the cabinet"
+  },
+  "dropbox": {
+    "endpoint": "https://mcp.dropbox.com/mcp",
+    "authorization_server": "https://www.dropbox.com/.well-known/oauth-authorization-server",
+    "registration_endpoint": "https://www.dropbox.com/oauth2/register",
+    "token_endpoint_auth_method": "client_secret_post",
+    "scopes": [
+      "account_info.read",
+      "files.metadata.read",
+      "files.content.read"
+    ],
+    "prefix": "dropbox",
+    "use": "documents into the cabinet"
+  },
+  "sentry": {
+    "endpoint": "https://mcp.sentry.dev/mcp",
+    "authorization_server": "https://mcp.sentry.dev/.well-known/oauth-authorization-server",
+    "registration_endpoint": "https://mcp.sentry.dev/oauth/register",
+    "token_endpoint_auth_method": "client_secret_post",
+    "scopes": [
+      "org:read"
+    ],
+    "prefix": "sentry",
+    "use": "the operator gerp: errors in the platform's own services"
+  }
+}

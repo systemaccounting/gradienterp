@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "read_schema",
+  "description": "Read a registry as field names and types (default) or in full (detail=true). source=local: the customer's rows. source=canonical: the operator's baseline; omit registry to list them.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "source"
+  ],
+  "properties": {
+    "source": {
+      "type": "string",
+      "enum": [
+        "local",
+        "canonical"
+      ],
+      "description": "local: this customer's registry DDB. canonical: the operator's baseline."
+    },
+    "registry": {
+      "type": "string",
+      "description": "Which registry. Required when source=local; with source=canonical omit it to list every registry there is."
+    },
+    "detail": {
+      "type": "boolean",
+      "description": "false (default): each field as name and type \u2014 what a write needs. true: the entries as stored \u2014 description, enum, class, origin \u2014 when you need what a field means."
+    }
+  }
+}

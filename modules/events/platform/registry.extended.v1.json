@@ -1,0 +1,71 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "modules/events/platform/registry.extended.v1",
+  "title": "registry.extended",
+  "description": "Emitted by the write_schema agent tool after a new entry is written to the customer's per-customer registry DDB (origin='extension'). Operator agent subscribes to detect cross-customer agreement patterns and decide when to promote into the canonical baseline.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "openly_operated",
+    "customer_id",
+    "registry",
+    "bucket",
+    "name",
+    "reason"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "integer",
+      "const": 1,
+      "description": "Bumped on breaking shape change. Consumers branch on it."
+    },
+    "openly_operated": {
+      "type": "boolean",
+      "description": "Set at emit time from local SSM tenant metadata. Defaults to false at the tool level for these \u2014 they're operator-internal signals, not public-facing platform events. Customer can opt them in via tenant config if they want their schema-evolution history visible in the public archive."
+    },
+    "customer_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Tenant identifier. Same as envelope account-id but saves operator agent a join when clustering."
+    },
+    "registry": {
+      "type": "string",
+      "enum": [
+        "chart_of_accounts",
+        "contact_fields",
+        "calendar_fields",
+        "note_fields",
+        "task_fields",
+        "item_fields",
+        "labor_fields",
+        "asset_fields",
+        "shipping_fields"
+      ],
+      "description": "Which canonical registry the extension belongs to. Enum grows as new registry-bearing modules ship."
+    },
+    "bucket": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Registry-specific path. chart_of_accounts: 'asset' | 'liability' | 'equity' | 'revenue' | 'expense'. contact_fields: 'common' | 'vendor' | 'customer' | 'employee'. calendar_fields: 'schedule' | 'target' | 'provenance'."
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The new entry's identifier within the bucket. UPPER_SNAKE for chart_of_accounts (e.g., TIPS_REVENUE); snake_case for fields registries (e.g., loyalty_tier)."
+    },
+    "schema": {
+      "description": "Registry-specific shape value. chart_of_accounts: just true (the bucket+name presence IS the schema). contact_fields/calendar_fields: object with {type, required, description, [enum/values/default/...] } matching the canonical JSON shape. Validated by the consuming module's validator at runtime; flexible at the event layer."
+    },
+    "reason": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Free-form, captured for operator agent's promotion review. Why this customer needed this entry \u2014 clusters by reason text are a strong promotion signal alongside same registry+bucket+name."
+    },
+    "created_by": {
+      "class": "subject",
+      "type": "string",
+      "description": "Provenance: 'agent_session' | 'owner_direct' | 'imported'. Defaults to 'agent_session'. Helps operator agent distinguish agent-inferred extensions from explicit owner asks (latter is a stronger promotion signal)."
+    }
+  }
+}

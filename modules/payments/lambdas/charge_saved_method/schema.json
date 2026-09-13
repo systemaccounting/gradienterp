@@ -1,0 +1,21 @@
+{
+  "type": "object",
+  "description": "Charge a method the payer already saved, for one invoice. Only where autopay is on — otherwise send a payment link. Idempotent per invoice, amount and method, so a retry cannot charge twice.",
+  "properties": {
+    "invoice_id": {
+      "type": "string",
+      "description": "The invoice to collect. Must be issued, overdue or partly paid."
+    },
+    "provider": {
+      "type": "string",
+      "description": "Only if the firm has several processors and this should not use their default."
+    },
+    "payment_method_id": {
+      "type": "string",
+      "description": "Which saved method to charge. Omit for the one the payer is billed to; pass one from manage_saved_cards to try another after a decline."
+    }
+  },
+  "required": [
+    "invoice_id"
+  ]
+}

@@ -1,0 +1,143 @@
+{
+  "api_id": null,
+  "bus": {
+    "name": "gerp-operator",
+    "rules": [
+      {
+        "name": "gerp-counters",
+        "pattern": {
+          "detail": {
+            "counters": {
+              "key": [
+                {
+                  "exists": true
+                }
+              ]
+            }
+          }
+        },
+        "targets": [
+          {
+            "arn": "arn:aws:lambda:us-east-1:185369506315:function:gerp-econ-counter",
+            "bus": null,
+            "function": "gerp-econ-counter"
+          }
+        ]
+      },
+      {
+        "name": "gerp-platform-reports",
+        "pattern": {
+          "detail-type": [
+            "escalation.raised"
+          ],
+          "source": [
+            "platform"
+          ]
+        },
+        "targets": [
+          {
+            "arn": "arn:aws:lambda:us-east-1:185369506315:function:gerp-issue-collector",
+            "bus": null,
+            "function": "gerp-issue-collector"
+          }
+        ]
+      },
+      {
+        "name": "gerp-publication",
+        "pattern": {
+          "detail": {
+            "openly_operated": [
+              true
+            ]
+          }
+        },
+        "targets": [
+          {
+            "arn": "arn:aws:firehose:us-east-1:185369506315:deliverystream/gerp-events-archive",
+            "bus": null,
+            "function": null
+          }
+        ]
+      },
+      {
+        "name": "gerp-published",
+        "pattern": {
+          "detail-type": [
+            "gerp.published",
+            "gerp.unpublished"
+          ]
+        },
+        "targets": [
+          {
+            "arn": "arn:aws:lambda:us-east-1:185369506315:function:gerp-published",
+            "bus": null,
+            "function": "gerp-published"
+          }
+        ]
+      },
+      {
+        "name": "gerp-publisher",
+        "pattern": {
+          "detail": {
+            "customer_id": [
+              {
+                "exists": true
+              }
+            ],
+            "to": [
+              {
+                "exists": false
+              }
+            ]
+          }
+        },
+        "targets": [
+          {
+            "arn": "arn:aws:lambda:us-east-1:185369506315:function:gerp-publisher",
+            "bus": null,
+            "function": "gerp-publisher"
+          }
+        ]
+      }
+    ]
+  },
+  "functions": {
+    "gerp-issue-collector": {
+      "env": {
+        "CUSTOMERS_TABLE": "gerp-customers",
+        "OPERATOR_ACCOUNT_ID": "185369506315",
+        "OPERATOR_GERP_ID": "gradienterp",
+        "OPS_READ_ROLE": "gerp-ops-read",
+        "STACK_PREFIX": "gerp"
+      },
+      "src_dir": "prod/platform/operator/lambdas/issue_collector",
+      "timeout": 30
+    },
+    "gerp-plaid-gateway": {
+      "env": {
+        "CUSTOMERS_TABLE": "gerp-customers",
+        "PLAID_ENV": "sandbox",
+        "PLAID_ITEMS_TABLE": "gerp-plaid-items",
+        "PLAID_SSM_PREFIX": "/gradienterp/operator/plaid",
+        "PLAID_WEBHOOK_URL": "https://flrpcdc76yj2qehaaw22apud5e0ecwfw.lambda-url.us-east-1.on.aws/",
+        "STACK_PREFIX": "gerp"
+      },
+      "src_dir": "prod/platform/operator/lambdas/plaid_gateway",
+      "timeout": 30
+    },
+    "gerp-plaid-webhook": {
+      "env": {
+        "PLAID_GATEWAY_FN": "gerp-plaid-gateway"
+      },
+      "function_url": {
+        "auth": "NONE"
+      },
+      "src_dir": "prod/platform/operator/lambdas/plaid_webhook",
+      "timeout": 15
+    }
+  },
+  "gerp": "gradienterp",
+  "protocol": null,
+  "routes": [],
+  "stack": "platform"
+}

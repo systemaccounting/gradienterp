@@ -1,0 +1,37 @@
+{
+  "id": "evt_TEST000000000004",
+  "object": "event",
+  "api_version": "2024-11-20",
+  "created": 1743811200,
+  "type": "payout.failed",
+  "livemode": false,
+  "pending_webhooks": 1,
+  "request": {
+    "id": null,
+    "idempotency_key": null
+  },
+  "data": {
+    "object": {
+      "id": "po_TEST000000000002",
+      "object": "payout",
+      "amount": 18900,
+      "arrival_date": 1743811200,
+      "automatic": true,
+      "balance_transaction": "txn_TEST000000000020",
+      "created": 1743724800,
+      "currency": "usd",
+      "description": "STRIPE PAYOUT",
+      "destination": "ba_TEST_bofa_checking",
+      "failure_balance_transaction": "txn_TEST000000000021",
+      "failure_code": "account_closed",
+      "failure_message": "The bank account has been closed.",
+      "livemode": false,
+      "metadata": {},
+      "method": "standard",
+      "source_type": "card",
+      "statement_descriptor": null,
+      "status": "failed",
+      "type": "bank_account"
+    }
+  }
+}

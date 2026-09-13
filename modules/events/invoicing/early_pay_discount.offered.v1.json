@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "modules/events/invoicing/early_pay_discount.offered.v1",
+  "title": "early_pay_discount.offered",
+  "description": "SPECULATIVE. Seller offers a discount for early payment. Matches firms with cash surplus (dynamic discounting — cash meets payable). Bilateral cousin of multilateral netting.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "openly_operated",
+    "customer_id",
+    "invoice_id",
+    "discount_rate",
+    "pay_by_ms"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "integer",
+      "const": 1,
+      "description": "Bumped on breaking shape change. Consumers branch on it."
+    },
+    "openly_operated": {
+      "type": "boolean",
+      "description": "Set at emit time from the gerp's settings. The publication rule's filter — a private gerp's events never leave the operator plane."
+    },
+    "customer_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Emitting tenant (gerp_id). Redundant with the envelope account id but saves consumers a join."
+    },
+    "invoice_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The receivable discounted."
+    },
+    "discount_rate": {
+      "type": "number",
+      "description": "e.g. 0.02 = 2% off.",
+      "exclusiveMinimum": 0
+    },
+    "pay_by_ms": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Deadline to earn the discount."
+    }
+  }
+}

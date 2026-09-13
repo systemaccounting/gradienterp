@@ -1,0 +1,45 @@
+# terraform validate in every directory holding .tf files: init -backend=false, so no state and no
+# credentials. Terraform is the version the roots are applied with.
+name: terraform
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: terraform-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_version: "1.10.5"
+          terraform_wrapper: false
+
+      # One plugin cache for every directory, so the AWS provider downloads once. The lock files
+      # carry checksums for the platform they were written on; without MAY_BREAK a linux cache
+      # entry doesn't match them and each directory downloads again. Nothing here writes a lock
+      # file back.
+      - name: the plugin cache
+        run: |
+          echo "TF_PLUGIN_CACHE_DIR=$RUNNER_TEMP/terraform-plugin-cache" >> "$GITHUB_ENV"
+          echo "TF_PLUGIN_CACHE_MAY_BREAK_DEPENDENCY_LOCK_FILE=true" >> "$GITHUB_ENV"
+          mkdir -p "$RUNNER_TEMP/terraform-plugin-cache"
+
+      - uses: actions/cache@v6
+        with:
+          path: ${{ runner.temp }}/terraform-plugin-cache
+          key: terraform-plugins-${{ runner.os }}-${{ hashFiles('**/.terraform.lock.hcl') }}
+          restore-keys: terraform-plugins-${{ runner.os }}-
+
+      - run: bash .github/workflows/tf-validate-all.sh

@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "seed_schema",
+  "description": "Internal one-time-per-customer canonical baseline seed. NOT registered as an agent gateway tool — invoked only by terraform's aws_lambda_invocation at provisioning. Reads each canonical registry JSON from operator's canonical S3 bucket and bulk-writes into the customer's per-customer registry DDB with origin='canonical'. Idempotent.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["customer_id"],
+  "properties": {
+    "customer_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Tenant identifier — used only for trace logging. Table name comes from SCHEMA_TABLE env var."
+    }
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "canonical_pull_invoke",
+  "description": "Internal EventBridge cron handler — NOT registered as an agent gateway tool. Fires weekly, invokes the customer's bedrock agent runtime with a prompt to perform the canonical-pull flow (diff canonical vs local registry, surface to owner, merge approved entries).",
+  "type": "object",
+  "additionalProperties": true,
+  "properties": {}
+}

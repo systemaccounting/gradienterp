@@ -1,0 +1,33 @@
+{
+  "type": "object",
+  "description": "Install a vendor's MCP server (Stripe, Linear, Xero...) for this firm, or remove it. op: install|uninstall|status|list. install returns consent_url for the owner to approve.",
+  "required": [
+    "op"
+  ],
+  "properties": {
+    "op": {
+      "type": "string",
+      "description": "install: register, make the credential and the target, return consent_url; for xero/github/hubspot the first install returns callback_url for the owner's own app, the second (with client_id) finishes. uninstall: remove all of it. status: the target's state and any pending consent (reissues a lapsed one). list: what is installed and what the catalog offers."
+    },
+    "provider": {
+      "type": "string",
+      "description": "the catalog name: stripe, square, paypal, xero, notion, linear, atlassian, github, hubspot, gong, zapier, canva, figma, dropbox, sentry. Required except for list."
+    },
+    "write": {
+      "type": "boolean",
+      "description": "install: the owner's answer to 'may the agent write to this vendor?'. false mounts the vendor's read tools only."
+    },
+    "secret_name": {
+      "type": "string",
+      "description": "install, the key path: the name the owner gave the vendor's key in collect_secret. Only for vendors that take a key (stripe, github, zapier)."
+    },
+    "client_id": {
+      "type": "string",
+      "description": "install, second half for a vendor whose app the owner makes (xero, github, hubspot): the client id of the app the owner made with the callback_url the first install answered."
+    },
+    "client_secret_name": {
+      "type": "string",
+      "description": "with client_id: the name the owner gave the app's client secret in collect_secret (the first install names it)."
+    }
+  }
+}

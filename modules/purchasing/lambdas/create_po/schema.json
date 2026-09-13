@@ -1,0 +1,77 @@
+{
+  "type": "object",
+  "description": "Create a purchase order and SEND it to the vendor \u2014 it opens when they approve. approved:true only records a PO the vendor already agreed to off-platform.",
+  "properties": {
+    "vendor": {
+      "type": "string",
+      "description": "The seller \u2014 the vendor's gerp_id (cross-firm) or contact_id (self-approved)."
+    },
+    "lines": {
+      "type": "array",
+      "description": "Line items being ordered.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "description": {
+            "type": "string",
+            "description": "What was ordered, e.g. \"10 bags espresso beans\"."
+          },
+          "amount": {
+            "type": "number",
+            "description": "Line total (the agreed price)."
+          },
+          "account": {
+            "type": "string",
+            "description": "Debit account at receipt; defaults INVENTORY."
+          },
+          "accountType": {
+            "type": "string",
+            "description": "ASSET (stock), EXPENSE (services/supplies), or EQUITY (a migrated opening bill)."
+          },
+          "item_id": {
+            "type": "string",
+            "description": "The inventory item this line buys. Set it and receiving the PO also moves the shelf count, not just the money."
+          },
+          "qty": {
+            "type": "number",
+            "description": "Units on this line. Sent to the vendor and part of the agreed terms; with item_id it also sizes the receipt."
+          },
+          "sku": {
+            "type": "string",
+            "description": "The VENDOR's item id for this line, from their published inventory. Sent to the vendor so their rules can answer from the shelf."
+          }
+        },
+        "required": [
+          "amount"
+        ]
+      }
+    },
+    "approved": {
+      "type": "boolean",
+      "description": "True ONLY when the VENDOR has already agreed off-platform (phoned in, confirmed by email) \u2014 it opens the PO now with no approval sent. The owner telling you to place the order is NOT this: leave it unset so the order goes to the vendor and their own approval opens it."
+    },
+    "thread": {
+      "type": "string",
+      "description": "Existing PO thread to counter/amend against; omit to open a new one."
+    },
+    "memo": {
+      "type": "string",
+      "description": "Optional note, written as a TEMPLATE: put $1, $2 \u2026 where a name or anything else specific to your firm would go and pass those values in private_values. This PO crosses to the vendor, so the memo travels; private_values does not."
+    },
+    "job": {
+      "type": "string",
+      "description": "Optional job tag \u2014 the PO's receipts/payments carry it into journal dimensions for per-job cost."
+    },
+    "private_values": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "What memo's $1, $2 \u2026 stand for, in order \u2014 one value per placeholder, no gaps. Stays on your row; never sent to the vendor."
+    }
+  },
+  "required": [
+    "vendor",
+    "lines"
+  ]
+}

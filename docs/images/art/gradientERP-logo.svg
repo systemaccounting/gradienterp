@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="757" height="268" viewBox="0 0 757 268" fill="none">
+  <defs>
+    <linearGradient id="gNabla" x1="0" y1="0" x2="0.45" y2="1">
+      <stop offset="0" stop-color="#5b8cff"></stop>
+      <stop offset="1" stop-color="#9d6bff"></stop>
+    </linearGradient>
+    <linearGradient id="gErp" x1="0" y1="0.5" x2="1" y2="0.5">
+      <stop offset="0" stop-color="#5b8cff"></stop>
+      <stop offset="1" stop-color="#9d6bff"></stop>
+    </linearGradient>
+  </defs>
+  <rect width="757" height="268" fill="#0f1115"></rect>
+  <text x="38" y="214" font-family="Georgia, &#39;Times New Roman&#39;, serif" font-size="248" fill="url(#gNabla)">∇</text>
+  <text x="136" y="174" font-family="-apple-system, BlinkMacSystemFont, &#39;Segoe UI&#39;, Roboto, Helvetica, Arial, sans-serif" font-size="96" font-weight="700" letter-spacing="-1.4">
+    <tspan fill="#e7e9ee">gradient</tspan><tspan fill="url(#gErp)">ERP</tspan>
+  </text>
+</svg>

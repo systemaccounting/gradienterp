@@ -1,0 +1,21 @@
+{
+  "type": "object",
+  "description": "Request a quote from a vendor that runs gerp (the agentic cross-firm buy side). Records the request and emits quote.requested addressed to the vendor's gerp.",
+  "properties": {
+    "vendor": {"type": "string", "description": "The vendor's gerp_id (a gerp peer you can address)."},
+    "items": {
+      "type": "array",
+      "description": "Items to quote, each {description, qty} — no price yet; that's what the quote returns.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "description": {"type": "string", "description": "What to quote."},
+          "qty": {"type": "number", "description": "Quantity."}
+        },
+        "required": ["description", "qty"]
+      }
+    },
+    "memo": {"type": "string", "description": "Optional note."}
+  },
+  "required": ["vendor", "items"]
+}

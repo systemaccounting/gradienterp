@@ -1,0 +1,62 @@
+{
+  "id": "WH-TEST000000000003-75F399086E414290U",
+  "event_version": "1.0",
+  "create_time": "2026-03-29T11:30:00.000Z",
+  "resource_type": "refund",
+  "resource_version": "2.0",
+  "event_type": "PAYMENT.CAPTURE.REVERSED",
+  "summary": "A $ 12.50 USD capture payment was reversed",
+  "resource": {
+    "id": "1JTEST000000000002",
+    "amount": {
+      "value": "12.50",
+      "currency_code": "USD"
+    },
+    "seller_payable_breakdown": {
+      "gross_amount": {
+        "value": "12.50",
+        "currency_code": "USD"
+      },
+      "paypal_fee": {
+        "value": "0.66",
+        "currency_code": "USD"
+      },
+      "net_amount": {
+        "value": "11.84",
+        "currency_code": "USD"
+      },
+      "total_refunded_amount": {
+        "value": "12.50",
+        "currency_code": "USD"
+      }
+    },
+    "note_to_payer": "Reversed by PayPal",
+    "invoice_id": "inv_TEST_0071",
+    "custom_id": "ord_0071",
+    "status": "COMPLETED",
+    "status_details": {
+      "reason": "ECHECK"
+    },
+    "create_time": "2026-03-29T11:30:00Z",
+    "update_time": "2026-03-29T11:30:00Z",
+    "links": [
+      {
+        "href": "https://api.sandbox.paypal.com/v2/payments/refunds/1JTEST000000000002",
+        "rel": "self",
+        "method": "GET"
+      },
+      {
+        "href": "https://api.sandbox.paypal.com/v2/payments/captures/3Y6TEST000000000071",
+        "rel": "up",
+        "method": "GET"
+      }
+    ]
+  },
+  "links": [
+    {
+      "href": "https://api.sandbox.paypal.com/v1/notifications/webhooks-events/WH-TEST000000000003-75F399086E414290U",
+      "rel": "self",
+      "method": "GET"
+    }
+  ]
+}

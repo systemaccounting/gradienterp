@@ -1,0 +1,5 @@
+{
+  "type": "object",
+  "description": "List unclassified pending journal entries waiting on owner classification. Takes no input — returns the full pending queue.",
+  "properties": {}
+}

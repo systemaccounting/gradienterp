@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "modules/events/labor/job_opening.created.v1",
+  "title": "job_opening.created",
+  "description": "SPECULATIVE. Permanent placement (shift.unfilled covers floating labor only). Open books make cross-firm wage + utilization data unusually good hiring signal.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "openly_operated",
+    "customer_id",
+    "role",
+    "classification"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "integer",
+      "const": 1,
+      "description": "Bumped on breaking shape change. Consumers branch on it."
+    },
+    "openly_operated": {
+      "type": "boolean",
+      "description": "Set at emit time from the gerp's settings. The publication rule's filter — a private gerp's events never leave the operator plane."
+    },
+    "customer_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Emitting tenant (gerp_id). Redundant with the envelope account id but saves consumers a join."
+    },
+    "role": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Role to fill."
+    },
+    "classification": {
+      "type": "string",
+      "enum": [
+        "W-2",
+        "1099"
+      ],
+      "description": "Employment classification."
+    },
+    "rate": {
+      "type": "number",
+      "description": "Offered rate; 0 = negotiable.",
+      "minimum": 0
+    },
+    "location": {
+      "type": "string",
+      "pattern": "^[0-9]+$",
+      "description": "Location ordinal (the 1 in LOCATION#1#...). Present on placeful objects so cross-firm matches can be geo/loc-scoped; '1' = the emitter's main location."
+    }
+  }
+}

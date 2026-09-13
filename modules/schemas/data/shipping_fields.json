@@ -1,0 +1,203 @@
+{
+  "common": {
+    "shipment_id": {
+      "type": "string",
+      "required": true,
+      "description": "hash key; `<location-ordinal>#s-<hex>` generated at create",
+      "class": "operational",
+      "shape": "copied"
+    },
+    "direction": {
+      "type": "enum",
+      "values": [
+        "inbound",
+        "outbound"
+      ],
+      "required": true,
+      "description": "which way custody crosses the firm boundary \u2014 a field, not a module",
+      "class": "operational",
+      "shape": "copied"
+    },
+    "description": {
+      "type": "string",
+      "required": false,
+      "description": "what it is ('3 pallets from Sysco', 'package for Dana'). free-form, and the mailroom case writes a person into it ('package for Dana'). Untemplated, so it takes the closed default",
+      "class": "secret",
+      "shape": "copied"
+    },
+    "contents": {
+      "type": "list",
+      "required": false,
+      "description": "informational lines [{item_id?, description, qty}] \u2014 the counted truth goes through manage_po receive. informational lines carrying free-form text. The COUNTED truth is not here \u2014 it is the inventory movement `manage_po receive` writes, which publishes",
+      "class": "secret",
+      "shape": "copied"
+    },
+    "carrier": {
+      "type": "string",
+      "required": false,
+      "description": "carrier slug: fedex | ups | usps | dhl | ontrac | freight | courier | other (open string). upgrades to carrier_gerp_id when carriers run gerps",
+      "class": "operational",
+      "shape": "copied"
+    },
+    "tracking": {
+      "type": "string",
+      "required": false,
+      "description": "carrier tracking id, VERBATIM \u2014 provider ids are never platform-prefixed. a carrier tracking id is a live query into the carrier's system, which returns the destination address and who signed. Freight economics publish without it",
+      "class": "secret",
+      "shape": "copied"
+    },
+    "service": {
+      "type": "string",
+      "required": false,
+      "description": "carrier service label as given (ground, 2day, priority, ltl)",
+      "class": "operational",
+      "shape": "copied"
+    },
+    "tracking_url": {
+      "type": "string",
+      "required": false,
+      "description": "generated from a per-carrier template for known carriers; a convenience string, lambda-managed. carries the tracking id",
+      "class": "secret",
+      "shape": "copied"
+    },
+    "sender": {
+      "type": "string",
+      "required": false,
+      "description": "contact_id of who sent it (inbound provenance)",
+      "class": "subject",
+      "shape": "referenced"
+    },
+    "recipient": {
+      "type": "string",
+      "required": false,
+      "description": "contact_id the parcel is FOR \u2014 the mailroom case; arrival notifies, pickup closes",
+      "class": "subject",
+      "shape": "referenced"
+    },
+    "destination": {
+      "type": "enum",
+      "values": [
+        "stock",
+        "person",
+        "customer"
+      ],
+      "required": false,
+      "description": "the polymorphic key: stock (dock \u2192 manage_po receive pairs), person (mailroom), customer (fulfillment). inferred from recipient/po_id/invoice_id when omitted",
+      "class": "operational",
+      "shape": "copied"
+    },
+    "po_id": {
+      "type": "string",
+      "required": false,
+      "description": "the PO an inbound delivery fulfills; custody here, money+quantity legs on manage_po receive",
+      "class": "operational",
+      "shape": "referenced"
+    },
+    "invoice_id": {
+      "type": "string",
+      "required": false,
+      "description": "the invoice/order an outbound shipment fulfills",
+      "class": "operational",
+      "shape": "referenced"
+    },
+    "location": {
+      "type": "string",
+      "required": true,
+      "description": "location ordinal; leads the shipment_id",
+      "class": "operational",
+      "shape": "copied"
+    },
+    "status": {
+      "type": "enum",
+      "values": [
+        "expected",
+        "arrived",
+        "putaway",
+        "delivered",
+        "picked_up",
+        "packed",
+        "shipped",
+        "exception",
+        "cancelled"
+      ],
+      "required": true,
+      "description": "inbound: expected\u2192arrived\u2192putaway|delivered|picked_up; outbound: packed\u2192shipped\u2192delivered; exception/cancelled from any open state",
+      "class": "operational",
+      "shape": "copied"
+    },
+    "expected": {
+      "type": "string",
+      "required": false,
+      "description": "ISO date an inbound shipment is expected",
+      "class": "operational",
+      "shape": "copied"
+    },
+    "signed_by": {
+      "type": "string",
+      "required": false,
+      "description": "who signed/confirmed at receive or pickup \u2014 the chain-of-custody stamp",
+      "class": "subject",
+      "shape": "referenced"
+    },
+    "condition": {
+      "type": "string",
+      "required": false,
+      "description": "condition on arrival; damage/short detail becomes a task with subject_key = the shipment id. about the parcel, not the party",
+      "class": "operational",
+      "shape": "copied"
+    },
+    "cost": {
+      "type": "number",
+      "required": false,
+      "description": "freight cost; posts Dr SHIPPING_EXPENSE at ship (outbound) / receive (inbound), once, with freight_entry as the receipt",
+      "class": "economic",
+      "shape": "copied"
+    },
+    "paid_via": {
+      "type": "enum",
+      "values": [
+        "cash",
+        "payable"
+      ],
+      "required": false,
+      "description": "how the freight leg credits",
+      "class": "operational",
+      "shape": "copied"
+    },
+    "freight_entry": {
+      "type": "string",
+      "required": false,
+      "description": "the freight journal entry id; lambda-managed, posted at most once per shipment",
+      "class": "operational",
+      "shape": "referenced"
+    },
+    "open_flag": {
+      "type": "string",
+      "required": false,
+      "description": "lambda-managed sparse-GSI marker: present until a terminal status. Not user-settable",
+      "class": "operational",
+      "shape": "copied"
+    },
+    "created_at": {
+      "type": "timestamp_ms",
+      "required": true,
+      "description": "ms-epoch set at create",
+      "class": "operational",
+      "shape": "copied"
+    },
+    "updated_at": {
+      "type": "timestamp_ms",
+      "required": true,
+      "description": "ms-epoch; advances on every write",
+      "class": "operational",
+      "shape": "copied"
+    },
+    "job": {
+      "type": "string",
+      "required": false,
+      "description": "optional job tag; the freight entry carries dimensions.job for per-job cost",
+      "class": "operational",
+      "shape": "copied"
+    }
+  }
+}

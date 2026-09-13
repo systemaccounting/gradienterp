@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "modules/events/purchasing/quote.requested.v1",
+  "title": "quote.requested",
+  "description": "An agent-emitted intent: this firm wants offers for a described need (looser than an rfq.issued — no structured lines yet). The reactive-hub flow's async cousin.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "openly_operated",
+    "customer_id",
+    "request_id",
+    "description"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "integer",
+      "const": 1,
+      "description": "Bumped on breaking shape change. Consumers branch on it."
+    },
+    "openly_operated": {
+      "type": "boolean",
+      "description": "Set at emit time from the gerp's settings. The publication rule's filter — a private gerp's events never leave the operator plane."
+    },
+    "customer_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Emitting tenant (gerp_id). Redundant with the envelope account id but saves consumers a join."
+    },
+    "request_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Intent id; quote.returned references it."
+    },
+    "description": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Natural-language need, e.g. 'appliance repair tech near chicago, today'."
+    },
+    "location": {
+      "type": "string",
+      "pattern": "^[0-9]+$",
+      "description": "Location ordinal (the 1 in LOCATION#1#...). Present on placeful objects so cross-firm matches can be geo/loc-scoped; '1' = the emitter's main location."
+    }
+  }
+}

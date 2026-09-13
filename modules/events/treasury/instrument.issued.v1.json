@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "modules/events/treasury/instrument.issued.v1",
+  "title": "instrument.issued",
+  "description": "SPECULATIVE (emit call pending). A financial instrument created (instrument-as-item). Visibility announcement after the durable write.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "openly_operated",
+    "customer_id",
+    "instrument_id",
+    "kind",
+    "terms"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "integer",
+      "const": 1,
+      "description": "Bumped on breaking shape change. Consumers branch on it."
+    },
+    "openly_operated": {
+      "type": "boolean",
+      "description": "Set at emit time from the gerp's settings. The publication rule's filter — a private gerp's events never leave the operator plane."
+    },
+    "customer_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Emitting tenant (gerp_id). Redundant with the envelope account id but saves consumers a join."
+    },
+    "instrument_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The instrument (DISTRIBUTION#<thread> rule instance)."
+    },
+    "kind": {
+      "type": "string",
+      "minLength": 1,
+      "description": "e.g. 'capped_dividend', 'revenue_share'."
+    },
+    "terms": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Free-form terms summary — the row's params are authoritative."
+    }
+  }
+}

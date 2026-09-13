@@ -1,0 +1,41 @@
+{
+  "type": "object",
+  "description": "Set up the mail server this firm sends through, so email comes from their address. Collect the password with collect_secret first and pass its NAME. A test send must succeed or nothing is saved.",
+  "properties": {
+    "op": {
+      "type": "string",
+      "description": "'set' (default), 'make_default', or 'remove'."
+    },
+    "address": {
+      "type": "string",
+      "description": "The address the firm sends as, e.g. billing@theirshop.com."
+    },
+    "host": {
+      "type": "string",
+      "description": "Their SMTP server, e.g. smtp.gmail.com. Ask the owner or their mail provider's docs."
+    },
+    "port": {
+      "type": "integer",
+      "description": "Defaults to 587 for starttls, 465 for ssl."
+    },
+    "username": {
+      "type": "string",
+      "description": "The login, if it differs from the address."
+    },
+    "tls": {
+      "type": "string",
+      "description": "'starttls' (default), 'ssl', or 'none'."
+    },
+    "secret_name": {
+      "type": "string",
+      "description": "The name collect_secret stored the mail password under. Google Workspace and most providers need an app password rather than the account one."
+    },
+    "test_to": {
+      "type": "string",
+      "description": "Where the test message goes. Defaults to the address itself."
+    }
+  },
+  "required": [
+    "address"
+  ]
+}

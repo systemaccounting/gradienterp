@@ -1,0 +1,67 @@
+{
+  "id": "WH-7FK21791TT5077935-60M02020KG5611835",
+  "create_time": "2026-06-08T04:12:36.802Z",
+  "resource_type": "refund",
+  "event_type": "PAYMENT.CAPTURE.REFUNDED",
+  "summary": "A $ 4.25 USD capture payment was refunded",
+  "resource": {
+    "seller_payable_breakdown": {
+      "total_refunded_amount": {
+        "value": "4.25",
+        "currency_code": "USD"
+      },
+      "paypal_fee": {
+        "value": "0.00",
+        "currency_code": "USD"
+      },
+      "gross_amount": {
+        "value": "4.25",
+        "currency_code": "USD"
+      },
+      "net_amount": {
+        "value": "4.25",
+        "currency_code": "USD"
+      }
+    },
+    "amount": {
+      "value": "4.25",
+      "currency_code": "USD"
+    },
+    "update_time": "2026-06-07T21:12:26-07:00",
+    "create_time": "2026-06-07T21:12:26-07:00",
+    "links": [
+      {
+        "method": "GET",
+        "rel": "self",
+        "href": "https://api.sandbox.paypal.com/v2/payments/refunds/32W95449GE343643T"
+      },
+      {
+        "method": "GET",
+        "rel": "up",
+        "href": "https://api.sandbox.paypal.com/v2/payments/captures/3WM40379GT784835Y"
+      }
+    ],
+    "id": "32W95449GE343643T",
+    "payer": {
+      "email_address": "sb-cspa751544480@business.example.com",
+      "merchant_id": "MU6PMHCPRQ2XS"
+    },
+    "status": "COMPLETED"
+  },
+  "links": [
+    {
+      "href": "https://api.sandbox.paypal.com/v1/notifications/webhooks-events/WH-7FK21791TT5077935-60M02020KG5611835",
+      "rel": "self",
+      "method": "GET",
+      "encType": "application/json"
+    },
+    {
+      "href": "https://api.sandbox.paypal.com/v1/notifications/webhooks-events/WH-7FK21791TT5077935-60M02020KG5611835/resend",
+      "rel": "resend",
+      "method": "POST",
+      "encType": "application/json"
+    }
+  ],
+  "event_version": "1.0",
+  "resource_version": "2.0"
+}

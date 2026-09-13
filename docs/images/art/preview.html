@@ -1,0 +1,26 @@
+<!doctype html><html><head><meta charset="utf-8"><title>gradientERP logo preview</title>
+<style>
+  html,body{margin:0;background:#0f1115;color:#9aa0aa;font:14px -apple-system,BlinkMacSystemFont,sans-serif}
+  .bar{padding:10px 16px;border-bottom:1px solid #222;display:flex;gap:14px;align-items:center}
+  .bar b{color:#e7e9ee} button{background:#222;color:#cfd3da;border:1px solid #333;border-radius:7px;padding:5px 10px;cursor:pointer}
+  .grid{display:flex;flex-wrap:wrap;gap:24px;padding:24px}
+  .card{border:1px solid #222;border-radius:12px;padding:18px;background:#13151a}
+  .card .lbl{font-size:11px;letter-spacing:.05em;text-transform:uppercase;margin-bottom:12px}
+  /* the lockup, sized like the live banner: width = 6.4 * --bw, --bw = clamp(2rem,12.5vw,4.14rem) of the frame width */
+  .logo{display:block;margin:0 auto;aspect-ratio:602/142;
+        background:center/contain no-repeat url("gradientERP-lockup.svg")}
+  .phone{width:390px} .phone .logo{width:312px}      /* ~390px viewport */
+  .small{width:330px} .small .logo{width:264px}      /* ~330px viewport */
+  .desk{width:460px}  .desk .logo{width:426px}       /* desktop cap */
+</style></head>
+<body>
+  <div class="bar"><b>gradientERP lockup</b> — current file: docs/images/art/gradientERP-lockup.svg
+    <button onclick="location.reload(true)">↻ reload</button>
+    <span id="t"></span></div>
+  <div class="grid">
+    <div class="card phone"><div class="lbl">phone ~390px</div><div class="logo"></div></div>
+    <div class="card small"><div class="lbl">narrow ~330px</div><div class="logo"></div></div>
+    <div class="card desk"><div class="lbl">desktop (max)</div><div class="logo"></div></div>
+  </div>
+  <script>document.getElementById('t').textContent='loaded '+new Date().toLocaleTimeString()</script>
+</body></html>

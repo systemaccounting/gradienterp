@@ -1,0 +1,27 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(aws dynamodb scan *)",
+      "Bash(aws dynamodb query *)",
+      "Bash(aws dynamodb get-item *)",
+      "Bash(aws dynamodb describe-table *)",
+      "Bash(aws sts get-caller-identity *)",
+      "Bash(aws logs filter-log-events *)",
+      "Bash(aws logs tail *)",
+      "Bash(aws logs describe-log-streams *)",
+      "Bash(aws logs describe-log-groups *)",
+      "Bash(aws logs get-log-events *)",
+      "Bash(terraform plan *)",
+      "Bash(terraform validate *)",
+      "Bash(terraform show *)",
+      "mcp__playwright__browser_snapshot",
+      "mcp__claude-in-chrome__tabs_context_mcp",
+      "mcp__claude-in-chrome__read_console_messages",
+      "mcp__claude-in-chrome__read_network_requests",
+      "mcp__plugin_aws-agents_awsknowledge__aws___read_documentation",
+      "mcp__plugin_aws-agents_awsknowledge__aws___search_documentation",
+      "mcp__plaid__search_documentation",
+      "mcp__github__get_file_contents"
+    ]
+  }
+}

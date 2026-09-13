@@ -1,0 +1,35 @@
+{
+  "type": "object",
+  "description": "The capital deal, both sides. record_receipt: issuer books funds in (DR CASH / CR OWNER_EQUITY). record_outlay: holder books funds out (DR INVESTMENTS / CR CASH). offers by stage. holdings.",
+  "properties": {
+    "op": {
+      "type": "string",
+      "enum": [
+        "record_receipt",
+        "record_outlay",
+        "offers",
+        "holdings"
+      ],
+      "description": "record_receipt and record_outlay need thread and post the money leg on an AGREED offer. offers lists deals (thread optional). holdings lists what this firm holds (issuer optional)."
+    },
+    "thread": {
+      "type": "string",
+      "description": "The capital deal's negotiation thread (from propose_offer). Required for record_receipt / record_outlay; a filter for offers."
+    },
+    "terms_hash": {
+      "type": "string",
+      "description": "record_*: the exact agreed terms. Omit when only one agreed, unfunded offer sits on the thread."
+    },
+    "amount": {
+      "type": "number",
+      "description": "record_*: override of the agreed price; defaults to the offer's total."
+    },
+    "issuer": {
+      "type": "string",
+      "description": "holdings: restrict to claims on one issuer's margin (their gerp_id)."
+    }
+  },
+  "required": [
+    "op"
+  ]
+}

@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "add_classification",
+  "description": "Register a category account → its Account type. Promotes pending entries with it and extends chart_of_accounts (origin='extension'). Categories only — a payee is not an account.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["account", "account_type"],
+  "properties": {
+    "account": {
+      "type": "string",
+      "description": "A canonical category account on the line item (e.g. 'CASH', 'SUPPLIES_EXPENSE') — never a per-vendor account; a payee is not an account."
+    },
+    "account_type": {
+      "type": "string",
+      "enum": ["ASSET", "LIABILITY", "EQUITY", "REVENUE", "EXPENSE"],
+      "description": "Canonical accounting bucket the account belongs to."
+    },
+    "notes": {
+      "type": "string",
+      "description": "Optional free-form note — surfaced to operator agent for agreement review."
+    }
+  }
+}

@@ -1,0 +1,155 @@
+{
+  "common": {
+    "asset_id": {
+      "type": "string",
+      "required": true,
+      "description": "hash key; `<location-ordinal>#<slug>` generated from name at add (e.g. 1#walk-in-fridge)",
+      "class": "operational",
+      "shape": "copied"
+    },
+    "name": {
+      "type": "string",
+      "required": true,
+      "description": "human name; the id slug derives from it",
+      "class": "operational",
+      "shape": "copied"
+    },
+    "class": {
+      "type": "enum",
+      "values": [
+        "machinery_equipment",
+        "vehicles",
+        "computer_equipment",
+        "furniture_fixtures",
+        "leasehold_improvements",
+        "buildings"
+      ],
+      "required": false,
+      "description": "accounting asset class; carries GL-account + useful-life defaults when the depreciation rule ships",
+      "class": "operational",
+      "shape": "copied"
+    },
+    "vendor": {
+      "type": "string",
+      "required": false,
+      "description": "manufacturer/vendor (e.g. True). vendor+model keys service history and the future cross-firm failure-signature join",
+      "class": "operational",
+      "shape": "copied"
+    },
+    "model": {
+      "type": "string",
+      "required": false,
+      "description": "model identifier (e.g. T-49)",
+      "class": "operational",
+      "shape": "copied"
+    },
+    "serial": {
+      "type": "string",
+      "required": false,
+      "description": "serial number",
+      "class": "operational",
+      "shape": "copied"
+    },
+    "location": {
+      "type": "string",
+      "required": true,
+      "description": "location ordinal; leads the asset_id",
+      "class": "operational",
+      "shape": "copied"
+    },
+    "in_service": {
+      "type": "string",
+      "required": false,
+      "description": "ISO date the unit entered service",
+      "class": "operational",
+      "shape": "copied"
+    },
+    "warranty_expiry": {
+      "type": "string",
+      "required": false,
+      "description": "ISO date the warranty ends; the future promise-clock reads this",
+      "class": "operational",
+      "shape": "copied"
+    },
+    "status": {
+      "type": "enum",
+      "values": [
+        "in_service",
+        "down",
+        "retired"
+      ],
+      "required": true,
+      "description": "operational status. retired here is operational; the disposal journal entry is a separate accounting step",
+      "class": "operational",
+      "shape": "copied"
+    },
+    "owner": {
+      "type": "string",
+      "required": false,
+      "description": "contact_id when the unit is installed-base (managed, not owned \u2014 a client's furnace). presence permanently disables the capitalized fields",
+      "class": "subject",
+      "shape": "referenced"
+    },
+    "cost": {
+      "type": "number",
+      "required": false,
+      "description": "acquisition cost; presence = capitalized, and the row carries acquired_entry (no capitalized row without a journal entry)",
+      "class": "economic",
+      "shape": "copied"
+    },
+    "paid_via": {
+      "type": "enum",
+      "values": [
+        "cash",
+        "payable",
+        "opening"
+      ],
+      "required": false,
+      "description": "how acquisition posted: cash/payable posted Dr FIXED_ASSETS; opening references the opening balance sheet (no new entry)",
+      "class": "operational",
+      "shape": "copied"
+    },
+    "acquired_entry": {
+      "type": "string",
+      "required": false,
+      "description": "the acquisition journal entry id, or the literal 'opening'. lambda-managed",
+      "class": "operational",
+      "shape": "copied"
+    },
+    "salvage": {
+      "type": "number",
+      "required": false,
+      "description": "salvage value for the future depreciation schedule",
+      "class": "economic",
+      "shape": "copied"
+    },
+    "useful_life_months": {
+      "type": "number",
+      "required": false,
+      "description": "useful life in months for the future depreciation schedule",
+      "class": "economic",
+      "shape": "copied"
+    },
+    "method": {
+      "type": "string",
+      "required": false,
+      "description": "depreciation method hint (e.g. straight_line); a param for the future rule, never code",
+      "class": "operational",
+      "shape": "copied"
+    },
+    "created_at": {
+      "type": "timestamp_ms",
+      "required": true,
+      "description": "ms-epoch set on add",
+      "class": "operational",
+      "shape": "copied"
+    },
+    "updated_at": {
+      "type": "timestamp_ms",
+      "required": true,
+      "description": "ms-epoch; advances on every write",
+      "class": "operational",
+      "shape": "copied"
+    }
+  }
+}

@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+
+# machine-readable site guide
+# llms.txt: https://gradienterp.cloud/llms.txt

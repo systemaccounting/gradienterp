@@ -1,0 +1,81 @@
+{
+  "type": "object",
+  "description": "The asset register: equipment the firm operates, not sells (fridge, van, oven). add with cost posts the acquisition entry. Incidents attach via tasks subject_key. Onboarding gear: search_guides.",
+  "required": [
+    "op"
+  ],
+  "properties": {
+    "op": {
+      "type": "string",
+      "description": "add | update | retire | get | list."
+    },
+    "asset_id": {
+      "type": "string",
+      "description": "For update/retire/get: the key, `<location-ordinal>#<slug>` (e.g. 1#walk-in-fridge). list shows them."
+    },
+    "name": {
+      "type": "string",
+      "description": "For add: the asset's name \u2014 the id slug is generated from it."
+    },
+    "class": {
+      "type": "string",
+      "description": "Asset class: machinery_equipment | vehicles | computer_equipment | furniture_fixtures | leasehold_improvements | buildings."
+    },
+    "vendor": {
+      "type": "string",
+      "description": "Manufacturer/vendor, e.g. 'True'. With model, identifies the unit type."
+    },
+    "model": {
+      "type": "string",
+      "description": "Model, e.g. 'T-49'. Vendor+model is how service history and recalls key."
+    },
+    "serial": {
+      "type": "string",
+      "description": "Serial number."
+    },
+    "location": {
+      "type": "string",
+      "description": "Location ordinal (default '1'). Leads the asset_id."
+    },
+    "in_service": {
+      "type": "string",
+      "description": "ISO date the unit entered service."
+    },
+    "warranty_expiry": {
+      "type": "string",
+      "description": "ISO date the warranty ends."
+    },
+    "owner": {
+      "type": "string",
+      "description": "contact_id when the unit belongs to a client (installed base \u2014 an HVAC firm's client furnaces). Such units can never carry cost."
+    },
+    "cost": {
+      "type": "number",
+      "description": "Acquisition cost \u2014 capitalizes the asset and posts Dr FIXED_ASSETS / Cr per paid_via. Omit for sub-threshold/expensed gear (typical policy: under $2,500)."
+    },
+    "paid_via": {
+      "type": "string",
+      "description": "cash | payable | opening. opening = onboarded equipment whose cost is already in the opening balance sheet (no new entry posts)."
+    },
+    "salvage": {
+      "type": "number",
+      "description": "Salvage value (for the future depreciation schedule)."
+    },
+    "useful_life_months": {
+      "type": "number",
+      "description": "Useful life in months (for the future depreciation schedule)."
+    },
+    "method": {
+      "type": "string",
+      "description": "Depreciation method hint, e.g. straight_line."
+    },
+    "updates": {
+      "type": "object",
+      "description": "For update: field-to-value map (operational fields + warranty/serial/etc). cost/paid_via/acquired_entry are immutable \u2014 disposal is the exit path."
+    },
+    "status": {
+      "type": "string",
+      "description": "For list: filter by in_service | down | retired."
+    }
+  }
+}

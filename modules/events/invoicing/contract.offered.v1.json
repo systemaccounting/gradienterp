@@ -1,0 +1,77 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "modules/events/invoicing/contract.offered.v1",
+  "title": "contract.offered",
+  "description": "SPECULATIVE. A blanket/outline agreement — the 4th textbook procurement object: volume pricing over a term. Matches recurring purchase patterns in other firms' event history; the graduation of a monthly pooled-purchase into a standing agreement.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "openly_operated",
+    "customer_id",
+    "contract_id",
+    "items",
+    "term_days",
+    "pricing"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "integer",
+      "const": 1,
+      "description": "Bumped on breaking shape change. Consumers branch on it."
+    },
+    "openly_operated": {
+      "type": "boolean",
+      "description": "Set at emit time from the gerp's settings. The publication rule's filter — a private gerp's events never leave the operator plane."
+    },
+    "customer_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Emitting tenant (gerp_id). Redundant with the envelope account id but saves consumers a join."
+    },
+    "contract_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Platform-generated id."
+    },
+    "items": {
+      "type": "array",
+      "minItems": 1,
+      "description": "The requested/offered lines. catalog_key is the SKU half of an item id (location-free — the counterparty's own items live at their own locations).",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "catalog_key",
+          "qty"
+        ],
+        "properties": {
+          "catalog_key": {
+            "type": "string",
+            "minLength": 1,
+            "description": "SKU-ish key, e.g. 'green_colombia'"
+          },
+          "qty": {
+            "type": "number",
+            "description": "Quantity in the line's unit.",
+            "exclusiveMinimum": 0
+          },
+          "unit": {
+            "type": "string",
+            "description": "Unit of measure; defaults to the item's own."
+          }
+        }
+      }
+    },
+    "term_days": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Agreement length."
+    },
+    "pricing": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Free-form pricing commitment, e.g. '$11.20/lb up to 500lb/mo'."
+    }
+  }
+}

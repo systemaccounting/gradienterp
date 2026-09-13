@@ -1,0 +1,17 @@
+{
+  "name": "gerp-chat-lambda",
+  "version": "1.0.0",
+  "description": "The gerp's web-chat front door — Node lambda with native response streaming.",
+  "type": "module",
+  "main": "index.mjs",
+  "private": true,
+  "dependencies": {
+    "@aws-sdk/client-bedrock-agentcore": "^3.0.0",
+    "@aws-sdk/client-dynamodb": "^3.0.0",
+    "@aws-sdk/client-lambda": "^3.1075.0",
+    "@aws-sdk/client-resource-groups-tagging-api": "^3.1075.0",
+    "@aws-sdk/client-s3": "^3.0.0",
+    "@aws-sdk/client-ssm": "^3.0.0",
+    "@aws-sdk/s3-request-presigner": "^3.0.0"
+  }
+}

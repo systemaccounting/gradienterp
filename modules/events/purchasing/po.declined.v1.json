@@ -1,0 +1,64 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "modules/events/purchasing/po.declined.v1",
+  "title": "po.declined",
+  "description": "LIVE RAIL (addressed event). One party's terminal no to the terms at hand, echoed to the other; the row is marked declined on both stores and never settles. Different terms are a new proposal on the same thread.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "openly_operated",
+    "customer_id",
+    "thread",
+    "terms_hash",
+    "declined_by",
+    "to"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "integer",
+      "const": 1,
+      "description": "Bumped on breaking shape change. Consumers branch on it."
+    },
+    "openly_operated": {
+      "type": "boolean",
+      "description": "Set at emit time from the gerp's settings. The publication rule's filter \u2014 a private gerp's events never leave the operator plane."
+    },
+    "customer_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Emitting tenant (gerp_id). Redundant with the envelope account id but saves consumers a join."
+    },
+    "thread": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The exchange id."
+    },
+    "terms_hash": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The proposal's, the exact terms declined."
+    },
+    "to": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Recipient gerp_profile_id."
+    },
+    "declined_by": {
+      "type": "string",
+      "enum": [
+        "buyer",
+        "seller"
+      ],
+      "description": "Which side of the row said no."
+    },
+    "buyer": {
+      "type": "string",
+      "description": "The buyer's gerp_id."
+    },
+    "seller": {
+      "type": "string",
+      "description": "The seller's gerp_id."
+    }
+  }
+}

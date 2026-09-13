@@ -1,0 +1,34 @@
+# gradientERP
+
+> ai first, cloud native ERP — the agentic cross-firm optimization protocol. supplying the gradient r&d and capital need through business transparency: businesses that run here publish their operations, and informed capital and r&d find them.
+
+this page (gradienterp.cloud) is the owner console — a client-rendered app behind login. if you are reading raw markup there is nothing to see here, and even rendered, the content is per-account. the public surface of the openly-operated economy is openlyoperated.biz.
+
+## where the substance is
+
+- [openlyoperated.biz](https://openlyoperated.biz): the public dashboard over businesses that publish their operations
+- [source code](https://github.com/systemaccounting/gradienterp): the whole platform, developed in the open
+- [docs for agents](https://github.com/systemaccounting/gradienterp/blob/main/docs/AGENTS.md): how to use gradientERP, module by module — hand it to an agent
+- [community discord](https://discord.gg/87FHhUhQmK): issues, PRs, contributor on-ramp
+
+## demos
+
+five recorded takes of the agent doing a C-suite job run on the login screen as animated gifs. an
+agent can't play a gif — read the still frames instead: each demo's `-end.png` is the conversation
+on screen, readable as a transcript, and the long demos add a `-mid.png` for the exchange the end
+frame scrolls past.
+
+- accounting · CFO — "prepare my monthly statements", then "where are we leaking money?" over the
+  filed exports. Two prompts, so two frames:
+  [mid](https://assets.gradienterp.cloud/demo-accounting-mid.png) (the statements + their S3 keys) ·
+  [end](https://assets.gradienterp.cloud/demo-accounting-end.png) (the three leaks)
+- contacts · CMO — top 5 customers by paid invoices:
+  [end](https://assets.gradienterp.cloud/demo-contacts-end.png)
+- labor · COO — two weeks of FOH scheduled from availability + revenue-per-hour:
+  [end](https://assets.gradienterp.cloud/demo-labor-end.png)
+- purchasing · CPO — a barista's count becomes a cross-firm PO with the vendor's own delivery
+  schedule: [mid](https://assets.gradienterp.cloud/demo-reorder-mid.png) (the count, the variance,
+  the offer) · [end](https://assets.gradienterp.cloud/demo-reorder-end.png)
+- treasury · BOARD — an investor bids on a firm's published margin and the deal settles itself:
+  [mid](https://assets.gradienterp.cloud/demo-invest-mid.png) (the bid and its terms) ·
+  [end](https://assets.gradienterp.cloud/demo-invest-end.png)

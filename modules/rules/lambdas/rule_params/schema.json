@@ -1,0 +1,41 @@
+{
+  "type": "object",
+  "description": "Rule configuration values: get reads an owner's param rows, a rule's param-spec, or the catalog of offerable rules; set upserts a row (append-only, effective-dated).",
+  "required": [
+    "op"
+  ],
+  "properties": {
+    "op": {
+      "type": "string",
+      "enum": [
+        "get",
+        "set"
+      ],
+      "description": "get: read rows, a spec, or the catalog. set: write a row."
+    },
+    "contact_id": {
+      "type": "string",
+      "description": "The worker/entity the params belong to. Omit for general (platform / employer-wide) params. Both ops."
+    },
+    "rule": {
+      "type": "string",
+      "description": "get: only this rule's rows (or '_rules' for the worker's rule set) \u2014 the answer carries the rule's param-spec too. set (required): the rule name (e.g. us_federal, futa), or '_rules' to set which rules apply to the worker."
+    },
+    "param": {
+      "type": "object",
+      "description": "set only, required there: the param JSON for this rule (e.g. the W-4 fields), or {names:[...]} when rule='_rules'."
+    },
+    "effective_from": {
+      "type": "string",
+      "description": "set only: YYYY-MM-DD this takes effect; defaults to today. A change is a new dated row, not an overwrite."
+    },
+    "catalog": {
+      "type": "boolean",
+      "description": "get only: list available rules instead of an owner's rows \u2014 each {name, spec, callsites}. The menu of offerable instruments."
+    },
+    "callsite": {
+      "type": "string",
+      "description": "get only, with catalog=true: only rules attachable at this callsite (e.g. 'pay_run', 'invoice_status'). Omit for every rule, each listing where it can attach. An unknown name returns the list."
+    }
+  }
+}

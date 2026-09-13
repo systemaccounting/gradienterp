@@ -1,0 +1,17 @@
+{
+  "type": "object",
+  "description": "Connect the owner's bank for automatic bookkeeping. start: returns a secure Plaid link the owner opens; credentials never touch us. check: finalize once the owner finishes; then the feed reconciles.",
+  "required": [
+    "op"
+  ],
+  "properties": {
+    "op": {
+      "type": "string",
+      "enum": [
+        "start",
+        "check"
+      ],
+      "description": "start: begin linking, returns the hosted link. check: finalize the pending link and report status."
+    }
+  }
+}

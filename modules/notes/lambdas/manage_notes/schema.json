@@ -1,0 +1,68 @@
+{
+  "type": "object",
+  "description": "The firm's notes: versioned annotations on contacts, journal entries, POs and invoices. op: get|put|update|query|scan. put/update append a version; get/query/scan return the latest.",
+  "required": [
+    "op"
+  ],
+  "properties": {
+    "op": {
+      "type": "string",
+      "description": "get: latest by note_id. put: create. update: merge updates into the latest, new version. query: latest per note by one FK. scan: full table — prefer query or get."
+    },
+    "note_id": {
+      "type": "string",
+      "description": "get/update: required hash key. put: optional slug, generated if omitted."
+    },
+    "content": {
+      "type": "string",
+      "description": "put, required. Written as a template: $1, $2… where a name, an address or anything firm-specific goes, values in private_values in order. This field publishes; private_values never does."
+    },
+    "private_values": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "put: what $1, $2… stand for, in order, one per placeholder. Never served; your own view puts them back."
+    },
+    "updates": {
+      "type": "object",
+      "description": "update, required: field to value (content, private_values, the FKs). Re-worded content re-states private_values — one value per $n or the write is refused."
+    },
+    "contact_id": {
+      "type": "string",
+      "description": "put: FK. query: notes about the contact."
+    },
+    "journal_entry_id": {
+      "type": "string",
+      "description": "put: FK. query: notes annotating the entry."
+    },
+    "purchase_order_id": {
+      "type": "string",
+      "description": "put: FK. query: notes about the PO."
+    },
+    "invoice_id": {
+      "type": "string",
+      "description": "put: FK. query: notes about the invoice."
+    },
+    "limit": {
+      "type": "number",
+      "description": "query/scan: latest-per-note page size, default 100."
+    },
+    "exclusive_start_key": {
+      "type": "object",
+      "description": "query/scan: the prior page's next_key."
+    },
+    "filter_expression": {
+      "type": "string",
+      "description": "scan: DDB FilterExpression."
+    },
+    "expression_attribute_names": {
+      "type": "object",
+      "description": "scan: '#alias' to attribute."
+    },
+    "expression_attribute_values": {
+      "type": "object",
+      "description": "scan: ':alias' to value."
+    }
+  }
+}

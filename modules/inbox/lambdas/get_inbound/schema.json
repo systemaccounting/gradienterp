@@ -1,0 +1,8 @@
+{
+  "type": "object",
+  "description": "Read the firm's inbox — addressed cross-firm events that have landed (pending order proposals, quote requests, messages). Optionally filter by detail_type or status.",
+  "properties": {
+    "detail_type": {"type": "string", "description": "Filter by event type, e.g. po.proposed or quote.requested."},
+    "status": {"type": "string", "description": "Filter by status (e.g. received)."}
+  }
+}

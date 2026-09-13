@@ -1,0 +1,50 @@
+{
+  "id": "WH-TEST000000000004-75F399086E414290U",
+  "event_version": "1.0",
+  "create_time": "2026-03-30T16:00:00.000Z",
+  "resource_type": "payouts_item",
+  "resource_version": "1.0",
+  "event_type": "PAYMENT.PAYOUTS-ITEM.SUCCEEDED",
+  "summary": "A payout item has succeeded",
+  "resource": {
+    "payout_item_id": "PTEST000000000001",
+    "transaction_id": "0DTEST000000000001",
+    "activity_id": "ATEST000000000001",
+    "transaction_status": "SUCCESS",
+    "payout_item_fee": {
+      "value": "0.50",
+      "currency": "USD"
+    },
+    "payout_batch_id": "BATEST0000000001",
+    "payout_item": {
+      "recipient_type": "EMAIL",
+      "amount": {
+        "value": "120.00",
+        "currency": "USD"
+      },
+      "note": "weekly pay - maria, barista",
+      "receiver": "barista-test@openlyoperated.example",
+      "sender_item_id": "payout_0011"
+    },
+    "time_processed": "2026-03-30T16:00:00Z",
+    "links": [
+      {
+        "href": "https://api.sandbox.paypal.com/v1/payments/payouts-item/PTEST000000000001",
+        "rel": "self",
+        "method": "GET"
+      },
+      {
+        "href": "https://api.sandbox.paypal.com/v1/payments/payouts/BATEST0000000001",
+        "rel": "batch",
+        "method": "GET"
+      }
+    ]
+  },
+  "links": [
+    {
+      "href": "https://api.sandbox.paypal.com/v1/notifications/webhooks-events/WH-TEST000000000004-75F399086E414290U",
+      "rel": "self",
+      "method": "GET"
+    }
+  ]
+}

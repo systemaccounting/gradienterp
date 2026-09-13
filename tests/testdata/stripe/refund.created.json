@@ -1,0 +1,40 @@
+{
+  "id": "evt_3TejzyRBOqTW9S9W1R2L6AzY",
+  "object": "event",
+  "api_version": "2026-04-22.dahlia",
+  "created": 1780613068,
+  "data": {
+    "object": {
+      "id": "re_3TejzyRBOqTW9S9W1fkSIZ7y",
+      "object": "refund",
+      "amount": 100,
+      "balance_transaction": "txn_3TejzyRBOqTW9S9W1PgJWgZy",
+      "charge": "ch_3TejzyRBOqTW9S9W1RyusGup",
+      "created": 1780613067,
+      "currency": "usd",
+      "destination_details": {
+        "card": {
+          "reference_status": "pending",
+          "reference_type": "acquirer_reference_number",
+          "type": "refund"
+        },
+        "type": "card"
+      },
+      "metadata": {},
+      "payment_intent": "pi_3TejzyRBOqTW9S9W19lxClcx",
+      "reason": null,
+      "receipt_number": null,
+      "source_transfer_reversal": null,
+      "status": "succeeded",
+      "transfer_reversal": null
+    },
+    "previous_attributes": {}
+  },
+  "livemode": false,
+  "pending_webhooks": 0,
+  "request": {
+    "id": "req_OFT4iItkMQRhnn",
+    "idempotency_key": "00000000-0000-4000-8000-000000000003"
+  },
+  "type": "refund.created"
+}

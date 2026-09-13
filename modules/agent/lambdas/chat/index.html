@@ -1,0 +1,499 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>workspace chat</title>
+<style>
+  :root { --bg:#0f1115; --panel:#181b22; --ink:#e7e9ee; --mut:#8b93a7; --me:#2a3340; --agent:#1f2630; --acc:#5b8cff; --submit:#9b6cff; --submit-h:#7f4fe0; }
+  * { box-sizing: border-box; }
+  body { margin:0; height:100vh; background:var(--bg); color:var(--ink);
+         font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; display:flex; flex-direction:column; }
+  header { padding:12px 16px; border-bottom:1px solid #262b36; display:flex; align-items:center; gap:10px; }
+  header b { font-weight:600; } header .role { color:var(--mut); font-size:13px; }
+  header .sp { flex:1; }
+  button { background:var(--acc); color:#fff; border:0; border-radius:8px; padding:9px 14px; font:inherit; cursor:pointer; }
+  button.ghost { background:transparent; color:var(--mut); border:1px solid #2c323d; }
+  #log { flex:1; overflow:auto; padding:18px 16px; display:flex; flex-direction:column; gap:12px; }
+  .msg { max-width:760px; padding:10px 13px; border-radius:12px; white-space:pre-wrap; word-wrap:break-word; }
+  .me { align-self:flex-end; background:var(--me); }
+  .agent { align-self:flex-start; background:var(--agent); }
+  .agent:not(.typing) { padding:15px 16px; }   /* response bubbles a touch roomier than the base .msg */
+  .sys { align-self:center; color:var(--mut); font-size:13px; background:transparent; }
+  .msg a { color:var(--acc); text-decoration:underline; text-underline-offset:2px; word-break:break-all; }
+  /* typing indicator: three dots rippling in sequence + an optional status label */
+  .typing { display:flex; align-items:center; gap:8px; }
+  .typing .dots { display:inline-flex; gap:5px; }
+  .typing .dot { width:7px; height:7px; border-radius:50%; background:var(--mut); animation:blink 1.4s infinite both; }
+  .typing .dots .dot:nth-child(2){ animation-delay:.2s; }
+  .typing .dots .dot:nth-child(3){ animation-delay:.4s; }
+  .typing .status { color:var(--mut); font-size:13px; }
+  /* tool-use audit trail: a centered line per tool the agent runs, kept in the log */
+  .tool { align-self:center; color:var(--mut); font-size:12px; opacity:.8; padding:3px 0; }
+  .tool::before { content:"⚙ "; opacity:.6; }
+  @keyframes blink { 0%,80%,100%{opacity:.3; transform:translateY(0)} 40%{opacity:1; transform:translateY(-4px)} }
+  /* secret form: an agent-opened form ANCHORED above the composer — a DISTINCT elevated panel
+     (accent top rail + drop shadow + lighter blue-slate surface) so it doesn't blend into the
+     message bar. Inserted into .main before the composer <form>; animates open/closed via max-height. */
+  .formpanel { flex:none; border-top:3px solid var(--acc); background:#1b2336; overflow:hidden;
+               box-shadow:0 -16px 36px rgba(0,0,0,.55);
+               max-height:0; opacity:0; transition:max-height .28s ease, opacity .18s ease; }
+  .formpanel.open { max-height:65vh; opacity:1; }
+  .formpanel .inner { padding:14px 16px 16px; display:flex; flex-direction:column; gap:11px; }
+  .formpanel .fhead { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; }
+  .formpanel .ftitle { font-weight:600; }
+  .formpanel .fclose { cursor:pointer; background:transparent; border:0; color:var(--mut); font-size:20px;
+                       line-height:1; padding:0 2px; margin:-2px -2px 0 0; }
+  .formpanel .fclose:hover { color:var(--ink); }
+  .formrow { display:flex; flex-direction:column; gap:4px; }
+  .formrow label { color:var(--mut); font-size:13px; }
+  .formrow input, .formrow select { width:100%; background:var(--bg); color:var(--ink); border:1px solid #3a4252;
+                                     border-radius:8px; padding:9px 11px; font:inherit; }
+  .formrow input:focus, .formrow select:focus { outline:none; border-color:var(--acc);
+                                                 box-shadow:0 0 0 2px rgba(91,140,255,.25); }
+  .formrow.check { flex-direction:row; align-items:center; gap:8px; }
+  .formrow.check input { width:18px; height:18px; }
+  .formrow.check label { font-size:14px; color:var(--ink); }
+  .formpanel .ferr { color:#e88; font-size:13px; display:none; }
+  .formpanel .factions { display:flex; justify-content:flex-end; margin-top:2px; }
+  .formpanel .factions button { padding:10px 22px; font-weight:600; background:var(--submit); }  /* purple — distinct from the blue composer Send */
+  .formpanel .factions button:hover { background:var(--submit-h); }
+  form { display:flex; gap:8px; padding:12px 16px; border-top:1px solid #262b36; }
+  textarea#in { flex:1; resize:none; background:var(--panel); color:var(--ink); border:1px solid #2c323d;
+                border-radius:10px; padding:10px 12px; font:inherit; max-height:140px; }
+  .gate { margin:auto; max-width:520px; padding:28px; }
+  .gate h1 { font-size:20px; margin:0 0 6px; } .gate p { color:var(--mut); }
+  .gate textarea { width:100%; height:90px; background:var(--panel); color:var(--ink); border:1px solid #2c323d;
+                   border-radius:10px; padding:10px; font:13px/1.4 ui-monospace,monospace; margin:10px 0; }
+  .row { display:flex; gap:8px; flex-wrap:wrap; }
+  /* layout: collapsible saved-chats sidebar + main column */
+  .wrap { display:flex; flex:1; min-height:0; }
+  .main { flex:1; display:flex; flex-direction:column; min-height:0; }
+  .sidebar { width:264px; flex:none; background:#13161c; border-right:1px solid #262b36;
+             display:flex; flex-direction:column; overflow:hidden; transition:width .15s ease; }
+  .sidebar.collapsed { width:0; border-right:0; }
+  .sidebar .new { margin:10px; background:transparent; border:1px solid #2c323d; color:var(--ink); text-align:left; }
+  .sidebar .chats { flex:1; overflow:auto; padding-bottom:10px; }
+  .chatrow { display:flex; align-items:center; gap:6px; margin:1px 6px; padding:8px 10px;
+             border-radius:8px; cursor:pointer; font-size:13px; color:var(--ink); }
+  .chatrow:hover { background:#1c212b; }
+  .chatrow.active { background:#232c3a; }
+  .chatrow .t { flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .chatrow .x { color:var(--mut); opacity:0; font-size:16px; line-height:1; padding:0 2px; }
+  .chatrow:hover .x { opacity:.6; }
+  .chatrow .x:hover { opacity:1; color:#e88; }
+  header .burger { padding:6px 10px; font-size:15px; line-height:1; }
+</style>
+</head>
+<body>
+<script>
+const CFG = {{CONFIG}};
+const KEY_TOKEN = "gerp_chat_token", KEY_REFRESH = "gerp_chat_refresh", KEY_SESSION = "gerp_chat_session", KEY_COLLAPSED = "gerp_chat_sidebar_collapsed";
+
+function b64urlJson(s){ try { return JSON.parse(atob(s.replace(/-/g,"+").replace(/_/g,"/"))); } catch(_){ return null; } }
+function tokenClaims(t){ const p=(t||"").split("."); return p.length===3 ? b64urlJson(p[1]) : null; }
+function tokenValid(t){ const c=tokenClaims(t); return !!(c && c.exp && c.exp*1000 > Date.now()); }
+
+// Absorb a token however it arrives: the lambda injects it via CFG after
+// completing the hosted-UI code flow (?code= → server exchange); a dashboard
+// deep-link or hosted-UI fragment hands it via the URL hash. Move it into this
+// origin's localStorage and clean the URL either way.
+(function absorbToken(){
+  if(CFG.injectedToken){
+    localStorage.setItem(KEY_TOKEN, CFG.injectedToken);
+    if(CFG.injectedRefresh) localStorage.setItem(KEY_REFRESH, CFG.injectedRefresh);
+    history.replaceState(null,"",location.pathname);
+    return;
+  }
+  if(!location.hash) return;
+  const h = new URLSearchParams(location.hash.slice(1));
+  const t = h.get("id_token") || h.get("token");
+  // the refresh token beside it is what replaces the id token for a month without a sign-in
+  const rt = h.get("refresh_token");
+  if(rt) localStorage.setItem(KEY_REFRESH, rt);
+  // a first message on the link (the ready mail's "onboard my business"): kept for the moment
+  // the chat renders, sent once, then gone — a reload does not say it again
+  const say = (h.get("say") || "").trim().slice(0, 200);
+  if(say) sessionStorage.setItem("say_once", say);
+  if(t || say){ if(t) localStorage.setItem(KEY_TOKEN, t); history.replaceState(null,"",location.pathname); }
+})();
+
+// Fixed redirect target = this page's root. Must match the lambda's
+// reconstruction and the registered Cognito callback exactly.
+function redirectUri(){ return location.origin + "/"; }
+
+function hostedLoginUrl(){
+  if(!CFG.domainPrefix || !CFG.clientId) return null;
+  return `https://${CFG.domainPrefix}.auth.${CFG.region}.amazoncognito.com/login`
+    + `?client_id=${encodeURIComponent(CFG.clientId)}&response_type=code`
+    + `&scope=${encodeURIComponent("openid email profile")}`
+    + `&redirect_uri=${encodeURIComponent(redirectUri())}`;
+}
+
+function getToken(){ const t=localStorage.getItem(KEY_TOKEN); return tokenValid(t)?t:null; }
+// The id token lasts an hour; the refresh token replaces it in place (Cognito's InitiateAuth,
+// the same call the dashboard makes), so an open chat never falls back to the sign-in gate
+// while the refresh token holds. Null when there is none or Cognito refused it.
+async function refreshToken(){
+  const rt = localStorage.getItem(KEY_REFRESH);
+  if(!rt || !CFG.clientId || !CFG.region) return null;
+  try{
+    const r = await fetch(`https://cognito-idp.${CFG.region}.amazonaws.com/`, {
+      method:"POST",
+      headers:{ "content-type":"application/x-amz-json-1.1", "x-amz-target":"AWSCognitoIdentityProviderService.InitiateAuth" },
+      body: JSON.stringify({ AuthFlow:"REFRESH_TOKEN_AUTH", ClientId: CFG.clientId, AuthParameters:{ REFRESH_TOKEN: rt } }),
+    });
+    const d = await r.json().catch(()=>({}));
+    const t = r.ok && d.AuthenticationResult && d.AuthenticationResult.IdToken;
+    if(!t){ localStorage.removeItem(KEY_REFRESH); return null; }
+    localStorage.setItem(KEY_TOKEN, t);
+    return t;
+  }catch(_){ return null; }
+}
+// every request's bearer: the id token while it lasts, else one refreshed on the spot
+async function token(){ return getToken() || await refreshToken(); }
+function sessionId(){ let s=localStorage.getItem(KEY_SESSION); if(!s){ s="chat-"+crypto.randomUUID().replace(/-/g,"")+"x"; localStorage.setItem(KEY_SESSION,s);} return s; }
+function signOut(){ localStorage.removeItem(KEY_TOKEN); localStorage.removeItem(KEY_REFRESH); localStorage.removeItem(KEY_SESSION); render(); }
+
+function el(tag, cls, text){ const e=document.createElement(tag); if(cls)e.className=cls; if(text!=null)e.textContent=text; return e; }
+// the chat renders plain text (no markdown engine) with ONE exception: links. Markdown syntax is
+// stripped (**bold**, `code`, # headers, ~~strike~~), and [text](url) / bare https URLs become
+// real anchors — DOM-built (createElement + textContent, never innerHTML), so agent output stays
+// inert. A presigned S3 statement link is 1,500 chars of query string; showing it raw buried the
+// response, so the anchor shows the label (or the hostname for a bare URL) and carries the URL.
+function renderRich(node, s){
+  const txt = String(s == null ? "" : s)
+    .replace(/`([^`]+)`/g, "$1")
+    .replace(/\*\*([^*]+)\*\*/g, "$1")
+    .replace(/~~([^~]+)~~/g, "$1")
+    .replace(/^\s{0,3}#{1,6}\s+/gm, "")
+    .replace(/^\s{0,3}>\s?/gm, "");
+  node.textContent = "";
+  const re = /\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)|(https?:\/\/[^\s)\]]+)/g;
+  let i = 0, m;
+  while((m = re.exec(txt))){
+    if(m.index > i) node.append(txt.slice(i, m.index));
+    const url = m[2] || m[3];
+    const a = document.createElement("a");
+    a.href = url; a.target = "_blank"; a.rel = "noopener";
+    let label = m[1];
+    if(!label){ try{ label = new URL(url).hostname; }catch(_){ label = "link"; } }
+    a.textContent = label;
+    node.append(a);
+    i = re.lastIndex;
+  }
+  node.append(txt.slice(i));
+}
+
+// Tool-status phrasing — the single source, applied to BOTH the live status stream and saved-chat
+// replay so they read identically. The container emits the raw tool name; this maps it (exact, then
+// ordered substring, else a generic line). Names may be gateway-namespaced ("target___tool") —
+// substring matching handles that.
+const STATUS_EXACT = { post_journal_entry:"recording the entry", get_statement:"pulling your statements", classify_pending:"classifying", get_inbound:"reading your inbox" };
+const STATUS_SUBSTR = [["task","working your tasks"],["note","reading your notes"],["labor","working the labor records"],["schedule","working the schedule"],["bank","linking your bank"],["rule","working your rules"],["payment_link","making the payment link"],["invoice","reading your invoices"],["po","reading your orders"],["order","reading your orders"],["stock","reading inventory"],["item","reading inventory"],["contact","looking up the contact"],["schema","reading the registry"]];
+function friendly(tool){
+  if(STATUS_EXACT[tool]) return STATUS_EXACT[tool];
+  const low = (tool||"").toLowerCase();
+  for(const [needle,text] of STATUS_SUBSTR){ if(low.includes(needle)) return text; }
+  return "working";
+}
+
+function render(){
+  document.body.innerHTML = "";
+  if(getToken()){ renderChat(); return; }
+  if(localStorage.getItem(KEY_REFRESH)){ refreshToken().then(t=> t ? renderChat() : renderGate()); return; }
+  renderGate();
+}
+
+function renderGate(){
+  const g = el("div","gate");
+  g.append(el("h1",null,"Sign in to your workspace"));
+  g.append(el("p",null,"Open this chat from your gradienterp.cloud dashboard, or paste an id token below."));
+  const login = hostedLoginUrl();
+  const row = el("div","row");
+  if(login){
+    const b = el("button",null,"Sign in with Cognito");
+    b.onclick = ()=> location.href = login;
+    row.append(b);
+  }
+  g.append(row);
+  const ta = el("textarea"); ta.placeholder = "paste a Cognito id token (eyJ...)";
+  const use = el("button","ghost","Use token");
+  use.onclick = ()=>{ const t=ta.value.trim(); if(tokenValid(t)){ localStorage.setItem(KEY_TOKEN,t); render(); } else { ta.value=""; ta.placeholder="that token is invalid or expired — try again"; } };
+  g.append(ta, use);
+  document.body.append(g);
+}
+
+function renderChat(){
+  const claims = tokenClaims(getToken()) || {};
+  // layout: [collapsible sidebar of saved chats] [main: header, log, form]
+  const wrap = el("div","wrap");
+  const side = el("aside","sidebar");
+  if(localStorage.getItem(KEY_COLLAPSED)==="1") side.classList.add("collapsed");
+  const newBtn = el("button","new","+  New chat");
+  const chats = el("div","chats");
+  side.append(newBtn, chats);
+
+  const main = el("div","main");
+  const head = el("header");
+  const burger = el("button","ghost burger","☰"); burger.title="toggle saved chats";
+  head.append(burger, el("b",null,"workspace chat"));
+  head.append(el("span","role", CFG.businessName ? `· ${CFG.businessName}` : (claims.email ? `· ${claims.email}` : "")));
+  head.append(el("div","sp"));
+  const out = el("button","ghost","sign out"); out.onclick = signOut; head.append(out);
+
+  const log = el("div"); log.id="log";
+  const form = el("form");
+  const in_ = el("textarea"); in_.id="in"; in_.rows=1; in_.placeholder="message your agent…";
+  const send = el("button",null,"Send"); send.type="submit";
+  form.append(in_, send);
+  main.append(head, log, form);
+
+  wrap.append(side, main);
+  document.body.append(wrap);
+
+  burger.onclick = ()=>{ side.classList.toggle("collapsed"); localStorage.setItem(KEY_COLLAPSED, side.classList.contains("collapsed")?"1":"0"); };
+
+  const add = (cls, text)=>{ const m=el("div","msg "+cls, text); log.append(m); log.scrollTop=log.scrollHeight; return m; };
+  const intro = ()=> add("sys","Ask about your books, inventory, invoices, orders — anything your agent can do.");
+
+  // ── saved chats: list, open (replay from Memory), new, delete ──
+  let current = localStorage.getItem(KEY_SESSION) || null;     // active session, for highlighting
+  let formPending = false;                                     // a secret form is open, awaiting submit
+  const highlight = ()=> [...chats.children].forEach(r=> r.classList.toggle("active", r.dataset.sid===current));
+
+  async function loadChats(){
+    try{
+      const r = await fetch("/api/chats", { headers:{ "authorization":"Bearer "+(await token()) } });
+      if(!r.ok) return;
+      const list = (await r.json()).chats || [];
+      chats.innerHTML = "";
+      for(const c of list){
+        const row = el("div","chatrow"); row.dataset.sid = c.session_id;
+        row.append(el("span","t", c.title));
+        const x = el("span","x","×"); x.title="delete";
+        x.onclick = (e)=>{ e.stopPropagation(); delChat(c.session_id, row); };
+        row.append(x);
+        row.onclick = ()=> openChat(c.session_id);
+        chats.append(row);
+      }
+      highlight();
+    }catch(_){ /* sidebar is best-effort */ }
+  }
+
+  function replay(messages){
+    log.innerHTML = "";
+    if(!messages || !messages.length){ intro(); return; }
+    for(const m of messages){
+      if(m.role==="user") add("me", m.text);
+      else if(m.role==="assistant"){ const b=el("div","msg agent"); renderRich(b, m.text); log.append(b); }
+      else if(m.role==="tool") log.append(el("div","tool", friendly(m.name)));  // raw tool name → same friendly phrase as live
+    }
+    log.scrollTop = log.scrollHeight;
+  }
+
+  async function openChat(sid){
+    if(send.disabled) return;                                  // mid-turn → ignore
+    current = sid; localStorage.setItem(KEY_SESSION, sid); highlight();
+    log.innerHTML=""; add("sys","loading…");
+    try{
+      const r = await fetch("/api/history?session_id="+encodeURIComponent(sid), { headers:{ "authorization":"Bearer "+(await token()) } });
+      if(!r.ok){ log.innerHTML=""; add("sys","couldn't load this chat"); return; }
+      replay((await r.json()).messages);
+    }catch(_){ log.innerHTML=""; add("sys","couldn't load this chat"); }
+    in_.focus();
+  }
+
+  function newChat(){
+    if(send.disabled) return;
+    current = null; localStorage.removeItem(KEY_SESSION); highlight();
+    log.innerHTML=""; intro(); in_.focus();
+  }
+  newBtn.onclick = newChat;
+
+  async function delChat(sid, row){
+    row.remove();
+    try{ await fetch("/api/chats?session_id="+encodeURIComponent(sid), { method:"DELETE", headers:{ "authorization":"Bearer "+(await token()) } }); }catch(_){}
+    if(sid===current) newChat();
+  }
+
+  intro();
+  loadChats();
+
+  // Drive one streamed turn from a POST body — {message,...} for a composer send, or
+  // {frame_submit,...} to resume a paused secret form. A turn renders as a chronological
+  // sequence in the log: agent text bubbles + centered tool-use lines (a persistent, auditable
+  // trail). `working` is a dots bubble parked last while between outputs.
+  async function streamTurn(body){
+    let curBubble = null;
+    const working = el("div","msg agent typing");
+    working.innerHTML = '<span class="dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></span>';
+    log.append(working); log.scrollTop = log.scrollHeight;
+    const showWorking = ()=>{ working.style.display=""; log.append(working); log.scrollTop = log.scrollHeight; }; // keep it last
+    const hideWorking = ()=>{ working.style.display="none"; };
+
+    let hint = null;
+    const hintTimer = setTimeout(()=>{ if(!curBubble && working.isConnected) hint = add("sys","still working… agent turns can take a moment"); }, 10000);
+    const clearHint = ()=>{ clearTimeout(hintTimer); if(hint){ hint.remove(); hint=null; } };
+
+    const onStatus = (s)=>{                                   // a tool fired → a centered line that STAYS (the audit trail)
+      clearHint();
+      curBubble = null;                                       // any text after this tool is a fresh bubble (chronological)
+      log.insertBefore(el("div","tool", friendly(s)), working);  // s is the raw tool name; map it the same way replay does
+      showWorking();                                          // still working on/after the tool
+    };
+    const onText = (t)=>{
+      clearHint(); hideWorking();
+      if(!curBubble){ curBubble = el("div","msg agent"); curBubble._t=""; log.insertBefore(curBubble, working); }
+      curBubble._t += t; renderRich(curBubble, curBubble._t); log.scrollTop = log.scrollHeight;
+    };
+    const fail = (m)=>{ clearHint(); hideWorking(); log.insertBefore(el("div","msg agent",m), working); };
+
+    send.disabled=true; in_.disabled=true;
+    let sawForm = false;
+    try{
+      const r = await fetch("/api/chat", {
+        method:"POST",
+        headers:{ "content-type":"application/json", "authorization":"Bearer "+(await token()) },
+        body: JSON.stringify(body),
+      });
+      if(r.status===401){ clearHint(); working.remove(); signOut(); return; }   // no token and no refresh left
+      if(r.status!==200){ const d=await r.json().catch(()=>({})); fail(d.error||("error "+r.status)); return; }
+
+      // newline-delimited JSON: {session} then {status|text|form}* then {done}
+      const reader = r.body.getReader(), dec = new TextDecoder();
+      let buf = "";
+      for(;;){
+        const {done, value} = await reader.read();
+        if(done) break;
+        buf += dec.decode(value, {stream:true});
+        let nl;
+        while((nl = buf.indexOf("\n")) >= 0){
+          const line = buf.slice(0, nl).trim(); buf = buf.slice(nl+1);
+          if(!line) continue;
+          let m; try{ m = JSON.parse(line); }catch{ continue; }
+          if(m.type==="session"){ if(m.session_id){ localStorage.setItem(KEY_SESSION, m.session_id); current = m.session_id; } }
+          else if(m.type==="status") onStatus(m.text||"");
+          else if(m.type==="text") onText(m.text||"");
+          else if(m.type==="frame"){ sawForm = true; clearHint(); hideWorking(); renderFrame(m); }
+        }
+      }
+      if(!curBubble && !sawForm) onText("(no response)");
+    }catch(err){ fail("request failed: "+err); }
+    finally{
+      working.remove();
+      if(!formPending){ send.disabled=false; in_.disabled=false; in_.focus(); }  // a pending form holds the composer
+      loadChats();                                            // refresh list: new chat appears, title + recency update
+    }
+  }
+
+  // secret form: an agent-opened form ANCHORED above the composer (animates open/closed), not a
+  // scrolling chat element. The composer stays locked while it's open (a fresh prompt can't resume an
+  // interrupt). Submit sends the values; the [×] bails — resuming the agent with {cancelled}, no sink call.
+  function renderFrame(m){
+    formPending = true; send.disabled = true; in_.disabled = true;
+    const spec = m.spec || {}, fields = Array.isArray(spec.fields) ? spec.fields : [];
+    const panel = el("div","formpanel");
+    const inner = el("div","inner"); panel.append(inner);
+
+    const fhead = el("div","fhead");
+    fhead.append(el("div","ftitle", spec.title || "Enter details"));
+    const closeBtn = el("button","fclose","×"); closeBtn.title = "cancel"; closeBtn.type = "button";
+    fhead.append(closeBtn);
+    inner.append(fhead);
+
+    const inputs = [];
+    for(const f of fields){
+      const isCheck = f.type==="checkbox";
+      const row = el("div","formrow" + (isCheck ? " check" : ""));
+      const labelText = (f.label||f.name) + (f.required ? " *" : "");
+      let input;
+      if(f.type==="select"){
+        input = el("select");
+        for(const o of (f.options||[])){ const opt = el("option",null,o); opt.value = o; input.append(opt); }
+      } else if(f.type==="secure"){
+        // reveal-while-typing, mask on blur — you see your SSN as you enter it, it asterisks once
+        // you move off the field. NOT a password field (no immediate masking). _real holds the value.
+        input = el("input"); input.type = "text"; input.autocomplete = "off"; input._real = "";
+        input.addEventListener("input", ()=>{ input._real = input.value; });
+        input.addEventListener("focus", ()=>{ input.value = input._real; });
+        input.addEventListener("blur",  ()=>{ input.value = input._real ? "•".repeat(input._real.length) : ""; });
+      } else {
+        input = el("input");
+        input.type = ({ date:"date", number:"number", checkbox:"checkbox" })[f.type] || "text";
+      }
+      isCheck ? row.append(input, el("label",null,labelText)) : row.append(el("label",null,labelText), input);
+      inner.append(row);
+      inputs.push({ field:f, input });
+    }
+    const err = el("div","ferr");
+    const submitBtn = el("button",null,"Submit"); submitBtn.type = "button";
+    const actions = el("div","factions"); actions.append(submitBtn);
+    inner.append(err, actions);
+
+    main.insertBefore(panel, form);                           // anchored just above the composer, not in the log
+    setTimeout(()=> panel.classList.add("open"), 20);         // next paint → animate open
+
+    const close = ()=>{                                       // animate out, then unlock the composer
+      panel.classList.remove("open");
+      setTimeout(()=> panel.remove(), 300);
+      formPending = false; send.disabled = false; in_.disabled = false;
+    };
+
+    closeBtn.onclick = async (e)=>{                           // [×] bail — resume the agent, no values, no sink call
+      e.preventDefault();
+      close();
+      add("sys", "(form cancelled)");
+      await streamTurn({ frame_submit:{ interrupt_id: m.interrupt_id, cancelled: true }, session_id: current || sessionId() });
+    };
+
+    submitBtn.onclick = async (e)=>{
+      e.preventDefault();
+      const values = {}, missing = [];
+      for(const { field, input } of inputs){
+        const val = field.type==="checkbox" ? input.checked
+                  : field.type==="secure"   ? (input._real || input.value)   // real value, not the masked display
+                  : input.value;
+        if(field.required && (val==="" || val==null || val===false)) missing.push(field.label||field.name);
+        values[field.name] = val;
+      }
+      if(missing.length){ err.textContent = "Please fill: " + missing.join(", "); err.style.display = "block"; return; }
+      close();                                                 // animate out
+      add("me", summarizeForm(fields, values));                // secure masked
+      // the values go to the lambda, which invokes the sink tool with them and resumes the agent
+      // with only the outcome (the agent never sees the values). echo tool/args/values_key for the invoke.
+      await streamTurn({ frame_submit:{ interrupt_id: m.interrupt_id, tool: spec.tool, args: spec.args || {}, values_key: spec.values_key || "", values }, session_id: current || sessionId() });
+    };
+  }
+
+  // One-line echo of the submission — secure fields masked; the value never hits the visible log.
+  function summarizeForm(fields, response){
+    const parts = [];
+    for(const f of fields){
+      const v = response[f.name];
+      if(f.type==="secure") parts.push((f.label||f.name) + ": ••••");
+      else if(f.type==="checkbox") parts.push((f.label||f.name) + ": " + (v ? "yes" : "no"));
+      else if(v!=="" && v!=null) parts.push((f.label||f.name) + ": " + v);
+    }
+    return parts.length ? parts.join(" · ") : "(submitted)";
+  }
+
+  async function submit(e){
+    e && e.preventDefault();
+    if(formPending) return;                                   // finish the open form first
+    const text = in_.value.trim(); if(!text) return;
+    in_.value=""; add("me", text);
+    const sid = sessionId(); current = sid;                   // creates + persists a fresh id for a new chat
+    await streamTurn({ message:text, session_id: sid });
+  }
+  form.addEventListener("submit", submit);
+  in_.addEventListener("keydown", e=>{ if(e.key==="Enter" && !e.shiftKey){ submit(e); } });
+  in_.focus();
+  const first = sessionStorage.getItem("say_once");
+  if(first){ sessionStorage.removeItem("say_once"); in_.value = first; submit(); }
+}
+
+render();
+</script>
+</body>
+</html>

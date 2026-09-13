@@ -1,0 +1,36 @@
+# Example inputs for local `terraform plan` dry-runs against this module.
+# Copy to terraform.tfvars (gitignored) to iterate without wiring through prod/.
+#
+# Tenant metadata (business_name, owner_email, policies, reporting_schedule,
+# etc.) is NOT here. It lives in SSM Parameter Store at
+#   /gradienterp/customers/<customer_id>
+# as a JSON blob. Seed it before `terraform apply` with:
+#
+#   aws ssm put-parameter \
+#     --name /gradienterp/customers/sandbox_01 \
+#     --type String \
+#     --value '{"business_name":"Maria'"'"'s Cafe","business_category":"quick_serve_restaurant","owner_email":"maria@example.com","owner_phone":"+15555550100","reporting_schedule":"cron(0 9 1 * ? *)","openly_operated":true,"policies":{"spend_threshold":500,"classification_confidence":0.8}}'
+#
+# Real instantiation of this module per customer happens via prod/customers.tf
+# — see modules/agent/AGENTS.md for the full module contract.
+
+customer_id = "sandbox_01"
+
+# Outputs from `terraform apply` on modules/accounting/infra and
+# modules/inventory/infra — copy them from those modules' outputs after
+# their apply. (Or let a composition layer wire them automatically.)
+accounting_lambda_arns = {
+  post_journal_entry   = "arn:aws:lambda:us-east-1:000000000000:function:oob-accounting-sandbox-01-post_journal_entry"
+  classify_pending = "arn:aws:lambda:us-east-1:000000000000:function:oob-accounting-sandbox-01-classify_pending"
+  get_trial_balance    = "arn:aws:lambda:us-east-1:000000000000:function:oob-accounting-sandbox-01-get_trial_balance"
+  get_income_statement = "arn:aws:lambda:us-east-1:000000000000:function:oob-accounting-sandbox-01-get_income_statement"
+  get_balance_sheet    = "arn:aws:lambda:us-east-1:000000000000:function:oob-accounting-sandbox-01-get_balance_sheet"
+  generate_report      = "arn:aws:lambda:us-east-1:000000000000:function:oob-accounting-sandbox-01-generate_report"
+}
+
+inventory_lambda_arns = {
+  manage_stock = "arn:aws:lambda:us-east-1:000000000000:function:oob-inventory-sandbox-01-manage_stock"
+}
+
+aws_region      = "us-east-1"
+agent_image_tag = "dev"

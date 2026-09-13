@@ -1,0 +1,83 @@
+{
+  "api_id": null,
+  "functions": {
+    "gerp-api-economy_counters": {
+      "env": {
+        "COUNTERS_TABLE": "gerp-counters",
+        "CUSTOMERS_TABLE": "gerp-customers",
+        "EVENTS_HTTP_HOST": "zj3z53hujne4fgezofcckdl3wa.appsync-api.us-east-1.amazonaws.com",
+        "EVENTS_KEY": "da2-3h4at3kbtjhwvpdsvdsjqtgz5e",
+        "EVENTS_REALTIME_HOST": "zj3z53hujne4fgezofcckdl3wa.appsync-realtime-api.us-east-1.amazonaws.com",
+        "PROFILES_TABLE": "gerp-profiles",
+        "PUBLIC_BASE": "https://api.openlyoperated.biz/v1"
+      },
+      "src_dir": "prod/api_openlyoperated/api/v1/economy_counters",
+      "timeout": 30
+    },
+    "gerp-api-events": {
+      "env": {
+        "COUNTERS_TABLE": "gerp-counters",
+        "CUSTOMERS_TABLE": "gerp-customers",
+        "EVENTS_HTTP_HOST": "zj3z53hujne4fgezofcckdl3wa.appsync-api.us-east-1.amazonaws.com",
+        "EVENTS_KEY": "da2-3h4at3kbtjhwvpdsvdsjqtgz5e",
+        "EVENTS_REALTIME_HOST": "zj3z53hujne4fgezofcckdl3wa.appsync-realtime-api.us-east-1.amazonaws.com",
+        "PROFILES_TABLE": "gerp-profiles",
+        "PUBLIC_BASE": "https://api.openlyoperated.biz/v1"
+      },
+      "src_dir": "prod/api_openlyoperated/api/v1/events",
+      "timeout": 900
+    },
+    "gerp-api-gerps": {
+      "env": {
+        "COUNTERS_TABLE": "gerp-counters",
+        "CUSTOMERS_TABLE": "gerp-customers",
+        "EVENTS_HTTP_HOST": "zj3z53hujne4fgezofcckdl3wa.appsync-api.us-east-1.amazonaws.com",
+        "EVENTS_KEY": "da2-3h4at3kbtjhwvpdsvdsjqtgz5e",
+        "EVENTS_REALTIME_HOST": "zj3z53hujne4fgezofcckdl3wa.appsync-realtime-api.us-east-1.amazonaws.com",
+        "PROFILES_TABLE": "gerp-profiles",
+        "PUBLIC_BASE": "https://api.openlyoperated.biz/v1"
+      },
+      "src_dir": "prod/api_openlyoperated/api/v1/gerps",
+      "timeout": 30
+    },
+    "gerp-api-gerps_sources": {
+      "env": {
+        "COUNTERS_TABLE": "gerp-counters",
+        "CUSTOMERS_TABLE": "gerp-customers",
+        "EVENTS_HTTP_HOST": "zj3z53hujne4fgezofcckdl3wa.appsync-api.us-east-1.amazonaws.com",
+        "EVENTS_KEY": "da2-3h4at3kbtjhwvpdsvdsjqtgz5e",
+        "EVENTS_REALTIME_HOST": "zj3z53hujne4fgezofcckdl3wa.appsync-realtime-api.us-east-1.amazonaws.com",
+        "PROFILES_TABLE": "gerp-profiles",
+        "PUBLIC_BASE": "https://api.openlyoperated.biz/v1"
+      },
+      "src_dir": "prod/api_openlyoperated/api/v1/gerps_sources",
+      "timeout": 900
+    },
+    "gerp-econ-counter": {
+      "env": {
+        "COUNTERS_TABLE": "gerp-counters"
+      },
+      "src_dir": "prod/api_openlyoperated/lambdas/counter",
+      "timeout": 15
+    },
+    "gerp-published": {
+      "env": {
+        "CUSTOMERS_TABLE": "gerp-customers"
+      },
+      "src_dir": "prod/api_openlyoperated/lambdas/published",
+      "timeout": 10
+    },
+    "gerp-publisher": {
+      "env": {
+        "CUSTOMERS_TABLE": "gerp-customers",
+        "EVENTS_HTTP": "https://zj3z53hujne4fgezofcckdl3wa.appsync-api.us-east-1.amazonaws.com/event"
+      },
+      "src_dir": "prod/api_openlyoperated/lambdas/publisher",
+      "timeout": 20
+    }
+  },
+  "gerp": "gradienterp",
+  "protocol": null,
+  "routes": [],
+  "stack": "openlyoperated_biz"
+}

@@ -1,0 +1,144 @@
+{
+  "$comment": "The fleet's self-description. Every tag here is a DECLARATION by a deployed resource about itself, which is why deploy.py keeps no list of 122 lambdas and reset_dev.py keeps no list of tables. Prose on why each exists is in AGENTS.md; the enums live here so a reader gets them in one look and a lint reads the same values it documents. Descriptions are data, not comments: `jq '.\"gerp:layer\".values | keys'` answers the question.",
+  "gerp:src-dir": {
+    "status": "live",
+    "purpose": "where this function's code is, exactly \u2014 so a deployed name never has to follow a naming convention",
+    "applies_to": [
+      "aws_lambda_function"
+    ],
+    "value": "the source dir, repo-relative: modules/<m>/lambdas/<fn> or prod/<stack>/lambdas/<fn>",
+    "required": true,
+    "consumers": {
+      "scripts/deploy.py": "fleet membership + fn -> src_dir in one query; fans update-function-code over the result",
+      "modules/aws/aws.py": "PROPOSED \u2014 resolve a deployed name to its handler for in-process dispatch, instead of globbing the name's last segment (which collides: apply_inbound, settle_agreement)"
+    },
+    "query": "aws resourcegroupstaggingapi get-resources --tag-filters Key=gerp:src-dir --resource-type-filters lambda:function",
+    "notes": [
+      "presence is fleet membership; a lambda deployed as an image rather than a zip omits the tag",
+      "for_each interpolates: \"gerp:src-dir\" = \"modules/notes/lambdas/${each.key}\"",
+      "merge with an existing tags map, never replace it"
+    ]
+  },
+  "gerp:layer": {
+    "status": "live",
+    "purpose": "what class of state this holds, so a reset knows what it may empty",
+    "applies_to": [
+      "aws_dynamodb_table",
+      "aws_s3_bucket"
+    ],
+    "applies_to_proposed": [
+      "aws_ssm_parameter"
+    ],
+    "required": true,
+    "values": {
+      "config": "schema / settings / rules-params. Platform configuration \u2014 NEVER reset.",
+      "books": "the accounting ledger and everything derived from it: balances, pending, report CSVs",
+      "operational": "the business registers \u2014 inventory, invoicing, purchasing, labor, contacts, assets, shipping, tasks, notes, calendar, inbox, payments, treasury \u2014 plus rule instances and agent uploads",
+      "session": "agent chat / email / session state: transcripts, the S3SessionManager store, memory"
+    },
+    "consumers": {
+      "scripts/reset_dev.py": "empties every layer but config; --layer <name> targets one",
+      "tests/helpers/localaws.py": "snapshot_schemas() sweeps by this tag and describe_table()s each hit into tests/testdata/table-schemas.json",
+      "the local image": "PROPOSED \u2014 seed what a stack needs, reset between scenarios"
+    },
+    "query": "aws resourcegroupstaggingapi get-resources --tag-filters Key=gerp:layer --resource-type-filters dynamodb:table s3:bucket",
+    "notes": [
+      "the reset EMPTIES, never drops \u2014 table/stream config and bucket policies survive, so the tenant stays functional with empty books",
+      "AgentCore Memory is neither DDB nor S3, so `session` clears the saved-chat index and session store while Memory transcripts age out on TTL"
+    ]
+  },
+  "gerp:stack": {
+    "status": "live",
+    "purpose": "which local image this resource belongs to, so standing one up is a query rather than a hand-kept list",
+    "applies_to": [
+      "aws_lambda_function",
+      "aws_dynamodb_table",
+      "aws_s3_bucket",
+      "aws_ssm_parameter",
+      "aws_cloudwatch_event_bus",
+      "aws_cloudwatch_event_rule",
+      "aws_scheduler_schedule_group",
+      "aws_apigatewayv2_api",
+      "aws_cloudfront_distribution"
+    ],
+    "one_owner_per_resource": "A resource carries exactly ONE stack \u2014 the one that OWNS it. Cross-stack reads are a fact about the stack, declared in depends_on below, not a second value on every resource. The four operator tables are read by bff and written by tower; they are tagged platform.",
+    "values": {
+      "init_customer": {
+        "description": "the part of a tenant that OUTLIVES the tenant \u2014 the document store, its CMK, the export reader role and export_gerp. A separate stack because a statefile is terraform's only destroy boundary: closing a gerp destroys per_customer whole while the owner's export stays downloadable for fifteen days. Applied first at provisioning, destroyed last at the end of that window.",
+        "roots": [
+          "prod/init_customer",
+          "modules/export/infra"
+        ],
+        "depends_on": [
+          "platform"
+        ]
+      },
+      "per_customer": {
+        "description": "a tenant's own stack \u2014 a composition of modules/*/infra, which is why prod/per_customer/ declares almost nothing and the directory cannot answer membership. Finds init_customer's bucket and CMK by NAME with data sources, not remote state.",
+        "roots": [
+          "prod/per_customer",
+          "modules/*/infra"
+        ],
+        "depends_on": [
+          "platform",
+          "init_customer"
+        ]
+      },
+      "bff": {
+        "description": "gradienterp.cloud, the owner web app. Reads platform's four operator tables and invokes tower's provisioner \u2014 both are depends_on, which is what merges their function config into the bff's local image.",
+        "roots": [
+          "prod/gradienterp_cloud"
+        ],
+        "depends_on": [
+          "platform",
+          "tower",
+          "per_customer"
+        ]
+      },
+      "openlyoperated_biz": {
+        "description": "the public dashboard: static site plus its read API. Two roots, one stack.",
+        "roots": [
+          "prod/openlyoperated_biz",
+          "prod/api_openlyoperated"
+        ],
+        "depends_on": [
+          "platform"
+        ]
+      },
+      "platform": {
+        "description": "operator singletons \u2014 the customers/members/accounts/profiles tables, the shared gerp-events bus, the event dispatcher. Not a front door; the substrate the other three read.",
+        "roots": [
+          "prod/platform"
+        ],
+        "depends_on": []
+      },
+      "tower": {
+        "description": "provisioning, billing, signup intake. A runtime with no front door of its own.",
+        "roots": [
+          "prod/tower"
+        ],
+        "depends_on": [
+          "platform"
+        ]
+      },
+      "optimizer": {
+        "description": "the a2a hub and the profile-match index",
+        "roots": [
+          "prod/optimizer"
+        ],
+        "depends_on": [
+          "platform"
+        ]
+      }
+    },
+    "not_tagged": {
+      "aws_lambda_function_url": "a property of its function, not an independent resource \u2014 the function's tag covers it and the builder reads get_function_url_config. Three of the four front doors in this fleet are Function URLs and appear in no OpenAPI export.",
+      "routes": "an APIGW route is not tagged. The gateway already merges routes across every module that attached one, and exports them: aws apigatewayv2 export-api --specification OAS30. Websocket APIs cannot be exported (OAS does not model them) \u2014 read those with get-routes."
+    },
+    "applied_via": "provider default_tags, one block per terraform root (prod/*/versions.tf) \u2014 NOT per resource. Every resource a root creates carries it, including inside child modules and including resources added later, so there is nothing to forget and no lint needed for presence. Untaggable types (aws_apigatewayv2_route) simply do not receive it.",
+    "consumers": {
+      "the local image": "PROPOSED \u2014 one query returns a stack's resource set, so standing it up needs no hand-kept list"
+    },
+    "query": "aws resourcegroupstaggingapi get-resources --tag-filters Key=gerp:stack"
+  }
+}

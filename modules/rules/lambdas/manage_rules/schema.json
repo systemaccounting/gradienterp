@@ -1,0 +1,39 @@
+{
+  "type": "object",
+  "description": "Business automations as rows: add attaches a rule instance to a key, delete turns one off (built-in canonical defaults resume), list shows what is attached, canonical defaults included.",
+  "required": [
+    "op"
+  ],
+  "properties": {
+    "op": {
+      "type": "string",
+      "enum": [
+        "add",
+        "delete",
+        "list"
+      ],
+      "description": "add: write an instance. delete: remove one. list: read what is attached."
+    },
+    "matches": {
+      "type": "string",
+      "description": "The key. add (required): where the instance runs and so WHEN \u2014 'INVOICE_LINE#<item_id>' (or '#*' for every item) when a line is priced, 'STOCK_SOLD#<item_id>', 'REORDER#<item_id>', 'PAY_RUN#<contact_id>', 'CLOSE_SHIFT#<contact_id>', 'INVOICE_STATUS#issued', 'INVOICE_TAG#<tag>'. delete (required): the row's key as list shows it. list: optional filter; an INVOICE_LINE#<key> answer includes the '#*' catch-alls a sale would trigger."
+    },
+    "rule": {
+      "type": "string",
+      "description": "add only, required there: which rule. 'multiply_item_value' derives an item worth factor x the one sold (a tax, a tip, a fee). 'rate_posting' posts factor x a base, optionally capped at a wage base \u2014 nearly every payroll tax IS this (FICA, SDI, FUTA, SUI, ETT). 'wage_accrual' is hours x rate. 'us_federal' / 'ca_pit' are the income-tax worksheets. rule_params op=get catalog=true lists what is available and what each needs."
+    },
+    "name": {
+      "type": "string",
+      "description": "add (required): what this firm calls this use of the rule, e.g. 'ca_sales_tax', 'futa'. A second rule on the same key stacks. delete (required): the instance's name."
+    },
+    "n": {
+      "type": "number",
+      "description": "Order when several rules match one key. Items: 300 = a state tax, 310 = a city tax on top. A pay run: 90 us_federal, 100/101 FICA, 110 ca_pit, 120 sdi, 200+ employer taxes. add: defaults to 300. delete: omit \u2014 the row is found by name; pass it only when two instances share a name."
+    },
+    "param": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "add only, required there: this instance's values. multiply_item_value: factor (0.0725 = 7.25%), creditor (e.g. SALES_TAX_PAYABLE), name (as it reads on the invoice), creditorType (LIABILITY when held for someone else). rate_posting: factor, base ('gross'), optional cap + consumed ('gross_wages') \u2014 cap may NAME a platform base ('ss_wage_base'), debit + debitType, credit + creditType. us_federal: the W-4. ca_pit: the DE-4."
+    }
+  }
+}

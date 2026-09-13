@@ -1,0 +1,77 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "modules/events/treasury/distribution.paid.v1",
+  "title": "distribution.paid",
+  "description": "Emitted by treasury's distribution handler after post_journal_entry books a dividend/interest payment to a holder. Visibility-plane announcement, downstream of the durable ledger write — carries entry_id so the payout is self-verifying against journal_entry.posted in the public archive.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "openly_operated",
+    "customer_id",
+    "instrument_id",
+    "holder",
+    "rule",
+    "amount",
+    "period_end",
+    "cumulative_paid",
+    "entry_id"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "integer",
+      "const": 1,
+      "description": "Bumped on breaking shape change. Consumers branch on it."
+    },
+    "openly_operated": {
+      "type": "boolean",
+      "description": "Set at emit time from local SSM tenant metadata. The publication rule's filter — true means the payout surfaces on the public stream."
+    },
+    "customer_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Tenant identifier. Redundant with envelope account-id but saves consumers a join."
+    },
+    "instrument_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The instrument that paid — the rules-params row / offer id keyed to the holder."
+    },
+    "holder": {
+      "class": "subject",
+      "type": "string",
+      "minLength": 1,
+      "description": "The holder's contact_id. An opaque reference, not PII."
+    },
+    "rule": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The distribution rule that fired, e.g. net_income_percent_dividend / net_income_percent_perpetuity / interest_perpetuity. A free string, not an enum — the rule families grow, and a stale enum would reject new instruments."
+    },
+    "amount": {
+      "type": "number",
+      "exclusiveMinimum": 0,
+      "description": "Amount paid this cycle (the positive delta posted to DIVIDENDS_PAYABLE). Always > 0 — a zero-delta cycle emits nothing."
+    },
+    "period_end": {
+      "type": "string",
+      "minLength": 1,
+      "description": "ISO-8601 period close that fired this distribution (matches accounting's periodEnd). Idempotency fold-point: one distribution per (instrument, period_end)."
+    },
+    "cumulative_paid": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Total paid to this instrument through this cycle, inclusive. Folds over the ledger; drives cap fulfillment."
+    },
+    "cap_remaining": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Optional. Present only for capped instruments — cap minus cumulative_paid after this payment. Absent on perpetuities (no cap). Reaching 0 stamps the instrument's end_time."
+    },
+    "entry_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The journal_entry.posted entry_id this payout booked. The verification join: read distribution.paid off the public stream, check it against the ledger entry."
+    }
+  }
+}

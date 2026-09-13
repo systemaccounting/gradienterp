@@ -1,0 +1,39 @@
+{
+  "type": "object",
+  "description": "Send email as the firm's own address. `to`/`subject`/`body` for one message, `messages` for many with different content each. `to` takes ONE address. Check failed_count \u2014 a partial send returns 200.",
+  "properties": {
+    "from": {
+      "type": "string",
+      "description": "Which configured sender it comes from, e.g. 'billing@theirshop.com'. Omit for the firm's default sender."
+    },
+    "to": {
+      "type": "string",
+      "description": "ONE recipient address. For several people use `messages`."
+    },
+    "subject": {
+      "type": "string",
+      "description": "Subject line."
+    },
+    "body": {
+      "type": "string",
+      "description": "The message, as plain text."
+    },
+    "cc": {
+      "type": "array",
+      "description": "Addresses that should see each other on this one message.",
+      "items": {
+        "type": "string",
+        "description": "An email address."
+      }
+    },
+    "messages": {
+      "type": "array",
+      "description": "Many messages in one call, each {to, subject, body}. One connection, one set of results.",
+      "items": {
+        "type": "string",
+        "description": "A message object: {to, subject, body, cc?}."
+      }
+    }
+  },
+  "required": []
+}

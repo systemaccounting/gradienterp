@@ -1,0 +1,13 @@
+{
+  "type": "object",
+  "description": "Code-review a staged automation script. Runs a fresh reviewer over it and returns findings; on a pass it returns a ticket that approve_automation needs. Review before approving.",
+  "required": [
+    "script"
+  ],
+  "properties": {
+    "script": {
+      "type": "string",
+      "description": "File name of the staged script, e.g. 'close_stale_incidents.py'."
+    }
+  }
+}

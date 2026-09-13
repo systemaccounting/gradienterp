@@ -1,0 +1,174 @@
+{
+  "schedule": {
+    "name": {
+      "type": "string",
+      "required": true,
+      "description": "agent-chosen slug, stable over the schedule's lifetime; lowercase hyphen-separated (e.g. \"weekly-inventory-check\")",
+      "class": "operational",
+      "shape": "copied"
+    },
+    "description": {
+      "type": "string",
+      "required": true,
+      "description": "human-readable rationale; shown back to the owner when they ask what's scheduled. free-form rationale, untemplated",
+      "class": "secret",
+      "shape": "copied"
+    },
+    "schedule_expression": {
+      "type": "string",
+      "required": true,
+      "description": "EB Scheduler syntax: at(yyyy-mm-ddThh:mm:ss) | rate(N minutes|hours|days) | cron(...). Agent generates from natural language.",
+      "class": "operational",
+      "shape": "copied"
+    },
+    "timezone": {
+      "type": "string",
+      "required": false,
+      "default": "UTC",
+      "description": "IANA tz name (e.g. \"America/Los_Angeles\"); applies only to cron expressions",
+      "class": "operational",
+      "shape": "copied"
+    },
+    "enabled": {
+      "type": "boolean",
+      "required": false,
+      "default": true,
+      "description": "false = the schedule exists but will not fire; pause without losing the entry",
+      "class": "operational",
+      "shape": "copied"
+    },
+    "start_date": {
+      "type": "timestamp_ms",
+      "required": false,
+      "description": "earliest time the schedule is allowed to fire",
+      "class": "operational",
+      "shape": "copied"
+    },
+    "end_date": {
+      "type": "timestamp_ms",
+      "required": false,
+      "description": "latest time the schedule is allowed to fire",
+      "class": "operational",
+      "shape": "copied"
+    }
+  },
+  "target": {
+    "kind": {
+      "type": "enum",
+      "values": [
+        "agent_invocation",
+        "lambda",
+        "sns"
+      ],
+      "required": true,
+      "description": "agent_invocation: fire a turn on the customer's runtime; lambda: invoke a handler directly; sns: publish to a topic for fan-out",
+      "class": "operational",
+      "shape": "copied"
+    },
+    "ref": {
+      "type": "string",
+      "required": true,
+      "description": "agent_invocation: runtime endpoint ARN (defaults to tenant's own runtime); lambda: lambda ARN; sns: topic ARN",
+      "class": "operational",
+      "shape": "referenced"
+    },
+    "input": {
+      "type": "map",
+      "required": false,
+      "description": "JSON payload passed to the target; for agent_invocation, arrives as user-facing content of the scheduled turn. an arbitrary agent-composed payload \u2014 the registry cannot say what is in it",
+      "class": "secret",
+      "shape": "copied"
+    }
+  },
+  "provenance": {
+    "created_by": {
+      "type": "enum",
+      "values": [
+        "agent_session",
+        "terraform",
+        "owner_direct"
+      ],
+      "required": true,
+      "description": "agent_session: agent created this in a turn; terraform: provisioned at deploy (typically NOT in calendar); owner_direct: future web UI. a MECHANISM here (agent_session | terraform), not a person \u2014 unlike the ledger dimension of the same name",
+      "class": "operational",
+      "shape": "copied"
+    },
+    "created_at": {
+      "type": "timestamp_ms",
+      "required": true,
+      "class": "operational",
+      "shape": "copied"
+    },
+    "updated_at": {
+      "type": "timestamp_ms",
+      "required": true,
+      "class": "operational",
+      "shape": "copied"
+    }
+  },
+  "event": {
+    "event_id": {
+      "type": "string",
+      "required": true,
+      "description": "hash key; opaque id for a calendar event. created on put if omitted",
+      "class": "operational",
+      "shape": "copied"
+    },
+    "subject": {
+      "type": "string",
+      "required": true,
+      "description": "whose calendar this event is on, as a CONTACT_ID \u2014 the same reference labor's `worker_id` and inventory's `subject_contact` use. Not a gerp_profile_id: that would make having a calendar depend on being publicly listed, so a private employee could not be scheduled at all, and it would freeze 'this person is public' into a GSI hash that cannot be rewritten. Referenced, so whether a reader can name them follows their contact's profile link and can change later. GSI calendar-index hash (with starts_at as the range)",
+      "class": "subject",
+      "shape": "referenced"
+    },
+    "expr": {
+      "type": "string",
+      "required": true,
+      "description": "when: an ISO date/datetime for a one-off, or an RFC 5545 RRULE for recurring (v1 indexes one-offs; recurring needs an explicit starts_at)",
+      "class": "operational",
+      "shape": "copied"
+    },
+    "starts_at": {
+      "type": "string",
+      "required": true,
+      "description": "concrete first/next occurrence, ISO \u2014 the date index (GSI calendar-index range key). defaults to expr for a one-off; range-queried for \"my calendar in [window]\"",
+      "class": "operational",
+      "shape": "copied"
+    },
+    "description": {
+      "type": "string",
+      "required": true,
+      "description": "human description of the event (e.g. \"AcmeConf, Vegas\"). free-form, untemplated",
+      "class": "secret",
+      "shape": "copied"
+    },
+    "duration": {
+      "type": "number",
+      "required": false,
+      "description": "optional length in minutes",
+      "class": "operational",
+      "shape": "copied"
+    },
+    "contact_id": {
+      "type": "string",
+      "required": false,
+      "description": "optional FK into modules/contacts \u2014 a contact this event is about",
+      "class": "subject",
+      "shape": "referenced"
+    },
+    "invoice_id": {
+      "type": "string",
+      "required": false,
+      "description": "optional FK into modules/invoicing \u2014 an invoice this event is about",
+      "class": "operational",
+      "shape": "referenced"
+    },
+    "created_at": {
+      "type": "timestamp_ms",
+      "required": true,
+      "description": "ms-epoch set on first put",
+      "class": "operational",
+      "shape": "copied"
+    }
+  }
+}

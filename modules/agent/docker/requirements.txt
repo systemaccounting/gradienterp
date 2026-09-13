@@ -1,0 +1,25 @@
+# AgentCore Runtime container dependencies — phase 4a-ii scaffold.
+# Pin versions before the first real build.
+
+fastapi
+uvicorn
+boto3                            # lambda invoke for tool dispatch; bedrock-runtime for model calls
+opentelemetry-distro             # pulls in opentelemetry-instrument + core SDK
+opentelemetry-exporter-otlp
+opentelemetry-instrumentation-fastapi
+
+# 4a-ii decision: raw anthropic SDK for local smoke (matches dev harness).
+# BEDROCK_MODEL_ID unset → use AnthropicEngine (this).
+anthropic
+
+# Pre-4b: Strands SDK for Bedrock-managed inference + native Gateway MCP.
+# BEDROCK_MODEL_ID set → use StrandsEngine.
+# mcp-proxy-for-aws provides aws_iam_streamablehttp_client — drop-in replacement
+# for streamablehttp_client that SigV4-signs requests, matching the Gateway's
+# authorizer_type = AWS_IAM config. Container auth is its own agent_execution
+# IAM role; no Cognito/JWT plumbing in the container.
+strands-agents==1.45.0          # pinned: interrupt → pause → cross-session resume verified on 1.45.0 (render_form elicitation loop)
+mcp-proxy-for-aws
+
+playwright                       # CDP client for the browse_* tools — connects to the MANAGED AgentCore Browser (no local chromium; the pip package alone suffices for connect_over_cdp)
+bedrock-agentcore                # SDK: browser_client session management (StartBrowserSession + SigV4 ws headers)

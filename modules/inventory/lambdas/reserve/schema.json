@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "reserve",
+  "description": "Capacity items (rooms, seats, bays, shifts): book or cancel over one interval or a repeating pattern, or read free windows + utilization (op availability). Stock counts are manage_stock's.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "item_id"
+  ],
+  "properties": {
+    "item_id": {
+      "type": "string",
+      "description": "The capacity item."
+    },
+    "op": {
+      "type": "string",
+      "enum": [
+        "book",
+        "cancel",
+        "availability"
+      ],
+      "description": "book (409 on a clash or outside offered hours) | cancel | availability (free windows and utilization over from/to). Default book."
+    },
+    "start": {
+      "type": "string",
+      "description": "book/cancel: ISO-8601 start (naive = UTC). With rule, the first occurrence's start. Required except cancel-by-source."
+    },
+    "end": {
+      "type": "string",
+      "description": "book/cancel: ISO-8601 end, exclusive. With rule, the date the pattern stops. Required except cancel-by-source."
+    },
+    "from": {
+      "type": "string",
+      "description": "availability, required: ISO-8601 range start (naive = UTC)."
+    },
+    "to": {
+      "type": "string",
+      "description": "availability, required: ISO-8601 range end, exclusive."
+    },
+    "source": {
+      "type": "string",
+      "description": "book/cancel: '<namespace>:<id>' — job:<invoice_id> binds it to the invoice (cancel by it undoes the job), subject:<contact_id> for a shift. A reference, never a name. Defaults to the op."
+    },
+    "movement_id": {
+      "type": "string",
+      "description": "book/cancel: idempotency key."
+    },
+    "rule": {
+      "type": "string",
+      "description": "book: RFC 5545 RRULE for a repeating reservation in one call, e.g. FREQ=WEEKLY;BYDAY=SA,SU — days from the rule, hours from duration, from start until end."
+    },
+    "duration": {
+      "type": "number",
+      "description": "book: seconds per occurrence; required with rule (28800 = an 8-hour shift)."
+    }
+  }
+}

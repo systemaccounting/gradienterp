@@ -1,0 +1,158 @@
+{
+  "common": {
+    "task_id": {
+      "type": "string",
+      "required": true,
+      "description": "hash key; opaque slug or uuid",
+      "class": "operational",
+      "shape": "copied"
+    },
+    "sk": {
+      "type": "string",
+      "required": true,
+      "description": "range key. \"HEADER\" = the task's current state (one per task; every GSI + hot read lives here); \"<ms>#<id>\" = an append-only changelog row (who changed which field, from -> to) written on every header update",
+      "class": "operational",
+      "shape": "copied"
+    },
+    "content": {
+      "type": "string",
+      "required": true,
+      "description": "free-form text describing the task. PUBLIC BY CONSTRUCTION: this field is a TEMPLATE — `$1`/`$2` stand where a firm-specific value goes and the values ride `private_values`. A public issue files from this field verbatim, so a writer that puts a name here breaks the contract rather than tripping a filter",
+      "class": "operational",
+      "shape": "copied"
+    },
+    "private_values": {
+      "type": "list",
+      "required": false,
+      "class": "secret",
+      "shape": "copied",
+      "description": "for a task whose `content` is a TEMPLATE (an escalation), the values its $1/$2 placeholders stand for, in order. Never published — the template is what a public issue is filed from, and keeping the values in a separate secret field is what makes that filing safe by construction rather than by the filer remembering to strip them"
+    },
+    "contact_id": {
+      "type": "string",
+      "required": false,
+      "description": "FK into modules/contacts/ when this task is about a contact",
+      "class": "subject",
+      "shape": "referenced"
+    },
+    "journal_entry_id": {
+      "type": "string",
+      "required": false,
+      "description": "FK into the accounting ledger when this task annotates a journal entry",
+      "class": "operational",
+      "shape": "referenced"
+    },
+    "purchase_order_id": {
+      "type": "string",
+      "required": false,
+      "description": "FK into modules/purchasing/ (future) when this task is about a PO",
+      "class": "operational",
+      "shape": "referenced"
+    },
+    "invoice_id": {
+      "type": "string",
+      "required": false,
+      "description": "FK into modules/invoicing/ (future) when this task is about an invoice",
+      "class": "operational",
+      "shape": "referenced"
+    },
+    "subject_key": {
+      "type": "string",
+      "required": false,
+      "description": "FK to an asset (`1#walk-in-fridge`) or inventory item the task is ABOUT — incidents and maintenance attach here; service history is the query by this key. an asset or item — a thing, not a party",
+      "class": "operational",
+      "shape": "referenced"
+    },
+    "parents": {
+      "type": "list",
+      "required": false,
+      "description": "task_ids this task is a child of — a subtask names one parent, several make a DAG (one fix serving two issues; an incident attaching to its class). Children of X = the open set filtered by contains(parents, X); an open child blocks the parent's delivery",
+      "class": "operational",
+      "shape": "referenced"
+    },
+    "category": {
+      "type": "string",
+      "required": false,
+      "description": "work/failure category (e.g. refrigeration, plumbing, pos) — the future incident-signature dimension",
+      "class": "operational",
+      "shape": "copied"
+    },
+    "assigned_to": {
+      "type": "string",
+      "required": false,
+      "description": "the agent identity this task is handed to (\"agent\" = this gerp's own). A change to this field pokes the assignee — assignment IS the handoff. an agent identity or gerp_id, not a private person",
+      "class": "operational",
+      "shape": "referenced"
+    },
+    "due_date": {
+      "type": "string",
+      "required": false,
+      "description": "ISO date (YYYY-MM-DD) or ISO datetime — the CEILING (when this must ship; a stamped commitment when one exists). Past = overdue. Distinct from quote (the moving forecast)",
+      "class": "operational",
+      "shape": "copied"
+    },
+    "quote": {
+      "type": "timestamp_ms",
+      "required": false,
+      "description": "the CURRENT delivery quote (forecast) — re-quoted as the queue shifts; history lives in the changelog rows. due_date is the ceiling a commitment stamps; quote is when it's actually expected to ship",
+      "class": "operational",
+      "shape": "copied"
+    },
+    "delivery": {
+      "type": "timestamp_ms",
+      "required": false,
+      "description": "when the work actually shipped. Set ONCE by a conditional write (the ratchet — first close wins) which also removes open_flag. Absent = open. Supersedes the old resolved_at",
+      "class": "operational",
+      "shape": "copied"
+    },
+    "open_flag": {
+      "type": "string",
+      "required": false,
+      "description": "lambda-managed sparse-GSI partition. Set to \"1\" while delivery is absent; REMOVE'd by the delivery ratchet. Not user-settable",
+      "class": "operational",
+      "shape": "copied"
+    },
+    "created_at": {
+      "type": "timestamp_ms",
+      "required": true,
+      "description": "ms-epoch set on first put",
+      "class": "operational",
+      "shape": "copied"
+    },
+    "updated_at": {
+      "type": "timestamp_ms",
+      "required": true,
+      "description": "ms-epoch; advances on every write",
+      "class": "operational",
+      "shape": "copied"
+    },
+    "investigated_by": {
+      "type": "string",
+      "required": false,
+      "description": "who worked an `alarm` task: `local` (a person with a Claude session, scripts/investigate.sh), a gerp_id (that gerp's agent from its poke), or a managed investigator's name. Several investigators may work one task; each names itself",
+      "class": "operational",
+      "shape": "referenced"
+    },
+    "finding": {
+      "type": "string",
+      "required": false,
+      "description": "what the investigator read: the lines, the metric, the queue's head — the evidence, quoted, not the judgment",
+      "class": "operational",
+      "shape": "copied"
+    },
+    "root_cause": {
+      "type": "string",
+      "required": false,
+      "description": "the investigator's judgment of why, one paragraph, naming the code, the config row or the dependency",
+      "class": "operational",
+      "shape": "copied"
+    },
+    "proposed_fix": {
+      "type": "string",
+      "required": false,
+      "description": "what to change and where; a fix that is code is a push after a person's review, a redrive is the queue's redrive, a rule is the owner's on their gerp",
+      "class": "operational",
+      "shape": "copied"
+    }
+  }
+}

@@ -1,0 +1,1154 @@
+{
+ "accounting-balances": {
+  "AttributeDefinitions": [
+   {
+    "AttributeName": "account_id",
+    "AttributeType": "S"
+   },
+   {
+    "AttributeName": "period_end",
+    "AttributeType": "S"
+   }
+  ],
+  "GlobalSecondaryIndexes": [],
+  "KeySchema": [
+   {
+    "AttributeName": "period_end",
+    "KeyType": "HASH"
+   },
+   {
+    "AttributeName": "account_id",
+    "KeyType": "RANGE"
+   }
+  ],
+  "TableName": "gerp-accounting-{gerp}-balances"
+ },
+ "accounting-ledger": {
+  "AttributeDefinitions": [
+   {
+    "AttributeName": "pk",
+    "AttributeType": "S"
+   },
+   {
+    "AttributeName": "sk",
+    "AttributeType": "S"
+   }
+  ],
+  "GlobalSecondaryIndexes": [],
+  "KeySchema": [
+   {
+    "AttributeName": "pk",
+    "KeyType": "HASH"
+   },
+   {
+    "AttributeName": "sk",
+    "KeyType": "RANGE"
+   }
+  ],
+  "TableName": "gerp-accounting-{gerp}-ledger"
+ },
+ "accounting-pending": {
+  "AttributeDefinitions": [
+   {
+    "AttributeName": "entry_id",
+    "AttributeType": "S"
+   }
+  ],
+  "GlobalSecondaryIndexes": [],
+  "KeySchema": [
+   {
+    "AttributeName": "entry_id",
+    "KeyType": "HASH"
+   }
+  ],
+  "TableName": "gerp-accounting-{gerp}-pending"
+ },
+ "accounts": {
+  "AttributeDefinitions": [
+   {
+    "AttributeName": "account_id",
+    "AttributeType": "S"
+   }
+  ],
+  "GlobalSecondaryIndexes": [],
+  "KeySchema": [
+   {
+    "AttributeName": "account_id",
+    "KeyType": "HASH"
+   }
+  ],
+  "TableName": "gerp-accounts"
+ },
+ "agent-chats": {
+  "AttributeDefinitions": [
+   {
+    "AttributeName": "account_id",
+    "AttributeType": "S"
+   },
+   {
+    "AttributeName": "session_id",
+    "AttributeType": "S"
+   }
+  ],
+  "GlobalSecondaryIndexes": [],
+  "KeySchema": [
+   {
+    "AttributeName": "account_id",
+    "KeyType": "HASH"
+   },
+   {
+    "AttributeName": "session_id",
+    "KeyType": "RANGE"
+   }
+  ],
+  "TableName": "gerp-agent-{gerp}-chats"
+ },
+ "agent-email": {
+  "AttributeDefinitions": [
+   {
+    "AttributeName": "message_id",
+    "AttributeType": "S"
+   }
+  ],
+  "GlobalSecondaryIndexes": [],
+  "KeySchema": [
+   {
+    "AttributeName": "message_id",
+    "KeyType": "HASH"
+   }
+  ],
+  "TableName": "gerp-agent-{gerp}-email"
+ },
+ "agreements": {
+  "AttributeDefinitions": [
+   {
+    "AttributeName": "terms_hash",
+    "AttributeType": "S"
+   },
+   {
+    "AttributeName": "thread",
+    "AttributeType": "S"
+   }
+  ],
+  "GlobalSecondaryIndexes": [],
+  "KeySchema": [
+   {
+    "AttributeName": "thread",
+    "KeyType": "HASH"
+   },
+   {
+    "AttributeName": "terms_hash",
+    "KeyType": "RANGE"
+   }
+  ],
+  "TableName": "gerp-agreements-{gerp}"
+ },
+ "assets": {
+  "AttributeDefinitions": [
+   {
+    "AttributeName": "asset_id",
+    "AttributeType": "S"
+   }
+  ],
+  "GlobalSecondaryIndexes": [],
+  "KeySchema": [
+   {
+    "AttributeName": "asset_id",
+    "KeyType": "HASH"
+   }
+  ],
+  "TableName": "gerp-assets-{gerp}"
+ },
+ "calendar-events": {
+  "AttributeDefinitions": [
+   {
+    "AttributeName": "event_id",
+    "AttributeType": "S"
+   },
+   {
+    "AttributeName": "starts_at",
+    "AttributeType": "S"
+   },
+   {
+    "AttributeName": "subject",
+    "AttributeType": "S"
+   }
+  ],
+  "GlobalSecondaryIndexes": [
+   {
+    "IndexName": "calendar-index",
+    "KeySchema": [
+     {
+      "AttributeName": "subject",
+      "KeyType": "HASH"
+     },
+     {
+      "AttributeName": "starts_at",
+      "KeyType": "RANGE"
+     }
+    ],
+    "Projection": {
+     "ProjectionType": "ALL"
+    }
+   }
+  ],
+  "KeySchema": [
+   {
+    "AttributeName": "event_id",
+    "KeyType": "HASH"
+   }
+  ],
+  "TableName": "gerp-calendar-{gerp}-events"
+ },
+ "contacts": {
+  "AttributeDefinitions": [
+   {
+    "AttributeName": "contact_id",
+    "AttributeType": "S"
+   },
+   {
+    "AttributeName": "gerp_profile_id",
+    "AttributeType": "S"
+   }
+  ],
+  "GlobalSecondaryIndexes": [
+   {
+    "IndexName": "account-index",
+    "KeySchema": [
+     {
+      "AttributeName": "gerp_profile_id",
+      "KeyType": "HASH"
+     }
+    ],
+    "Projection": {
+     "ProjectionType": "ALL"
+    }
+   }
+  ],
+  "KeySchema": [
+   {
+    "AttributeName": "contact_id",
+    "KeyType": "HASH"
+   }
+  ],
+  "TableName": "gerp-contacts-{gerp}"
+ },
+ "customers": {
+  "AttributeDefinitions": [
+   {
+    "AttributeName": "gerp_id",
+    "AttributeType": "S"
+   },
+   {
+    "AttributeName": "owner_sub",
+    "AttributeType": "S"
+   }
+  ],
+  "GlobalSecondaryIndexes": [
+   {
+    "IndexName": "owner-index",
+    "KeySchema": [
+     {
+      "AttributeName": "owner_sub",
+      "KeyType": "HASH"
+     }
+    ],
+    "Projection": {
+     "ProjectionType": "ALL"
+    }
+   }
+  ],
+  "KeySchema": [
+   {
+    "AttributeName": "gerp_id",
+    "KeyType": "HASH"
+   }
+  ],
+  "TableName": "gerp-customers"
+ },
+ "export-jobs": {
+  "AttributeDefinitions": [
+   {
+    "AttributeName": "export_id",
+    "AttributeType": "S"
+   },
+   {
+    "AttributeName": "unit",
+    "AttributeType": "S"
+   }
+  ],
+  "GlobalSecondaryIndexes": [],
+  "KeySchema": [
+   {
+    "AttributeName": "export_id",
+    "KeyType": "HASH"
+   },
+   {
+    "AttributeName": "unit",
+    "KeyType": "RANGE"
+   }
+  ],
+  "TableName": "gerp-export-{gerp}-jobs"
+ },
+ "inbox-inbound": {
+  "AttributeDefinitions": [
+   {
+    "AttributeName": "inbound_id",
+    "AttributeType": "S"
+   }
+  ],
+  "GlobalSecondaryIndexes": [],
+  "KeySchema": [
+   {
+    "AttributeName": "inbound_id",
+    "KeyType": "HASH"
+   }
+  ],
+  "TableName": "gerp-inbox-{gerp}-inbound"
+ },
+ "inventory-items": {
+  "AttributeDefinitions": [
+   {
+    "AttributeName": "item_id",
+    "AttributeType": "S"
+   }
+  ],
+  "GlobalSecondaryIndexes": [],
+  "KeySchema": [
+   {
+    "AttributeName": "item_id",
+    "KeyType": "HASH"
+   }
+  ],
+  "TableName": "gerp-inventory-{gerp}-items"
+ },
+ "inventory-movements": {
+  "AttributeDefinitions": [
+   {
+    "AttributeName": "item_id",
+    "AttributeType": "S"
+   },
+   {
+    "AttributeName": "mv_sk",
+    "AttributeType": "S"
+   }
+  ],
+  "GlobalSecondaryIndexes": [],
+  "KeySchema": [
+   {
+    "AttributeName": "item_id",
+    "KeyType": "HASH"
+   },
+   {
+    "AttributeName": "mv_sk",
+    "KeyType": "RANGE"
+   }
+  ],
+  "TableName": "gerp-inventory-{gerp}-movements"
+ },
+ "invoicing-agreements": {
+  "AttributeDefinitions": [
+   {
+    "AttributeName": "terms_hash",
+    "AttributeType": "S"
+   },
+   {
+    "AttributeName": "thread",
+    "AttributeType": "S"
+   }
+  ],
+  "GlobalSecondaryIndexes": [],
+  "KeySchema": [
+   {
+    "AttributeName": "thread",
+    "KeyType": "HASH"
+   },
+   {
+    "AttributeName": "terms_hash",
+    "KeyType": "RANGE"
+   }
+  ],
+  "TableName": "gerp-invoicing-{gerp}-agreements"
+ },
+ "invoicing-invoice-lines": {
+  "AttributeDefinitions": [
+   {
+    "AttributeName": "gsi_item",
+    "AttributeType": "S"
+   },
+   {
+    "AttributeName": "gsi_sk",
+    "AttributeType": "S"
+   },
+   {
+    "AttributeName": "gsi_tag",
+    "AttributeType": "S"
+   },
+   {
+    "AttributeName": "invoice_id",
+    "AttributeType": "S"
+   },
+   {
+    "AttributeName": "sk",
+    "AttributeType": "S"
+   }
+  ],
+  "GlobalSecondaryIndexes": [
+   {
+    "IndexName": "tag-index",
+    "KeySchema": [
+     {
+      "AttributeName": "gsi_tag",
+      "KeyType": "HASH"
+     },
+     {
+      "AttributeName": "gsi_sk",
+      "KeyType": "RANGE"
+     }
+    ],
+    "Projection": {
+     "ProjectionType": "KEYS_ONLY"
+    }
+   },
+   {
+    "IndexName": "item-index",
+    "KeySchema": [
+     {
+      "AttributeName": "gsi_item",
+      "KeyType": "HASH"
+     },
+     {
+      "AttributeName": "gsi_sk",
+      "KeyType": "RANGE"
+     }
+    ],
+    "Projection": {
+     "ProjectionType": "ALL"
+    }
+   }
+  ],
+  "KeySchema": [
+   {
+    "AttributeName": "invoice_id",
+    "KeyType": "HASH"
+   },
+   {
+    "AttributeName": "sk",
+    "KeyType": "RANGE"
+   }
+  ],
+  "TableName": "gerp-invoicing-{gerp}-invoice-lines"
+ },
+ "invoicing-invoices": {
+  "AttributeDefinitions": [
+   {
+    "AttributeName": "invoice_id",
+    "AttributeType": "S"
+   }
+  ],
+  "GlobalSecondaryIndexes": [],
+  "KeySchema": [
+   {
+    "AttributeName": "invoice_id",
+    "KeyType": "HASH"
+   }
+  ],
+  "TableName": "gerp-invoicing-{gerp}-invoices"
+ },
+ "invoicing-transitions": {
+  "AttributeDefinitions": [
+   {
+    "AttributeName": "invoice_id",
+    "AttributeType": "S"
+   },
+   {
+    "AttributeName": "tx_sk",
+    "AttributeType": "S"
+   }
+  ],
+  "GlobalSecondaryIndexes": [],
+  "KeySchema": [
+   {
+    "AttributeName": "invoice_id",
+    "KeyType": "HASH"
+   },
+   {
+    "AttributeName": "tx_sk",
+    "KeyType": "RANGE"
+   }
+  ],
+  "TableName": "gerp-invoicing-{gerp}-transitions"
+ },
+ "labor-time-entries": {
+  "AttributeDefinitions": [
+   {
+    "AttributeName": "entry_id",
+    "AttributeType": "S"
+   },
+   {
+    "AttributeName": "worker_id",
+    "AttributeType": "S"
+   }
+  ],
+  "GlobalSecondaryIndexes": [],
+  "KeySchema": [
+   {
+    "AttributeName": "worker_id",
+    "KeyType": "HASH"
+   },
+   {
+    "AttributeName": "entry_id",
+    "KeyType": "RANGE"
+   }
+  ],
+  "TableName": "gerp-labor-{gerp}-time-entries"
+ },
+ "labor-worker": {
+  "AttributeDefinitions": [
+   {
+    "AttributeName": "contact_id",
+    "AttributeType": "S"
+   },
+   {
+    "AttributeName": "role",
+    "AttributeType": "S"
+   }
+  ],
+  "GlobalSecondaryIndexes": [],
+  "KeySchema": [
+   {
+    "AttributeName": "contact_id",
+    "KeyType": "HASH"
+   },
+   {
+    "AttributeName": "role",
+    "KeyType": "RANGE"
+   }
+  ],
+  "TableName": "gerp-labor-{gerp}-worker"
+ },
+ "labor-worker-legal": {
+  "AttributeDefinitions": [
+   {
+    "AttributeName": "sk",
+    "AttributeType": "S"
+   },
+   {
+    "AttributeName": "worker_id",
+    "AttributeType": "S"
+   }
+  ],
+  "GlobalSecondaryIndexes": [],
+  "KeySchema": [
+   {
+    "AttributeName": "worker_id",
+    "KeyType": "HASH"
+   },
+   {
+    "AttributeName": "sk",
+    "KeyType": "RANGE"
+   }
+  ],
+  "TableName": "gerp-labor-{gerp}-worker-legal"
+ },
+ "members": {
+  "AttributeDefinitions": [
+   {
+    "AttributeName": "account_id",
+    "AttributeType": "S"
+   },
+   {
+    "AttributeName": "gerp_id",
+    "AttributeType": "S"
+   }
+  ],
+  "GlobalSecondaryIndexes": [],
+  "KeySchema": [
+   {
+    "AttributeName": "account_id",
+    "KeyType": "HASH"
+   },
+   {
+    "AttributeName": "gerp_id",
+    "KeyType": "RANGE"
+   }
+  ],
+  "TableName": "gerp-members"
+ },
+ "notes": {
+  "AttributeDefinitions": [
+   {
+    "AttributeName": "contact_id",
+    "AttributeType": "S"
+   },
+   {
+    "AttributeName": "invoice_id",
+    "AttributeType": "S"
+   },
+   {
+    "AttributeName": "journal_entry_id",
+    "AttributeType": "S"
+   },
+   {
+    "AttributeName": "note_id",
+    "AttributeType": "S"
+   },
+   {
+    "AttributeName": "purchase_order_id",
+    "AttributeType": "S"
+   },
+   {
+    "AttributeName": "version_ts",
+    "AttributeType": "S"
+   }
+  ],
+  "GlobalSecondaryIndexes": [
+   {
+    "IndexName": "purchase-order-index",
+    "KeySchema": [
+     {
+      "AttributeName": "purchase_order_id",
+      "KeyType": "HASH"
+     },
+     {
+      "AttributeName": "version_ts",
+      "KeyType": "RANGE"
+     }
+    ],
+    "Projection": {
+     "ProjectionType": "ALL"
+    }
+   },
+   {
+    "IndexName": "invoice-index",
+    "KeySchema": [
+     {
+      "AttributeName": "invoice_id",
+      "KeyType": "HASH"
+     },
+     {
+      "AttributeName": "version_ts",
+      "KeyType": "RANGE"
+     }
+    ],
+    "Projection": {
+     "ProjectionType": "ALL"
+    }
+   },
+   {
+    "IndexName": "contact-index",
+    "KeySchema": [
+     {
+      "AttributeName": "contact_id",
+      "KeyType": "HASH"
+     },
+     {
+      "AttributeName": "version_ts",
+      "KeyType": "RANGE"
+     }
+    ],
+    "Projection": {
+     "ProjectionType": "ALL"
+    }
+   },
+   {
+    "IndexName": "journal-entry-index",
+    "KeySchema": [
+     {
+      "AttributeName": "journal_entry_id",
+      "KeyType": "HASH"
+     },
+     {
+      "AttributeName": "version_ts",
+      "KeyType": "RANGE"
+     }
+    ],
+    "Projection": {
+     "ProjectionType": "ALL"
+    }
+   }
+  ],
+  "KeySchema": [
+   {
+    "AttributeName": "note_id",
+    "KeyType": "HASH"
+   },
+   {
+    "AttributeName": "version_ts",
+    "KeyType": "RANGE"
+   }
+  ],
+  "TableName": "gerp-notes-{gerp}"
+ },
+ "payments-dlq": {
+  "AttributeDefinitions": [
+   {
+    "AttributeName": "pk",
+    "AttributeType": "S"
+   }
+  ],
+  "GlobalSecondaryIndexes": [],
+  "KeySchema": [
+   {
+    "AttributeName": "pk",
+    "KeyType": "HASH"
+   }
+  ],
+  "TableName": "gerp-payments-{gerp}-dlq"
+ },
+ "payments-dlq-bodies": {
+  "AttributeDefinitions": [
+   {
+    "AttributeName": "pk",
+    "AttributeType": "S"
+   }
+  ],
+  "GlobalSecondaryIndexes": [],
+  "KeySchema": [
+   {
+    "AttributeName": "pk",
+    "KeyType": "HASH"
+   }
+  ],
+  "TableName": "gerp-payments-{gerp}-dlq-bodies"
+ },
+ "payments-webhook-log": {
+  "AttributeDefinitions": [
+   {
+    "AttributeName": "pk",
+    "AttributeType": "S"
+   }
+  ],
+  "GlobalSecondaryIndexes": [],
+  "KeySchema": [
+   {
+    "AttributeName": "pk",
+    "KeyType": "HASH"
+   }
+  ],
+  "TableName": "gerp-payments-{gerp}-webhook-log"
+ },
+ "priors": {
+  "AttributeDefinitions": [
+   {
+    "AttributeName": "id",
+    "AttributeType": "S"
+   }
+  ],
+  "GlobalSecondaryIndexes": [],
+  "KeySchema": [
+   {
+    "AttributeName": "id",
+    "KeyType": "HASH"
+   }
+  ],
+  "TableName": "gerp-priors"
+ },
+ "profile-index": {
+  "AttributeDefinitions": [
+   {
+    "AttributeName": "gerp_profile_id",
+    "AttributeType": "S"
+   },
+   {
+    "AttributeName": "match",
+    "AttributeType": "S"
+   }
+  ],
+  "GlobalSecondaryIndexes": [
+   {
+    "IndexName": "by-profile",
+    "KeySchema": [
+     {
+      "AttributeName": "gerp_profile_id",
+      "KeyType": "HASH"
+     }
+    ],
+    "Projection": {
+     "ProjectionType": "KEYS_ONLY"
+    }
+   }
+  ],
+  "KeySchema": [
+   {
+    "AttributeName": "match",
+    "KeyType": "HASH"
+   },
+   {
+    "AttributeName": "gerp_profile_id",
+    "KeyType": "RANGE"
+   }
+  ],
+  "TableName": "gerp-profile-index"
+ },
+ "profiles": {
+  "AttributeDefinitions": [
+   {
+    "AttributeName": "gerp_profile_id",
+    "AttributeType": "S"
+   }
+  ],
+  "GlobalSecondaryIndexes": [],
+  "KeySchema": [
+   {
+    "AttributeName": "gerp_profile_id",
+    "KeyType": "HASH"
+   }
+  ],
+  "TableName": "gerp-profiles"
+ },
+ "purchasing-orders": {
+  "AttributeDefinitions": [
+   {
+    "AttributeName": "po_id",
+    "AttributeType": "S"
+   }
+  ],
+  "GlobalSecondaryIndexes": [],
+  "KeySchema": [
+   {
+    "AttributeName": "po_id",
+    "KeyType": "HASH"
+   }
+  ],
+  "TableName": "gerp-purchasing-{gerp}-orders"
+ },
+ "rules-instances": {
+  "AttributeDefinitions": [
+   {
+    "AttributeName": "pk",
+    "AttributeType": "S"
+   },
+   {
+    "AttributeName": "sk",
+    "AttributeType": "S"
+   }
+  ],
+  "GlobalSecondaryIndexes": [],
+  "KeySchema": [
+   {
+    "AttributeName": "pk",
+    "KeyType": "HASH"
+   },
+   {
+    "AttributeName": "sk",
+    "KeyType": "RANGE"
+   }
+  ],
+  "TableName": "gerp-rules-{gerp}-instances"
+ },
+ "rules-params": {
+  "AttributeDefinitions": [
+   {
+    "AttributeName": "pk",
+    "AttributeType": "S"
+   },
+   {
+    "AttributeName": "sk",
+    "AttributeType": "S"
+   }
+  ],
+  "GlobalSecondaryIndexes": [],
+  "KeySchema": [
+   {
+    "AttributeName": "pk",
+    "KeyType": "HASH"
+   },
+   {
+    "AttributeName": "sk",
+    "KeyType": "RANGE"
+   }
+  ],
+  "TableName": "gerp-rules-{gerp}-params"
+ },
+ "schema": {
+  "AttributeDefinitions": [
+   {
+    "AttributeName": "bucket_name",
+    "AttributeType": "S"
+   },
+   {
+    "AttributeName": "registry",
+    "AttributeType": "S"
+   }
+  ],
+  "GlobalSecondaryIndexes": [],
+  "KeySchema": [
+   {
+    "AttributeName": "registry",
+    "KeyType": "HASH"
+   },
+   {
+    "AttributeName": "bucket_name",
+    "KeyType": "RANGE"
+   }
+  ],
+  "TableName": "gerp-schema-{gerp}"
+ },
+ "settings": {
+  "AttributeDefinitions": [
+   {
+    "AttributeName": "gerp_id",
+    "AttributeType": "S"
+   },
+   {
+    "AttributeName": "sk",
+    "AttributeType": "S"
+   }
+  ],
+  "GlobalSecondaryIndexes": [],
+  "KeySchema": [
+   {
+    "AttributeName": "gerp_id",
+    "KeyType": "HASH"
+   },
+   {
+    "AttributeName": "sk",
+    "KeyType": "RANGE"
+   }
+  ],
+  "TableName": "gerp-settings-{gerp}"
+ },
+ "shipping": {
+  "AttributeDefinitions": [
+   {
+    "AttributeName": "created_at",
+    "AttributeType": "N"
+   },
+   {
+    "AttributeName": "open_flag",
+    "AttributeType": "S"
+   },
+   {
+    "AttributeName": "shipment_id",
+    "AttributeType": "S"
+   }
+  ],
+  "GlobalSecondaryIndexes": [
+   {
+    "IndexName": "open-shipments-index",
+    "KeySchema": [
+     {
+      "AttributeName": "open_flag",
+      "KeyType": "HASH"
+     },
+     {
+      "AttributeName": "created_at",
+      "KeyType": "RANGE"
+     }
+    ],
+    "Projection": {
+     "ProjectionType": "ALL"
+    }
+   }
+  ],
+  "KeySchema": [
+   {
+    "AttributeName": "shipment_id",
+    "KeyType": "HASH"
+   }
+  ],
+  "TableName": "gerp-shipping-{gerp}"
+ },
+ "tasks": {
+  "AttributeDefinitions": [
+   {
+    "AttributeName": "contact_id",
+    "AttributeType": "S"
+   },
+   {
+    "AttributeName": "created_at",
+    "AttributeType": "N"
+   },
+   {
+    "AttributeName": "due_date",
+    "AttributeType": "S"
+   },
+   {
+    "AttributeName": "gsi_tag",
+    "AttributeType": "S"
+   },
+   {
+    "AttributeName": "gsi_tag_sk",
+    "AttributeType": "S"
+   },
+   {
+    "AttributeName": "invoice_id",
+    "AttributeType": "S"
+   },
+   {
+    "AttributeName": "journal_entry_id",
+    "AttributeType": "S"
+   },
+   {
+    "AttributeName": "open_flag",
+    "AttributeType": "S"
+   },
+   {
+    "AttributeName": "purchase_order_id",
+    "AttributeType": "S"
+   },
+   {
+    "AttributeName": "sk",
+    "AttributeType": "S"
+   },
+   {
+    "AttributeName": "subject_key",
+    "AttributeType": "S"
+   },
+   {
+    "AttributeName": "task_id",
+    "AttributeType": "S"
+   }
+  ],
+  "GlobalSecondaryIndexes": [
+   {
+    "IndexName": "tag-index",
+    "KeySchema": [
+     {
+      "AttributeName": "gsi_tag",
+      "KeyType": "HASH"
+     },
+     {
+      "AttributeName": "gsi_tag_sk",
+      "KeyType": "RANGE"
+     }
+    ],
+    "Projection": {
+     "ProjectionType": "KEYS_ONLY"
+    }
+   },
+   {
+    "IndexName": "purchase-order-index",
+    "KeySchema": [
+     {
+      "AttributeName": "purchase_order_id",
+      "KeyType": "HASH"
+     },
+     {
+      "AttributeName": "due_date",
+      "KeyType": "RANGE"
+     }
+    ],
+    "Projection": {
+     "ProjectionType": "ALL"
+    }
+   },
+   {
+    "IndexName": "invoice-index",
+    "KeySchema": [
+     {
+      "AttributeName": "invoice_id",
+      "KeyType": "HASH"
+     },
+     {
+      "AttributeName": "due_date",
+      "KeyType": "RANGE"
+     }
+    ],
+    "Projection": {
+     "ProjectionType": "ALL"
+    }
+   },
+   {
+    "IndexName": "open-tasks-index",
+    "KeySchema": [
+     {
+      "AttributeName": "open_flag",
+      "KeyType": "HASH"
+     },
+     {
+      "AttributeName": "created_at",
+      "KeyType": "RANGE"
+     }
+    ],
+    "Projection": {
+     "ProjectionType": "ALL"
+    }
+   },
+   {
+    "IndexName": "contact-index",
+    "KeySchema": [
+     {
+      "AttributeName": "contact_id",
+      "KeyType": "HASH"
+     },
+     {
+      "AttributeName": "due_date",
+      "KeyType": "RANGE"
+     }
+    ],
+    "Projection": {
+     "ProjectionType": "ALL"
+    }
+   },
+   {
+    "IndexName": "journal-entry-index",
+    "KeySchema": [
+     {
+      "AttributeName": "journal_entry_id",
+      "KeyType": "HASH"
+     },
+     {
+      "AttributeName": "due_date",
+      "KeyType": "RANGE"
+     }
+    ],
+    "Projection": {
+     "ProjectionType": "ALL"
+    }
+   },
+   {
+    "IndexName": "subject-index",
+    "KeySchema": [
+     {
+      "AttributeName": "subject_key",
+      "KeyType": "HASH"
+     },
+     {
+      "AttributeName": "created_at",
+      "KeyType": "RANGE"
+     }
+    ],
+    "Projection": {
+     "ProjectionType": "ALL"
+    }
+   }
+  ],
+  "KeySchema": [
+   {
+    "AttributeName": "task_id",
+    "KeyType": "HASH"
+   },
+   {
+    "AttributeName": "sk",
+    "KeyType": "RANGE"
+   }
+  ],
+  "TableName": "gerp-tasks-{gerp}"
+ },
+ "treasury-agreements": {
+  "AttributeDefinitions": [
+   {
+    "AttributeName": "terms_hash",
+    "AttributeType": "S"
+   },
+   {
+    "AttributeName": "thread",
+    "AttributeType": "S"
+   }
+  ],
+  "GlobalSecondaryIndexes": [],
+  "KeySchema": [
+   {
+    "AttributeName": "thread",
+    "KeyType": "HASH"
+   },
+   {
+    "AttributeName": "terms_hash",
+    "KeyType": "RANGE"
+   }
+  ],
+  "TableName": "gerp-treasury-{gerp}-agreements"
+ }
+}

@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: A question
+    url: https://discord.gg/87FHhUhQmK
+    about: The community Discord answers questions.
+  - name: Anything private
+    url: https://gradienterp.cloud/support
+    about: An account, a payment or a person's details goes through the private support form, never a public issue.

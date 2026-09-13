@@ -1,0 +1,215 @@
+{
+  "STACK_PREFIX": "gerp",
+  "OPERATOR_ACCOUNT_ID": "185369506315",
+  "ORG_IDS": [],
+  "EDGE_SETS": {
+    "spoke": 0.95,
+    "capture": 0.05
+  },
+  "HUBS": {
+    "us-east-1": {
+      "account": "582129522725",
+      "region": "us-east-1",
+      "bus_arn": "arn:aws:events:us-east-1:582129522725:event-bus/gerp-events",
+      "manage_edges_arn": "arn:aws:lambda:us-east-1:582129522725:function:gerp-hub-manage-edges"
+    },
+    "eu-west-1": {
+      "account": "586499578286",
+      "region": "eu-west-1",
+      "bus_arn": "arn:aws:events:eu-west-1:586499578286:event-bus/gerp-events",
+      "manage_edges_arn": "arn:aws:lambda:eu-west-1:586499578286:function:gerp-hub-manage-edges"
+    },
+    "eu-central-1": {
+      "account": "156470789042",
+      "region": "eu-central-1",
+      "bus_arn": "arn:aws:events:eu-central-1:156470789042:event-bus/gerp-events",
+      "manage_edges_arn": "arn:aws:lambda:eu-central-1:156470789042:function:gerp-hub-manage-edges"
+    },
+    "eu-west-2": {
+      "account": "743887469661",
+      "region": "eu-west-2",
+      "bus_arn": "arn:aws:events:eu-west-2:743887469661:event-bus/gerp-events",
+      "manage_edges_arn": "arn:aws:lambda:eu-west-2:743887469661:function:gerp-hub-manage-edges"
+    },
+    "ap-southeast-1": {
+      "account": "213264718945",
+      "region": "ap-southeast-1",
+      "bus_arn": "arn:aws:events:ap-southeast-1:213264718945:event-bus/gerp-events",
+      "manage_edges_arn": "arn:aws:lambda:ap-southeast-1:213264718945:function:gerp-hub-manage-edges"
+    },
+    "ap-northeast-1": {
+      "account": "371234372605",
+      "region": "ap-northeast-1",
+      "bus_arn": "arn:aws:events:ap-northeast-1:371234372605:event-bus/gerp-events",
+      "manage_edges_arn": "arn:aws:lambda:ap-northeast-1:371234372605:function:gerp-hub-manage-edges"
+    },
+    "ap-southeast-2": {
+      "account": "243345108549",
+      "region": "ap-southeast-2",
+      "bus_arn": "arn:aws:events:ap-southeast-2:243345108549:event-bus/gerp-events",
+      "manage_edges_arn": "arn:aws:lambda:ap-southeast-2:243345108549:function:gerp-hub-manage-edges"
+    },
+    "ap-south-1": {
+      "account": "695694683794",
+      "region": "ap-south-1",
+      "bus_arn": "arn:aws:events:ap-south-1:695694683794:event-bus/gerp-events",
+      "manage_edges_arn": "arn:aws:lambda:ap-south-1:695694683794:function:gerp-hub-manage-edges"
+    }
+  },
+  "REGIONS": {
+    "us-east-1": {
+      "label": "US East (N. Virginia)",
+      "model": "us.anthropic.claude-sonnet-4-6",
+      "status": "offered",
+      "countries": [
+        "US",
+        "CA",
+        "MX",
+        "BR",
+        "United States",
+        "Canada",
+        "Mexico",
+        "Brazil"
+      ]
+    },
+    "eu-west-1": {
+      "label": "Europe (Ireland)",
+      "model": "eu.anthropic.claude-sonnet-4-6",
+      "status": "offered",
+      "countries": [
+        "IE",
+        "FR",
+        "ES",
+        "PT",
+        "IT",
+        "NL",
+        "BE",
+        "Ireland",
+        "France",
+        "Spain",
+        "Portugal",
+        "Italy",
+        "Netherlands",
+        "Belgium"
+      ]
+    },
+    "eu-central-1": {
+      "label": "Europe (Frankfurt)",
+      "model": "eu.anthropic.claude-sonnet-4-6",
+      "status": "offered",
+      "countries": [
+        "DE",
+        "AT",
+        "CH",
+        "PL",
+        "CZ",
+        "DK",
+        "SE",
+        "NO",
+        "FI",
+        "Germany",
+        "Austria",
+        "Switzerland",
+        "Poland",
+        "Czechia",
+        "Denmark",
+        "Sweden",
+        "Norway",
+        "Finland"
+      ]
+    },
+    "eu-west-2": {
+      "label": "Europe (London)",
+      "model": "eu.anthropic.claude-sonnet-4-6",
+      "status": "offered",
+      "countries": [
+        "GB",
+        "United Kingdom"
+      ]
+    },
+    "ap-southeast-1": {
+      "label": "Asia Pacific (Singapore)",
+      "model": "apac.anthropic.claude-sonnet-4-20250514-v1:0",
+      "status": "offered",
+      "countries": [
+        "SG",
+        "MY",
+        "ID",
+        "TH",
+        "VN",
+        "PH",
+        "Singapore",
+        "Malaysia",
+        "Indonesia",
+        "Thailand",
+        "Vietnam",
+        "Philippines"
+      ]
+    },
+    "ap-northeast-1": {
+      "label": "Asia Pacific (Tokyo)",
+      "model": "jp.anthropic.claude-sonnet-4-5-20250929-v1:0",
+      "status": "offered",
+      "countries": [
+        "JP",
+        "KR",
+        "Japan",
+        "South Korea"
+      ]
+    },
+    "ap-southeast-2": {
+      "label": "Asia Pacific (Sydney)",
+      "model": "au.anthropic.claude-sonnet-4-5-20250929-v1:0",
+      "status": "offered",
+      "countries": [
+        "AU",
+        "NZ",
+        "Australia",
+        "New Zealand"
+      ]
+    },
+    "ap-south-1": {
+      "label": "Asia Pacific (Mumbai)",
+      "model": "apac.anthropic.claude-sonnet-4-20250514-v1:0",
+      "status": "offered",
+      "countries": [
+        "IN",
+        "LK",
+        "BD",
+        "India",
+        "Sri Lanka",
+        "Bangladesh"
+      ]
+    }
+  },
+  "COGNITO_USER_POOL_ID": "us-east-1_1803uNTZU",
+  "COGNITO_CLIENT_ID": "7jbo53d9kq8gvj0kglfnjuh17k",
+  "AGENT_EMAIL_PARENT_DOMAIN": "agents.gradienterp.cloud",
+  "CMD_ENABLED": true,
+  "AUTOMATION_ENABLED": true,
+  "SELLER_GERP": "gradienterp",
+  "SELLER_ACCOUNT_ID": "867637277314",
+  "CLOSE_BUILD_PROJECT": "tower-per-customer",
+  "OPS_ALERTS_TOPIC_ARN": "arn:aws:sns:us-east-1:185369506315:gerp-ops-alerts",
+  "LOG_RETENTION_DAYS": 90,
+  "OAM_SINKS": {
+    "us-east-1": "arn:aws:oam:us-east-1:185369506315:sink/22125f05-417e-47ae-96f8-c563a2fc4a1b",
+    "eu-west-1": "arn:aws:oam:eu-west-1:185369506315:sink/9ec9f1e1-efc3-4b29-bb39-c4f6e5376d58",
+    "eu-central-1": "arn:aws:oam:eu-central-1:185369506315:sink/70eaa355-b3a5-4934-af15-92f245ae8983",
+    "eu-west-2": "arn:aws:oam:eu-west-2:185369506315:sink/7b24c57b-67fc-4d11-886b-66e90e07a88b",
+    "ap-southeast-1": "arn:aws:oam:ap-southeast-1:185369506315:sink/c0d149c7-d995-4a28-b78d-09972b91067f",
+    "ap-northeast-1": "arn:aws:oam:ap-northeast-1:185369506315:sink/d562df2f-c7e1-4486-99f0-0f31894bc054",
+    "ap-southeast-2": "arn:aws:oam:ap-southeast-2:185369506315:sink/f35f0a07-4945-4eec-89b3-6b157c17f226",
+    "ap-south-1": "arn:aws:oam:ap-south-1:185369506315:sink/13342b38-ecb1-49a1-b931-8378c4c2d07f"
+  },
+  "OPS_ALERTS_TOPICS": {
+    "us-east-1": "arn:aws:sns:us-east-1:185369506315:gerp-ops-alerts",
+    "eu-west-1": "arn:aws:sns:eu-west-1:185369506315:gerp-ops-alerts",
+    "eu-central-1": "arn:aws:sns:eu-central-1:185369506315:gerp-ops-alerts",
+    "eu-west-2": "arn:aws:sns:eu-west-2:185369506315:gerp-ops-alerts",
+    "ap-southeast-1": "arn:aws:sns:ap-southeast-1:185369506315:gerp-ops-alerts",
+    "ap-northeast-1": "arn:aws:sns:ap-northeast-1:185369506315:gerp-ops-alerts",
+    "ap-southeast-2": "arn:aws:sns:ap-southeast-2:185369506315:gerp-ops-alerts",
+    "ap-south-1": "arn:aws:sns:ap-south-1:185369506315:gerp-ops-alerts"
+  }
+}

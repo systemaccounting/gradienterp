@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "modules/events/platform/module.published.v1",
+  "title": "module.published",
+  "description": "SPECULATIVE. An engineer ships a module/capability to the marketplace. The engineer×firm match: cross-tenant cost patterns (fee drag, unit-cost outliers) match against published capabilities — the labor-allocation half of the thesis. customer_id = the publisher.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "openly_operated",
+    "customer_id",
+    "module_name",
+    "version",
+    "addresses"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "integer",
+      "const": 1,
+      "description": "Bumped on breaking shape change. Consumers branch on it."
+    },
+    "openly_operated": {
+      "type": "boolean",
+      "description": "Set at emit time from the gerp's settings. The publication rule's filter — a private gerp's events never leave the operator plane."
+    },
+    "customer_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Emitting tenant (gerp_id). Redundant with the envelope account id but saves consumers a join."
+    },
+    "module_name": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The published module/capability."
+    },
+    "version": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Semver-ish version."
+    },
+    "addresses": {
+      "type": "string",
+      "minLength": 1,
+      "description": "What cost/pattern it addresses, e.g. 'square fee drag'."
+    }
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "type": "object",
+  "description": "Create a capital-instrument request — the rule PAYS the buyer from the seller's margin (stored in seller's table). You must be one of the two. bid/ask computed from who creates first. Not a loan.",
+  "properties": {
+    "buyer": {"type": "string", "description": "The account the rule pays (the investor). Set this to yourself to bid to buy."},
+    "seller": {"type": "string", "description": "The account that issues the rule and pays it from its margin — the rule is stored in this account's table (the firm). Set this to yourself to offer/sell."},
+    "factor": {"type": "number", "description": "The rate: 0.10 = 10% of the period's net income each close."},
+    "price": {"type": "number", "description": "Capital in — the total the buyer pays for the instrument."},
+    "cap": {"type": "number", "description": "Optional LIFETIME payout ceiling — the deal stops once cumulative distributions reach it (e.g. 550000). Omit for a perpetuity."},
+    "product": {"type": "string", "description": "The marketplace name for the instrument. Default net_income_percent_dividend (a capped net-income share)."},
+    "thread": {"type": "string", "description": "Optional existing negotiation thread to counter against; omit to open a new one."}
+  },
+  "required": ["buyer", "seller", "factor", "price"]
+}

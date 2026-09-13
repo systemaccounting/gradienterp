@@ -1,0 +1,5 @@
+{
+  "type": "object",
+  "description": "Walk pending entries; resolve unclassified line items via the classifications table; promote balanced entries to the ledger. No input.",
+  "properties": {}
+}

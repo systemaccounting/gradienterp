@@ -1,0 +1,36 @@
+{
+  "merchant_id": "MLVASSBGBB05Z",
+  "type": "refund.updated",
+  "event_id": "222bac4c-2329-4d76-b868-1fa481068e11",
+  "created_at": "2026-06-05T03:11:20.382Z",
+  "data": {
+    "type": "refund",
+    "id": "Xp1vsL7hvOKCOnxJJrBcMR7K4jJZY_ZsDNUOL1dCdZ1xlP7r6LgD8RZnw84IV7tqziBAwcswb",
+    "object": {
+      "refund": {
+        "id": "Xp1vsL7hvOKCOnxJJrBcMR7K4jJZY_ZsDNUOL1dCdZ1xlP7r6LgD8RZnw84IV7tqziBAwcswb",
+        "status": "COMPLETED",
+        "amount_money": {
+          "amount": 100,
+          "currency": "USD"
+        },
+        "payment_id": "Xp1vsL7hvOKCOnxJJrBcMR7K4jJZY",
+        "order_id": "ZsPwVCG6A2ijOvXiHgRrxVlxpJfZY",
+        "created_at": "2026-06-05T03:11:17.623Z",
+        "updated_at": "2026-06-05T03:11:20.382Z",
+        "processing_fee": [
+          {
+            "effective_at": "2026-06-05T03:56:06.000Z",
+            "type": "INITIAL",
+            "amount_money": {
+              "amount": 0,
+              "currency": "USD"
+            }
+          }
+        ],
+        "location_id": "LYBDR6Y0NV8S1",
+        "destination_type": "CARD"
+      }
+    }
+  }
+}

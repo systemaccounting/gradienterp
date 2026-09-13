@@ -1,0 +1,21 @@
+{
+  "revenue": {
+    "label": "economy revenue",
+    "unit": "USD",
+    "definition": "every gerp's credits to revenue accounts in the period \u2014 the economy's revenue, published or not"
+  },
+  "expense": {
+    "label": "economy expense",
+    "unit": "USD",
+    "definition": "every gerp's debits to expense accounts in the period, cost of goods sold included"
+  },
+  "margin": {
+    "label": "economy margin",
+    "unit": "ratio",
+    "derived": [
+      "revenue",
+      "expense"
+    ],
+    "definition": "(revenue \u2212 expense) / revenue in the period, from the two counters above"
+  }
+}

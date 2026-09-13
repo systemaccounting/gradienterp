@@ -1,0 +1,27 @@
+{
+  "name": "gradienterp-e2e",
+  "private": true,
+  "type": "module",
+  "description": "Full-stack e2e: drive the gerp-website in a real browser, assert the backend effect (SSM/DDB) directly.",
+  "scripts": {
+    "setup": "playwright install chromium",
+    "test": "npm run smoke:prod",
+    "smoke:local": "E2E_ENV=local playwright test --grep @smoke",
+    "smoke:prod": "E2E_ENV=prod playwright test --grep @smoke --grep-invert @mutating",
+    "full:local": "E2E_ENV=local playwright test --grep-invert @lifecycle",
+    "full:prod": "E2E_ENV=prod playwright test --grep-invert @lifecycle",
+    "lifecycle": "E2E_ENV=prod playwright test lifecycle.spec.mjs --headed --grep @lifecycle"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.48.0"
+  },
+  "dependencies": {
+    "@aws-sdk/client-cognito-identity-provider": "^3.0.0",
+    "@aws-sdk/client-dynamodb": "^3.1078.0",
+    "@aws-sdk/client-lambda": "^3.1127.0",
+    "@aws-sdk/client-s3": "^3.0.0",
+    "@aws-sdk/client-ssm": "^3.0.0",
+    "@aws-sdk/client-sts": "^3.0.0",
+    "@aws-sdk/credential-providers": "^3.0.0"
+  }
+}

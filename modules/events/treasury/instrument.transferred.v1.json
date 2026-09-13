@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "modules/events/treasury/instrument.transferred.v1",
+  "title": "instrument.transferred",
+  "description": "SPECULATIVE (emit call pending). An instrument changed holders.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "openly_operated",
+    "customer_id",
+    "instrument_id",
+    "from_holder",
+    "to_holder"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "integer",
+      "const": 1,
+      "description": "Bumped on breaking shape change. Consumers branch on it."
+    },
+    "openly_operated": {
+      "type": "boolean",
+      "description": "Set at emit time from the gerp's settings. The publication rule's filter — a private gerp's events never leave the operator plane."
+    },
+    "customer_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Emitting tenant (gerp_id). Redundant with the envelope account id but saves consumers a join."
+    },
+    "instrument_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The instrument."
+    },
+    "from_holder": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Prior holder (gerp_profile_id)."
+    },
+    "to_holder": {
+      "type": "string",
+      "minLength": 1,
+      "description": "New holder."
+    }
+  }
+}

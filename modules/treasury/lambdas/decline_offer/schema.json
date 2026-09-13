@@ -1,0 +1,18 @@
+{
+  "type": "object",
+  "description": "Decline a capital offer or bid on this firm's margin. Terminal: the row is marked declined on both sides and never settles. A different price is a new propose_offer on the same thread.",
+  "properties": {
+    "thread": {
+      "type": "string",
+      "description": "The offer's thread (from the inbound offer.proposed)."
+    },
+    "terms_hash": {
+      "type": "string",
+      "description": "The exact terms being declined, echoed from the proposal."
+    }
+  },
+  "required": [
+    "thread",
+    "terms_hash"
+  ]
+}

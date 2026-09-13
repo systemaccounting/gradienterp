@@ -1,0 +1,21 @@
+{
+  "type": "object",
+  "description": "Export the firm's records and documents to a downloadable copy: books, invoices, contacts, inventory, labor, and the filing cabinet. Returns links to a script that downloads it.",
+  "properties": {
+    "include": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Narrow the export to these tables, by their exact names: accounting-ledger, accounting-balances, accounting-pending, invoicing-invoices (its lines ride with it), invoicing-transitions, invoicing-agreements, contacts, inventory-items, inventory-movements, labor-time-entries, labor-worker, labor-worker-legal, settings, rules-instances, rules-params, calendar-events, notes, tasks, assets, agreements, treasury-agreements, purchasing-orders, shipping, payments-webhook-log, payments-dlq, payments-dlq-bodies, inbox-inbound, agent-chats, agent-email. A name not on this list is refused with the list. Leave empty to take everything, which is the usual case; name tables only when someone wants a smaller copy."
+    },
+    "resume": {
+      "type": "string",
+      "description": "Continue an export that ran out of time, by its export id. Work already finished is not redone."
+    },
+    "credentials_only": {
+      "type": "boolean",
+      "description": "Refresh the download links for the most recent export instead of making a new one. Use when the previous links expired."
+    }
+  }
+}

@@ -1,0 +1,114 @@
+{
+  "type": "object",
+  "description": "Shipping AND receiving: one custody record per parcel, inbound or outbound - the mailroom and the dock. ship posts the freight entry; exceptions are tasks. The custody walks: search_guides.",
+  "required": [
+    "op"
+  ],
+  "properties": {
+    "op": {
+      "type": "string",
+      "description": "create | update | receive | pickup | ship | get | list."
+    },
+    "shipment_id": {
+      "type": "string",
+      "description": "<location>#s-<hex>; update/receive/pickup/ship/get."
+    },
+    "direction": {
+      "type": "string",
+      "description": "create: inbound (expected→arrived→putaway|delivered|picked_up) | outbound (packed→shipped→delivered)."
+    },
+    "description": {
+      "type": "string",
+      "description": "What it is."
+    },
+    "contents": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "item_id": {
+            "type": "string",
+            "description": "Inventory item key, if known."
+          },
+          "description": {
+            "type": "string",
+            "description": "Line description."
+          },
+          "qty": {
+            "type": "number",
+            "description": "Quantity."
+          }
+        }
+      },
+      "description": "Informational; counts go through manage_po receive."
+    },
+    "carrier": {
+      "type": "string",
+      "description": "fedex|ups|usps|dhl|ontrac|freight|courier|other (open string)."
+    },
+    "tracking": {
+      "type": "string",
+      "description": "Carrier tracking id; known carriers get a link."
+    },
+    "service": {
+      "type": "string",
+      "description": "Carrier service label: ground, 2day, ltl…"
+    },
+    "sender": {
+      "type": "string",
+      "description": "contact_id of the sender (inbound)."
+    },
+    "recipient": {
+      "type": "string",
+      "description": "contact_id the parcel is for; arrival notifies, pickup closes."
+    },
+    "po_id": {
+      "type": "string",
+      "description": "The PO fulfilled; counted in via manage_po receive."
+    },
+    "invoice_id": {
+      "type": "string",
+      "description": "The invoice an outbound shipment fulfills."
+    },
+    "location": {
+      "type": "string",
+      "description": "Location ordinal, default '1'."
+    },
+    "expected": {
+      "type": "string",
+      "description": "ISO date expected (inbound)."
+    },
+    "cost": {
+      "type": "number",
+      "description": "Freight: Dr SHIPPING_EXPENSE at ship (outbound) or receive (inbound); omit if not paid by the firm."
+    },
+    "paid_via": {
+      "type": "string",
+      "description": "cash | payable."
+    },
+    "signed_by": {
+      "type": "string",
+      "description": "Who signed at receive or pickup."
+    },
+    "condition": {
+      "type": "string",
+      "description": "On arrival; damage or shortage becomes a task."
+    },
+    "status": {
+      "type": "string",
+      "description": "list: filter. update: exception|cancelled from any open state."
+    },
+    "open": {
+      "type": "boolean",
+      "description": "list: in-flight, on-dock or awaiting pickup."
+    },
+    "updates": {
+      "type": "object",
+      "description": "update: field to value; direction, freight_entry, created_at immutable."
+    },
+    "job": {
+      "type": "string",
+      "description": "Job tag (dimensions.job)."
+    }
+  }
+}

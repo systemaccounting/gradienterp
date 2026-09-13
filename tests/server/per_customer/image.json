@@ -1,0 +1,1751 @@
+{
+  "api_id": "7asszow002",
+  "bus": {
+    "name": "gerp-internal-gradienterp",
+    "rules": [
+      {
+        "name": "gerp-automation-gradienterp-requested",
+        "pattern": {
+          "detail-type": [
+            "automation.requested"
+          ],
+          "source": [
+            "rules"
+          ]
+        },
+        "targets": [
+          {
+            "arn": "arn:aws:lambda:us-east-1:867637277314:function:gerp-automation-gradienterp-automate",
+            "bus": null,
+            "function": "gerp-automation-gradienterp-automate"
+          }
+        ]
+      },
+      {
+        "name": "gerp-automation-gradienterp-scheduled",
+        "pattern": {
+          "detail-type": [
+            "automation.scheduled"
+          ],
+          "source": [
+            "rules"
+          ]
+        },
+        "targets": [
+          {
+            "arn": "arn:aws:lambda:us-east-1:867637277314:function:gerp-automation-gradienterp-manage_automation",
+            "bus": null,
+            "function": "gerp-automation-gradienterp-manage_automation"
+          }
+        ]
+      },
+      {
+        "name": "gerp-inbox-gradienterp-consume",
+        "pattern": {
+          "detail": {
+            "to": [
+              "gradienterp"
+            ]
+          }
+        },
+        "targets": [
+          {
+            "arn": "arn:aws:lambda:us-east-1:867637277314:function:gerp-inbox-gradienterp-receive_inbound",
+            "bus": null,
+            "function": "gerp-inbox-gradienterp-receive_inbound"
+          }
+        ]
+      },
+      {
+        "name": "gerp-payments-gradienterp-collection-requested",
+        "pattern": {
+          "detail-type": [
+            "collection.requested"
+          ],
+          "source": [
+            "invoicing"
+          ]
+        },
+        "targets": [
+          {
+            "arn": "arn:aws:lambda:us-east-1:867637277314:function:gerp-payments-gradienterp-charge_saved_method",
+            "bus": null,
+            "function": "gerp-payments-gradienterp-charge_saved_method"
+          }
+        ]
+      }
+    ]
+  },
+  "functions": {
+    "agentcore-gradienterp-chat": {
+      "env": {
+        "AGENT_RUNTIME_ENDPOINT_ARN": "arn:aws:bedrock-agentcore:us-east-1:867637277314:runtime/agentcore_gradienterp-is2qoF7tii/runtime-endpoint/agentcore_gradienterp_endpoint",
+        "BUSINESS_NAME": "gradienterp",
+        "CHATS_TABLE": "gerp-agent-gradienterp-chats",
+        "COGNITO_CLIENT_ID": "7jbo53d9kq8gvj0kglfnjuh17k",
+        "COGNITO_DOMAIN_PREFIX": "gerp-auth",
+        "COGNITO_USER_POOL_ID": "us-east-1_1803uNTZU",
+        "CONTACTS_TABLE": "gerp-contacts-gradienterp",
+        "CUSTOMER_ID": "gradienterp",
+        "GERP_ID": "gradienterp",
+        "MEMORY_ACTOR_ID": "agent-session",
+        "MEMORY_ID": "agentcore_gradienterp_memory-sGlO6WFAsk",
+        "OWNER_SUB_PARAM": "/gradienterp/customers/gradienterp/owner_sub",
+        "SESSIONS_BUCKET": "gerp-agent-gradienterp-sessions-867637277314"
+      },
+      "function_url": {
+        "auth": "NONE"
+      },
+      "src_dir": "modules/agent/lambdas/chat",
+      "timeout": 120
+    },
+    "agentcore-gradienterp-email": {
+      "env": {
+        "AGENT_ADDRESS": "agent@gradienterp.agents.gradienterp.cloud",
+        "AGENT_RUNTIME_ENDPOINT_ARN": "arn:aws:bedrock-agentcore:us-east-1:867637277314:runtime/agentcore_gradienterp-is2qoF7tii/runtime-endpoint/agentcore_gradienterp_endpoint",
+        "ALLOWLIST": "owner@example.com",
+        "CUSTOMER_ID": "gradienterp",
+        "DEDUP_TABLE": "gerp-agent-gradienterp-email",
+        "EMAIL_BUCKET": "gerp-agent-gradienterp-email-867637277314",
+        "GERP_ID": "gradienterp",
+        "MAX_ATTACHMENT_MB": "5",
+        "SETTINGS_TABLE": "gerp-settings-gradienterp"
+      },
+      "src_dir": "modules/agent/lambdas/email",
+      "timeout": 120
+    },
+    "agentcore_gradienterp_continue_poke": {
+      "env": {
+        "AGENT_RUNTIME_ENDPOINT_ARN": "arn:aws:bedrock-agentcore:us-east-1:867637277314:runtime/agentcore_gradienterp-is2qoF7tii/runtime-endpoint/agentcore_gradienterp_endpoint",
+        "CUSTOMER_ID": "gradienterp",
+        "DEFAULT_MAX_TURNS": "3",
+        "GERP_ID": "gradienterp",
+        "SETTINGS_TABLE": "gerp-settings-gradienterp",
+        "UPLOADS_BUCKET": "gerp-agent-gradienterp-uploads-867637277314"
+      },
+      "src_dir": "modules/agent/lambdas/continue_poke",
+      "timeout": 120
+    },
+    "gerp-accounting-gradienterp-add_classification": {
+      "env": {
+        "BALANCES_TABLE": "gerp-accounting-gradienterp-balances",
+        "CHAT_BASE_URL": "https://gradienterp.cloud/chat",
+        "CUSTOMER_ID": "gradienterp",
+        "DISTRIBUTION_FN": "gerp-treasury-gradienterp-distribution",
+        "EXTEND_SCHEMA_FN": "gerp-schemas-gradienterp-write_schema",
+        "GENERATE_REPORT_FN": "gerp-accounting-gradienterp-get_statement",
+        "GERP_ID": "gradienterp",
+        "GERP_TIMEZONE": "UTC",
+        "LEDGER_TABLE": "gerp-accounting-gradienterp-ledger",
+        "OP_EVENT_BUS_ARN": "arn:aws:events:us-east-1:582129522725:event-bus/gerp-events",
+        "OWNER_EMAIL": "owner@example.com",
+        "PENDING_TABLE": "gerp-accounting-gradienterp-pending",
+        "PLAID_ACCESS_TOKEN_PARAM": "/gradienterp/customers/gradienterp/secrets/plaid/access_token",
+        "PLAID_CURSOR_PARAM": "/gradienterp/customers/gradienterp/accounting/plaid_cursor",
+        "PLAID_GATEWAY_ARN": "arn:aws:lambda:us-east-1:185369506315:function:gerp-plaid-gateway",
+        "PLAID_PENDING_LINK_PARAM": "/gradienterp/customers/gradienterp/accounting/plaid_pending_link",
+        "POST_JOURNAL_ENTRY_FN": "gerp-accounting-gradienterp-post_journal_entry",
+        "REPORTING_STANDARD": "true",
+        "REPORT_BUCKET": "gerp-accounting-gradienterp-report",
+        "SCHEMA_TABLE": "gerp-schema-gradienterp",
+        "SENDER_EMAIL": "ops+sender@gradienterp.cloud",
+        "SETTINGS_TABLE": "gerp-settings-gradienterp"
+      },
+      "src_dir": "modules/accounting/lambdas/add_classification",
+      "timeout": 30
+    },
+    "gerp-accounting-gradienterp-classify_pending": {
+      "env": {
+        "BALANCES_TABLE": "gerp-accounting-gradienterp-balances",
+        "CHAT_BASE_URL": "https://gradienterp.cloud/chat",
+        "CUSTOMER_ID": "gradienterp",
+        "DISTRIBUTION_FN": "gerp-treasury-gradienterp-distribution",
+        "EXTEND_SCHEMA_FN": "gerp-schemas-gradienterp-write_schema",
+        "GENERATE_REPORT_FN": "gerp-accounting-gradienterp-get_statement",
+        "GERP_ID": "gradienterp",
+        "GERP_TIMEZONE": "UTC",
+        "LEDGER_TABLE": "gerp-accounting-gradienterp-ledger",
+        "OP_EVENT_BUS_ARN": "arn:aws:events:us-east-1:582129522725:event-bus/gerp-events",
+        "OWNER_EMAIL": "owner@example.com",
+        "PENDING_TABLE": "gerp-accounting-gradienterp-pending",
+        "PLAID_ACCESS_TOKEN_PARAM": "/gradienterp/customers/gradienterp/secrets/plaid/access_token",
+        "PLAID_CURSOR_PARAM": "/gradienterp/customers/gradienterp/accounting/plaid_cursor",
+        "PLAID_GATEWAY_ARN": "arn:aws:lambda:us-east-1:185369506315:function:gerp-plaid-gateway",
+        "PLAID_PENDING_LINK_PARAM": "/gradienterp/customers/gradienterp/accounting/plaid_pending_link",
+        "POST_JOURNAL_ENTRY_FN": "gerp-accounting-gradienterp-post_journal_entry",
+        "REPORTING_STANDARD": "true",
+        "REPORT_BUCKET": "gerp-accounting-gradienterp-report",
+        "SCHEMA_TABLE": "gerp-schema-gradienterp",
+        "SENDER_EMAIL": "ops+sender@gradienterp.cloud",
+        "SETTINGS_TABLE": "gerp-settings-gradienterp"
+      },
+      "src_dir": "modules/accounting/lambdas/classify_pending",
+      "timeout": 30
+    },
+    "gerp-accounting-gradienterp-connect_bank": {
+      "env": {
+        "BALANCES_TABLE": "gerp-accounting-gradienterp-balances",
+        "CHAT_BASE_URL": "https://gradienterp.cloud/chat",
+        "CUSTOMER_ID": "gradienterp",
+        "DISTRIBUTION_FN": "gerp-treasury-gradienterp-distribution",
+        "EXTEND_SCHEMA_FN": "gerp-schemas-gradienterp-write_schema",
+        "GENERATE_REPORT_FN": "gerp-accounting-gradienterp-get_statement",
+        "GERP_ID": "gradienterp",
+        "GERP_TIMEZONE": "UTC",
+        "LEDGER_TABLE": "gerp-accounting-gradienterp-ledger",
+        "OP_EVENT_BUS_ARN": "arn:aws:events:us-east-1:582129522725:event-bus/gerp-events",
+        "OWNER_EMAIL": "owner@example.com",
+        "PENDING_TABLE": "gerp-accounting-gradienterp-pending",
+        "PLAID_ACCESS_TOKEN_PARAM": "/gradienterp/customers/gradienterp/secrets/plaid/access_token",
+        "PLAID_CURSOR_PARAM": "/gradienterp/customers/gradienterp/accounting/plaid_cursor",
+        "PLAID_GATEWAY_ARN": "arn:aws:lambda:us-east-1:185369506315:function:gerp-plaid-gateway",
+        "PLAID_PENDING_LINK_PARAM": "/gradienterp/customers/gradienterp/accounting/plaid_pending_link",
+        "POST_JOURNAL_ENTRY_FN": "gerp-accounting-gradienterp-post_journal_entry",
+        "REPORTING_STANDARD": "true",
+        "REPORT_BUCKET": "gerp-accounting-gradienterp-report",
+        "SCHEMA_TABLE": "gerp-schema-gradienterp",
+        "SENDER_EMAIL": "ops+sender@gradienterp.cloud",
+        "SETTINGS_TABLE": "gerp-settings-gradienterp"
+      },
+      "src_dir": "modules/accounting/lambdas/connect_bank",
+      "timeout": 30
+    },
+    "gerp-accounting-gradienterp-get_aws_cost": {
+      "env": {
+        "BALANCES_TABLE": "gerp-accounting-gradienterp-balances",
+        "CHAT_BASE_URL": "https://gradienterp.cloud/chat",
+        "CUSTOMER_ID": "gradienterp",
+        "DISTRIBUTION_FN": "gerp-treasury-gradienterp-distribution",
+        "EXTEND_SCHEMA_FN": "gerp-schemas-gradienterp-write_schema",
+        "GENERATE_REPORT_FN": "gerp-accounting-gradienterp-get_statement",
+        "GERP_ID": "gradienterp",
+        "GERP_TIMEZONE": "UTC",
+        "LEDGER_TABLE": "gerp-accounting-gradienterp-ledger",
+        "OP_EVENT_BUS_ARN": "arn:aws:events:us-east-1:582129522725:event-bus/gerp-events",
+        "OWNER_EMAIL": "owner@example.com",
+        "PENDING_TABLE": "gerp-accounting-gradienterp-pending",
+        "PLAID_ACCESS_TOKEN_PARAM": "/gradienterp/customers/gradienterp/secrets/plaid/access_token",
+        "PLAID_CURSOR_PARAM": "/gradienterp/customers/gradienterp/accounting/plaid_cursor",
+        "PLAID_GATEWAY_ARN": "arn:aws:lambda:us-east-1:185369506315:function:gerp-plaid-gateway",
+        "PLAID_PENDING_LINK_PARAM": "/gradienterp/customers/gradienterp/accounting/plaid_pending_link",
+        "POST_JOURNAL_ENTRY_FN": "gerp-accounting-gradienterp-post_journal_entry",
+        "REPORTING_STANDARD": "true",
+        "REPORT_BUCKET": "gerp-accounting-gradienterp-report",
+        "SCHEMA_TABLE": "gerp-schema-gradienterp",
+        "SENDER_EMAIL": "ops+sender@gradienterp.cloud",
+        "SETTINGS_TABLE": "gerp-settings-gradienterp"
+      },
+      "src_dir": "modules/accounting/lambdas/get_aws_cost",
+      "timeout": 30
+    },
+    "gerp-accounting-gradienterp-get_statement": {
+      "env": {
+        "BALANCES_TABLE": "gerp-accounting-gradienterp-balances",
+        "CHAT_BASE_URL": "https://gradienterp.cloud/chat",
+        "CUSTOMER_ID": "gradienterp",
+        "DISTRIBUTION_FN": "gerp-treasury-gradienterp-distribution",
+        "EXTEND_SCHEMA_FN": "gerp-schemas-gradienterp-write_schema",
+        "GENERATE_REPORT_FN": "gerp-accounting-gradienterp-get_statement",
+        "GERP_ID": "gradienterp",
+        "GERP_TIMEZONE": "UTC",
+        "LEDGER_TABLE": "gerp-accounting-gradienterp-ledger",
+        "OP_EVENT_BUS_ARN": "arn:aws:events:us-east-1:582129522725:event-bus/gerp-events",
+        "OWNER_EMAIL": "owner@example.com",
+        "PENDING_TABLE": "gerp-accounting-gradienterp-pending",
+        "PLAID_ACCESS_TOKEN_PARAM": "/gradienterp/customers/gradienterp/secrets/plaid/access_token",
+        "PLAID_CURSOR_PARAM": "/gradienterp/customers/gradienterp/accounting/plaid_cursor",
+        "PLAID_GATEWAY_ARN": "arn:aws:lambda:us-east-1:185369506315:function:gerp-plaid-gateway",
+        "PLAID_PENDING_LINK_PARAM": "/gradienterp/customers/gradienterp/accounting/plaid_pending_link",
+        "POST_JOURNAL_ENTRY_FN": "gerp-accounting-gradienterp-post_journal_entry",
+        "REPORTING_STANDARD": "true",
+        "REPORT_BUCKET": "gerp-accounting-gradienterp-report",
+        "SCHEMA_TABLE": "gerp-schema-gradienterp",
+        "SENDER_EMAIL": "ops+sender@gradienterp.cloud",
+        "SETTINGS_TABLE": "gerp-settings-gradienterp"
+      },
+      "src_dir": "modules/accounting/lambdas/get_statement",
+      "timeout": 120
+    },
+    "gerp-accounting-gradienterp-oob_financials": {
+      "env": {
+        "BALANCES_TABLE": "gerp-accounting-gradienterp-balances",
+        "CUSTOMER_ID": "gradienterp",
+        "GERP_ID": "gradienterp",
+        "LEDGER_TABLE": "gerp-accounting-gradienterp-ledger",
+        "SETTINGS_TABLE": "gerp-settings-gradienterp",
+        "WINDOW_DAYS": "90"
+      },
+      "src_dir": "modules/accounting/lambdas/oob_financials",
+      "timeout": 15
+    },
+    "gerp-accounting-gradienterp-oob_metrics": {
+      "env": {
+        "CUSTOMER_ID": "gradienterp",
+        "GERP_ID": "gradienterp",
+        "LEDGER_TABLE": "gerp-accounting-gradienterp-ledger",
+        "SETTINGS_TABLE": "gerp-settings-gradienterp",
+        "WINDOW_DAYS": "90"
+      },
+      "src_dir": "modules/accounting/lambdas/oob_metrics",
+      "timeout": 15
+    },
+    "gerp-accounting-gradienterp-post_journal_entry": {
+      "env": {
+        "BALANCES_TABLE": "gerp-accounting-gradienterp-balances",
+        "CHAT_BASE_URL": "https://gradienterp.cloud/chat",
+        "CUSTOMER_ID": "gradienterp",
+        "DISTRIBUTION_FN": "gerp-treasury-gradienterp-distribution",
+        "EXTEND_SCHEMA_FN": "gerp-schemas-gradienterp-write_schema",
+        "GENERATE_REPORT_FN": "gerp-accounting-gradienterp-get_statement",
+        "GERP_ID": "gradienterp",
+        "GERP_TIMEZONE": "UTC",
+        "LEDGER_TABLE": "gerp-accounting-gradienterp-ledger",
+        "OP_EVENT_BUS_ARN": "arn:aws:events:us-east-1:582129522725:event-bus/gerp-events",
+        "OWNER_EMAIL": "owner@example.com",
+        "PENDING_TABLE": "gerp-accounting-gradienterp-pending",
+        "PLAID_ACCESS_TOKEN_PARAM": "/gradienterp/customers/gradienterp/secrets/plaid/access_token",
+        "PLAID_CURSOR_PARAM": "/gradienterp/customers/gradienterp/accounting/plaid_cursor",
+        "PLAID_GATEWAY_ARN": "arn:aws:lambda:us-east-1:185369506315:function:gerp-plaid-gateway",
+        "PLAID_PENDING_LINK_PARAM": "/gradienterp/customers/gradienterp/accounting/plaid_pending_link",
+        "POST_JOURNAL_ENTRY_FN": "gerp-accounting-gradienterp-post_journal_entry",
+        "REPORTING_STANDARD": "true",
+        "REPORT_BUCKET": "gerp-accounting-gradienterp-report",
+        "SCHEMA_TABLE": "gerp-schema-gradienterp",
+        "SENDER_EMAIL": "ops+sender@gradienterp.cloud",
+        "SETTINGS_TABLE": "gerp-settings-gradienterp"
+      },
+      "src_dir": "modules/accounting/lambdas/post_journal_entry",
+      "timeout": 30
+    },
+    "gerp-accounting-gradienterp-reconcile": {
+      "env": {
+        "BALANCES_TABLE": "gerp-accounting-gradienterp-balances",
+        "CHAT_BASE_URL": "https://gradienterp.cloud/chat",
+        "CUSTOMER_ID": "gradienterp",
+        "DISTRIBUTION_FN": "gerp-treasury-gradienterp-distribution",
+        "EXTEND_SCHEMA_FN": "gerp-schemas-gradienterp-write_schema",
+        "GENERATE_REPORT_FN": "gerp-accounting-gradienterp-get_statement",
+        "GERP_ID": "gradienterp",
+        "GERP_TIMEZONE": "UTC",
+        "LEDGER_TABLE": "gerp-accounting-gradienterp-ledger",
+        "OP_EVENT_BUS_ARN": "arn:aws:events:us-east-1:582129522725:event-bus/gerp-events",
+        "OWNER_EMAIL": "owner@example.com",
+        "PENDING_TABLE": "gerp-accounting-gradienterp-pending",
+        "PLAID_ACCESS_TOKEN_PARAM": "/gradienterp/customers/gradienterp/secrets/plaid/access_token",
+        "PLAID_CURSOR_PARAM": "/gradienterp/customers/gradienterp/accounting/plaid_cursor",
+        "PLAID_GATEWAY_ARN": "arn:aws:lambda:us-east-1:185369506315:function:gerp-plaid-gateway",
+        "PLAID_PENDING_LINK_PARAM": "/gradienterp/customers/gradienterp/accounting/plaid_pending_link",
+        "POST_JOURNAL_ENTRY_FN": "gerp-accounting-gradienterp-post_journal_entry",
+        "REPORTING_STANDARD": "true",
+        "REPORT_BUCKET": "gerp-accounting-gradienterp-report",
+        "SCHEMA_TABLE": "gerp-schema-gradienterp",
+        "SENDER_EMAIL": "ops+sender@gradienterp.cloud",
+        "SETTINGS_TABLE": "gerp-settings-gradienterp"
+      },
+      "src_dir": "modules/accounting/lambdas/reconcile",
+      "timeout": 30
+    },
+    "gerp-accounting-gradienterp-report_pending": {
+      "env": {
+        "BALANCES_TABLE": "gerp-accounting-gradienterp-balances",
+        "CHAT_BASE_URL": "https://gradienterp.cloud/chat",
+        "CUSTOMER_ID": "gradienterp",
+        "DISTRIBUTION_FN": "gerp-treasury-gradienterp-distribution",
+        "EXTEND_SCHEMA_FN": "gerp-schemas-gradienterp-write_schema",
+        "GENERATE_REPORT_FN": "gerp-accounting-gradienterp-get_statement",
+        "GERP_ID": "gradienterp",
+        "GERP_TIMEZONE": "UTC",
+        "LEDGER_TABLE": "gerp-accounting-gradienterp-ledger",
+        "OP_EVENT_BUS_ARN": "arn:aws:events:us-east-1:582129522725:event-bus/gerp-events",
+        "OWNER_EMAIL": "owner@example.com",
+        "PENDING_TABLE": "gerp-accounting-gradienterp-pending",
+        "PLAID_ACCESS_TOKEN_PARAM": "/gradienterp/customers/gradienterp/secrets/plaid/access_token",
+        "PLAID_CURSOR_PARAM": "/gradienterp/customers/gradienterp/accounting/plaid_cursor",
+        "PLAID_GATEWAY_ARN": "arn:aws:lambda:us-east-1:185369506315:function:gerp-plaid-gateway",
+        "PLAID_PENDING_LINK_PARAM": "/gradienterp/customers/gradienterp/accounting/plaid_pending_link",
+        "POST_JOURNAL_ENTRY_FN": "gerp-accounting-gradienterp-post_journal_entry",
+        "REPORTING_STANDARD": "true",
+        "REPORT_BUCKET": "gerp-accounting-gradienterp-report",
+        "SCHEMA_TABLE": "gerp-schema-gradienterp",
+        "SENDER_EMAIL": "ops+sender@gradienterp.cloud",
+        "SETTINGS_TABLE": "gerp-settings-gradienterp"
+      },
+      "src_dir": "modules/accounting/lambdas/report_pending",
+      "timeout": 30
+    },
+    "gerp-agreements-gradienterp-accept": {
+      "env": {
+        "AGREEMENTS_TABLE": "gerp-agreements-gradienterp",
+        "CUSTOMER_ID": "gradienterp",
+        "DIRECTORY_TABLE_ARN": "arn:aws:dynamodb:us-east-1:185369506315:table/gerp-directory",
+        "GERP_ID": "gradienterp",
+        "HUB_ID": "us-east-1",
+        "OP_EVENT_BUS_ARN": "arn:aws:events:us-east-1:582129522725:event-bus/gerp-events"
+      },
+      "src_dir": "modules/agreements/lambdas/accept",
+      "timeout": 30
+    },
+    "gerp-agreements-gradienterp-apply_inbound": {
+      "env": {
+        "AGREEMENTS_TABLE": "gerp-agreements-gradienterp",
+        "CUSTOMER_ID": "gradienterp",
+        "DIRECTORY_TABLE_ARN": "arn:aws:dynamodb:us-east-1:185369506315:table/gerp-directory",
+        "GERP_ID": "gradienterp",
+        "HUB_ID": "us-east-1",
+        "ITEMS_TABLE": "gerp-inventory-gradienterp-items",
+        "OP_EVENT_BUS_ARN": "arn:aws:events:us-east-1:582129522725:event-bus/gerp-events",
+        "RULE_INSTANCES_TABLE": "gerp-rules-gradienterp-instances"
+      },
+      "src_dir": "modules/agreements/lambdas/apply_inbound",
+      "timeout": 30
+    },
+    "gerp-agreements-gradienterp-decline": {
+      "env": {
+        "AGREEMENTS_TABLE": "gerp-agreements-gradienterp",
+        "CUSTOMER_ID": "gradienterp",
+        "DIRECTORY_TABLE_ARN": "arn:aws:dynamodb:us-east-1:185369506315:table/gerp-directory",
+        "GERP_ID": "gradienterp",
+        "HUB_ID": "us-east-1",
+        "OP_EVENT_BUS_ARN": "arn:aws:events:us-east-1:582129522725:event-bus/gerp-events"
+      },
+      "src_dir": "modules/agreements/lambdas/decline",
+      "timeout": 30
+    },
+    "gerp-agreements-gradienterp-request": {
+      "env": {
+        "AGREEMENTS_TABLE": "gerp-agreements-gradienterp",
+        "CUSTOMER_ID": "gradienterp",
+        "DIRECTORY_TABLE_ARN": "arn:aws:dynamodb:us-east-1:185369506315:table/gerp-directory",
+        "GERP_ID": "gradienterp",
+        "HUB_ID": "us-east-1",
+        "OP_EVENT_BUS_ARN": "arn:aws:events:us-east-1:582129522725:event-bus/gerp-events"
+      },
+      "src_dir": "modules/agreements/lambdas/request",
+      "timeout": 30
+    },
+    "gerp-agreements-gradienterp-settle": {
+      "env": {
+        "AGREEMENTS_TABLE": "gerp-agreements-gradienterp",
+        "CUSTOMER_ID": "gradienterp",
+        "GERP_ID": "gradienterp",
+        "POST_JOURNAL_ENTRY_FN": "gerp-accounting-gradienterp-post_journal_entry"
+      },
+      "src_dir": "modules/agreements/lambdas/settle",
+      "timeout": 60
+    },
+    "gerp-assets-gradienterp-manage_assets": {
+      "env": {
+        "ASSETS_TABLE": "gerp-assets-gradienterp",
+        "CUSTOMER_ID": "gradienterp",
+        "GERP_ID": "gradienterp",
+        "POST_JOURNAL_ENTRY_FN": "gerp-accounting-gradienterp-post_journal_entry",
+        "SCHEMA_TABLE": "gerp-schema-gradienterp"
+      },
+      "src_dir": "modules/assets/lambdas/manage_assets",
+      "timeout": 30
+    },
+    "gerp-automation-gradienterp-approve_automation": {
+      "env": {
+        "AGENT_RUNTIME_ENDPOINT_ARN": "arn:aws:bedrock-agentcore:us-east-1:867637277314:runtime/agentcore_gradienterp-is2qoF7tii/runtime-endpoint/agentcore_gradienterp_endpoint",
+        "APPROVED_PREFIX": "automations/approved/",
+        "AUTOMATE_FUNCTION_ARN": "arn:aws:lambda:us-east-1:867637277314:function:gerp-automation-gradienterp-automate",
+        "AUTOMATION_ENV_PATH": "/gradienterp/customers/gradienterp/automation/env",
+        "AWS_ACCOUNT_ID": "867637277314",
+        "CABINET_BUCKET": "gerp-agent-gradienterp-uploads-867637277314",
+        "CLOSE_ACCOUNT_FN": "arn:aws:lambda:us-east-1:185369506315:function:tower-close-account",
+        "CLOSE_BUILD_PROJECT": "tower-per-customer",
+        "CLOSURE_REQUESTER_ROLE_ARN": "arn:aws:iam::185369506315:role/gerp-closure-requester",
+        "CMD_FUNCTION_ARN": "arn:aws:lambda:us-east-1:867637277314:function:gerp-cmd-gradienterp-cmd",
+        "CUSTOMERS_TABLE": "gerp-customers",
+        "CUSTOMER_ID": "gradienterp",
+        "GATEWAY_URL": "https://agentcore-gradienterp-gateway-nm7z9mk3tr.gateway.bedrock-agentcore.us-east-1.amazonaws.com/mcp",
+        "GERP_ID": "gradienterp",
+        "HOOKS_BASE_URL": "https://7asszow002.execute-api.us-east-1.amazonaws.com",
+        "MACHINES_PREFIX": "automations/approved/machines/",
+        "REVIEWS_TABLE": "gerp-automation-gradienterp-reviews",
+        "ROUTES_PREFIX": "automations/routes/",
+        "SCHEDULER_TARGET_ROLE": "arn:aws:iam::867637277314:role/gerp-automation-gradienterp-scheduler-target",
+        "SCHEDULE_GROUP": "gerp-automation-gradienterp-schedules",
+        "SEND_EMAIL_FUNCTION_ARN": "arn:aws:lambda:us-east-1:867637277314:function:gerp-mail-gradienterp-send_email",
+        "SFN_LOG_GROUP_ARN": "arn:aws:logs:us-east-1:867637277314:log-group:/aws/vendedlogs/states/gerp-automation-gradienterp:*",
+        "SFN_NAME_PREFIX": "gerp-automation-gradienterp-",
+        "SFN_ROLE_ARN": "arn:aws:iam::867637277314:role/gerp-automation-gradienterp-machine",
+        "STAGED_PREFIX": "automations/staged/",
+        "TASKS_FN": "gerp-tasks-gradienterp-manage_tasks",
+        "TENANT_PARAM": "/gradienterp/customers/gradienterp"
+      },
+      "src_dir": "modules/automation/lambdas/approve_automation",
+      "timeout": 30
+    },
+    "gerp-automation-gradienterp-automate": {
+      "env": {
+        "AGENT_RUNTIME_ENDPOINT_ARN": "arn:aws:bedrock-agentcore:us-east-1:867637277314:runtime/agentcore_gradienterp-is2qoF7tii/runtime-endpoint/agentcore_gradienterp_endpoint",
+        "APPROVED_PREFIX": "automations/approved/modules/",
+        "AUTOMATE_FUNCTION_ARN": "arn:aws:lambda:us-east-1:867637277314:function:gerp-automation-gradienterp-automate",
+        "AUTOMATION_ENV_PATH": "/gradienterp/customers/gradienterp/automation/env",
+        "AWS_ACCOUNT_ID": "867637277314",
+        "CABINET_BUCKET": "gerp-agent-gradienterp-uploads-867637277314",
+        "CLOSE_ACCOUNT_FN": "arn:aws:lambda:us-east-1:185369506315:function:tower-close-account",
+        "CLOSE_BUILD_PROJECT": "tower-per-customer",
+        "CLOSURE_REQUESTER_ROLE_ARN": "arn:aws:iam::185369506315:role/gerp-closure-requester",
+        "CMD_FUNCTION_ARN": "arn:aws:lambda:us-east-1:867637277314:function:gerp-cmd-gradienterp-cmd",
+        "CUSTOMERS_TABLE": "gerp-customers",
+        "CUSTOMER_ID": "gradienterp",
+        "GATEWAY_URL": "https://agentcore-gradienterp-gateway-nm7z9mk3tr.gateway.bedrock-agentcore.us-east-1.amazonaws.com/mcp",
+        "GERP_ID": "gradienterp",
+        "HOOKS_BASE_URL": "https://7asszow002.execute-api.us-east-1.amazonaws.com",
+        "MACHINES_PREFIX": "automations/approved/machines/",
+        "REVIEWS_TABLE": "gerp-automation-gradienterp-reviews",
+        "ROUTES_PREFIX": "automations/routes/",
+        "SCHEDULER_TARGET_ROLE": "arn:aws:iam::867637277314:role/gerp-automation-gradienterp-scheduler-target",
+        "SCHEDULE_GROUP": "gerp-automation-gradienterp-schedules",
+        "SEND_EMAIL_FUNCTION_ARN": "arn:aws:lambda:us-east-1:867637277314:function:gerp-mail-gradienterp-send_email",
+        "SFN_LOG_GROUP_ARN": "arn:aws:logs:us-east-1:867637277314:log-group:/aws/vendedlogs/states/gerp-automation-gradienterp:*",
+        "SFN_NAME_PREFIX": "gerp-automation-gradienterp-",
+        "SFN_ROLE_ARN": "arn:aws:iam::867637277314:role/gerp-automation-gradienterp-machine",
+        "STAGED_PREFIX": "automations/staged/",
+        "TASKS_FN": "gerp-tasks-gradienterp-manage_tasks",
+        "TENANT_PARAM": "/gradienterp/customers/gradienterp"
+      },
+      "src_dir": "modules/automation/lambdas/automate",
+      "timeout": 300
+    },
+    "gerp-automation-gradienterp-create_inc_from_log": {
+      "env": {
+        "AGENT_RUNTIME_ENDPOINT_ARN": "arn:aws:bedrock-agentcore:us-east-1:867637277314:runtime/agentcore_gradienterp-is2qoF7tii/runtime-endpoint/agentcore_gradienterp_endpoint",
+        "APPROVED_PREFIX": "automations/approved/",
+        "AUTOMATE_FUNCTION_ARN": "arn:aws:lambda:us-east-1:867637277314:function:gerp-automation-gradienterp-automate",
+        "AUTOMATION_ENV_PATH": "/gradienterp/customers/gradienterp/automation/env",
+        "AWS_ACCOUNT_ID": "867637277314",
+        "CABINET_BUCKET": "gerp-agent-gradienterp-uploads-867637277314",
+        "CLOSE_ACCOUNT_FN": "arn:aws:lambda:us-east-1:185369506315:function:tower-close-account",
+        "CLOSE_BUILD_PROJECT": "tower-per-customer",
+        "CLOSURE_REQUESTER_ROLE_ARN": "arn:aws:iam::185369506315:role/gerp-closure-requester",
+        "CMD_FUNCTION_ARN": "arn:aws:lambda:us-east-1:867637277314:function:gerp-cmd-gradienterp-cmd",
+        "CUSTOMERS_TABLE": "gerp-customers",
+        "CUSTOMER_ID": "gradienterp",
+        "GATEWAY_URL": "https://agentcore-gradienterp-gateway-nm7z9mk3tr.gateway.bedrock-agentcore.us-east-1.amazonaws.com/mcp",
+        "GERP_ID": "gradienterp",
+        "HOOKS_BASE_URL": "https://7asszow002.execute-api.us-east-1.amazonaws.com",
+        "MACHINES_PREFIX": "automations/approved/machines/",
+        "REVIEWS_TABLE": "gerp-automation-gradienterp-reviews",
+        "ROUTES_PREFIX": "automations/routes/",
+        "SCHEDULER_TARGET_ROLE": "arn:aws:iam::867637277314:role/gerp-automation-gradienterp-scheduler-target",
+        "SCHEDULE_GROUP": "gerp-automation-gradienterp-schedules",
+        "SEND_EMAIL_FUNCTION_ARN": "arn:aws:lambda:us-east-1:867637277314:function:gerp-mail-gradienterp-send_email",
+        "SFN_LOG_GROUP_ARN": "arn:aws:logs:us-east-1:867637277314:log-group:/aws/vendedlogs/states/gerp-automation-gradienterp:*",
+        "SFN_NAME_PREFIX": "gerp-automation-gradienterp-",
+        "SFN_ROLE_ARN": "arn:aws:iam::867637277314:role/gerp-automation-gradienterp-machine",
+        "STAGED_PREFIX": "automations/staged/",
+        "TASKS_FN": "gerp-tasks-gradienterp-manage_tasks",
+        "TENANT_PARAM": "/gradienterp/customers/gradienterp"
+      },
+      "src_dir": "modules/automation/lambdas/create_inc_from_log",
+      "timeout": 300
+    },
+    "gerp-automation-gradienterp-machine_failed": {
+      "env": {
+        "AGENT_RUNTIME_ENDPOINT_ARN": "arn:aws:bedrock-agentcore:us-east-1:867637277314:runtime/agentcore_gradienterp-is2qoF7tii/runtime-endpoint/agentcore_gradienterp_endpoint",
+        "APPROVED_PREFIX": "automations/approved/",
+        "AUTOMATE_FUNCTION_ARN": "arn:aws:lambda:us-east-1:867637277314:function:gerp-automation-gradienterp-automate",
+        "AUTOMATION_ENV_PATH": "/gradienterp/customers/gradienterp/automation/env",
+        "AWS_ACCOUNT_ID": "867637277314",
+        "CABINET_BUCKET": "gerp-agent-gradienterp-uploads-867637277314",
+        "CLOSE_ACCOUNT_FN": "arn:aws:lambda:us-east-1:185369506315:function:tower-close-account",
+        "CLOSE_BUILD_PROJECT": "tower-per-customer",
+        "CLOSURE_REQUESTER_ROLE_ARN": "arn:aws:iam::185369506315:role/gerp-closure-requester",
+        "CMD_FUNCTION_ARN": "arn:aws:lambda:us-east-1:867637277314:function:gerp-cmd-gradienterp-cmd",
+        "CUSTOMERS_TABLE": "gerp-customers",
+        "CUSTOMER_ID": "gradienterp",
+        "GATEWAY_URL": "https://agentcore-gradienterp-gateway-nm7z9mk3tr.gateway.bedrock-agentcore.us-east-1.amazonaws.com/mcp",
+        "GERP_ID": "gradienterp",
+        "HOOKS_BASE_URL": "https://7asszow002.execute-api.us-east-1.amazonaws.com",
+        "MACHINES_PREFIX": "automations/approved/machines/",
+        "REVIEWS_TABLE": "gerp-automation-gradienterp-reviews",
+        "ROUTES_PREFIX": "automations/routes/",
+        "SCHEDULER_TARGET_ROLE": "arn:aws:iam::867637277314:role/gerp-automation-gradienterp-scheduler-target",
+        "SCHEDULE_GROUP": "gerp-automation-gradienterp-schedules",
+        "SEND_EMAIL_FUNCTION_ARN": "arn:aws:lambda:us-east-1:867637277314:function:gerp-mail-gradienterp-send_email",
+        "SFN_LOG_GROUP_ARN": "arn:aws:logs:us-east-1:867637277314:log-group:/aws/vendedlogs/states/gerp-automation-gradienterp:*",
+        "SFN_NAME_PREFIX": "gerp-automation-gradienterp-",
+        "SFN_ROLE_ARN": "arn:aws:iam::867637277314:role/gerp-automation-gradienterp-machine",
+        "STAGED_PREFIX": "automations/staged/",
+        "TASKS_FN": "gerp-tasks-gradienterp-manage_tasks",
+        "TENANT_PARAM": "/gradienterp/customers/gradienterp"
+      },
+      "src_dir": "modules/automation/lambdas/machine_failed",
+      "timeout": 300
+    },
+    "gerp-automation-gradienterp-manage_automation": {
+      "env": {
+        "AGENT_RUNTIME_ENDPOINT_ARN": "arn:aws:bedrock-agentcore:us-east-1:867637277314:runtime/agentcore_gradienterp-is2qoF7tii/runtime-endpoint/agentcore_gradienterp_endpoint",
+        "APPROVED_PREFIX": "automations/approved/",
+        "AUTOMATE_FUNCTION_ARN": "arn:aws:lambda:us-east-1:867637277314:function:gerp-automation-gradienterp-automate",
+        "AUTOMATION_ENV_PATH": "/gradienterp/customers/gradienterp/automation/env",
+        "AWS_ACCOUNT_ID": "867637277314",
+        "CABINET_BUCKET": "gerp-agent-gradienterp-uploads-867637277314",
+        "CLOSE_ACCOUNT_FN": "arn:aws:lambda:us-east-1:185369506315:function:tower-close-account",
+        "CLOSE_BUILD_PROJECT": "tower-per-customer",
+        "CLOSURE_REQUESTER_ROLE_ARN": "arn:aws:iam::185369506315:role/gerp-closure-requester",
+        "CMD_FUNCTION_ARN": "arn:aws:lambda:us-east-1:867637277314:function:gerp-cmd-gradienterp-cmd",
+        "CUSTOMERS_TABLE": "gerp-customers",
+        "CUSTOMER_ID": "gradienterp",
+        "GATEWAY_URL": "https://agentcore-gradienterp-gateway-nm7z9mk3tr.gateway.bedrock-agentcore.us-east-1.amazonaws.com/mcp",
+        "GERP_ID": "gradienterp",
+        "HOOKS_BASE_URL": "https://7asszow002.execute-api.us-east-1.amazonaws.com",
+        "MACHINES_PREFIX": "automations/approved/machines/",
+        "REVIEWS_TABLE": "gerp-automation-gradienterp-reviews",
+        "ROUTES_PREFIX": "automations/routes/",
+        "SCHEDULER_TARGET_ROLE": "arn:aws:iam::867637277314:role/gerp-automation-gradienterp-scheduler-target",
+        "SCHEDULE_GROUP": "gerp-automation-gradienterp-schedules",
+        "SEND_EMAIL_FUNCTION_ARN": "arn:aws:lambda:us-east-1:867637277314:function:gerp-mail-gradienterp-send_email",
+        "SFN_LOG_GROUP_ARN": "arn:aws:logs:us-east-1:867637277314:log-group:/aws/vendedlogs/states/gerp-automation-gradienterp:*",
+        "SFN_NAME_PREFIX": "gerp-automation-gradienterp-",
+        "SFN_ROLE_ARN": "arn:aws:iam::867637277314:role/gerp-automation-gradienterp-machine",
+        "STAGED_PREFIX": "automations/staged/",
+        "TASKS_FN": "gerp-tasks-gradienterp-manage_tasks",
+        "TENANT_PARAM": "/gradienterp/customers/gradienterp"
+      },
+      "src_dir": "modules/automation/lambdas/manage_automation",
+      "timeout": 300
+    },
+    "gerp-automation-gradienterp-manage_hooks": {
+      "env": {
+        "AGENT_RUNTIME_ENDPOINT_ARN": "arn:aws:bedrock-agentcore:us-east-1:867637277314:runtime/agentcore_gradienterp-is2qoF7tii/runtime-endpoint/agentcore_gradienterp_endpoint",
+        "APPROVED_PREFIX": "automations/approved/",
+        "AUTOMATE_FUNCTION_ARN": "arn:aws:lambda:us-east-1:867637277314:function:gerp-automation-gradienterp-automate",
+        "AUTOMATION_ENV_PATH": "/gradienterp/customers/gradienterp/automation/env",
+        "AWS_ACCOUNT_ID": "867637277314",
+        "CABINET_BUCKET": "gerp-agent-gradienterp-uploads-867637277314",
+        "CLOSE_ACCOUNT_FN": "arn:aws:lambda:us-east-1:185369506315:function:tower-close-account",
+        "CLOSE_BUILD_PROJECT": "tower-per-customer",
+        "CLOSURE_REQUESTER_ROLE_ARN": "arn:aws:iam::185369506315:role/gerp-closure-requester",
+        "CMD_FUNCTION_ARN": "arn:aws:lambda:us-east-1:867637277314:function:gerp-cmd-gradienterp-cmd",
+        "CUSTOMERS_TABLE": "gerp-customers",
+        "CUSTOMER_ID": "gradienterp",
+        "GATEWAY_URL": "https://agentcore-gradienterp-gateway-nm7z9mk3tr.gateway.bedrock-agentcore.us-east-1.amazonaws.com/mcp",
+        "GERP_ID": "gradienterp",
+        "HOOKS_BASE_URL": "https://7asszow002.execute-api.us-east-1.amazonaws.com",
+        "MACHINES_PREFIX": "automations/approved/machines/",
+        "REVIEWS_TABLE": "gerp-automation-gradienterp-reviews",
+        "ROUTES_PREFIX": "automations/routes/",
+        "SCHEDULER_TARGET_ROLE": "arn:aws:iam::867637277314:role/gerp-automation-gradienterp-scheduler-target",
+        "SCHEDULE_GROUP": "gerp-automation-gradienterp-schedules",
+        "SEND_EMAIL_FUNCTION_ARN": "arn:aws:lambda:us-east-1:867637277314:function:gerp-mail-gradienterp-send_email",
+        "SFN_LOG_GROUP_ARN": "arn:aws:logs:us-east-1:867637277314:log-group:/aws/vendedlogs/states/gerp-automation-gradienterp:*",
+        "SFN_NAME_PREFIX": "gerp-automation-gradienterp-",
+        "SFN_ROLE_ARN": "arn:aws:iam::867637277314:role/gerp-automation-gradienterp-machine",
+        "STAGED_PREFIX": "automations/staged/",
+        "TASKS_FN": "gerp-tasks-gradienterp-manage_tasks",
+        "TENANT_PARAM": "/gradienterp/customers/gradienterp"
+      },
+      "src_dir": "modules/automation/lambdas/manage_hooks",
+      "timeout": 300
+    },
+    "gerp-automation-gradienterp-manage_machines": {
+      "env": {
+        "AGENT_RUNTIME_ENDPOINT_ARN": "arn:aws:bedrock-agentcore:us-east-1:867637277314:runtime/agentcore_gradienterp-is2qoF7tii/runtime-endpoint/agentcore_gradienterp_endpoint",
+        "APPROVED_PREFIX": "automations/approved/",
+        "AUTOMATE_FUNCTION_ARN": "arn:aws:lambda:us-east-1:867637277314:function:gerp-automation-gradienterp-automate",
+        "AUTOMATION_ENV_PATH": "/gradienterp/customers/gradienterp/automation/env",
+        "AWS_ACCOUNT_ID": "867637277314",
+        "CABINET_BUCKET": "gerp-agent-gradienterp-uploads-867637277314",
+        "CLOSE_ACCOUNT_FN": "arn:aws:lambda:us-east-1:185369506315:function:tower-close-account",
+        "CLOSE_BUILD_PROJECT": "tower-per-customer",
+        "CLOSURE_REQUESTER_ROLE_ARN": "arn:aws:iam::185369506315:role/gerp-closure-requester",
+        "CMD_FUNCTION_ARN": "arn:aws:lambda:us-east-1:867637277314:function:gerp-cmd-gradienterp-cmd",
+        "CUSTOMERS_TABLE": "gerp-customers",
+        "CUSTOMER_ID": "gradienterp",
+        "GATEWAY_URL": "https://agentcore-gradienterp-gateway-nm7z9mk3tr.gateway.bedrock-agentcore.us-east-1.amazonaws.com/mcp",
+        "GERP_ID": "gradienterp",
+        "HOOKS_BASE_URL": "https://7asszow002.execute-api.us-east-1.amazonaws.com",
+        "MACHINES_PREFIX": "automations/approved/machines/",
+        "REVIEWS_TABLE": "gerp-automation-gradienterp-reviews",
+        "ROUTES_PREFIX": "automations/routes/",
+        "SCHEDULER_TARGET_ROLE": "arn:aws:iam::867637277314:role/gerp-automation-gradienterp-scheduler-target",
+        "SCHEDULE_GROUP": "gerp-automation-gradienterp-schedules",
+        "SEND_EMAIL_FUNCTION_ARN": "arn:aws:lambda:us-east-1:867637277314:function:gerp-mail-gradienterp-send_email",
+        "SFN_LOG_GROUP_ARN": "arn:aws:logs:us-east-1:867637277314:log-group:/aws/vendedlogs/states/gerp-automation-gradienterp:*",
+        "SFN_NAME_PREFIX": "gerp-automation-gradienterp-",
+        "SFN_ROLE_ARN": "arn:aws:iam::867637277314:role/gerp-automation-gradienterp-machine",
+        "STAGED_PREFIX": "automations/staged/",
+        "TASKS_FN": "gerp-tasks-gradienterp-manage_tasks",
+        "TENANT_PARAM": "/gradienterp/customers/gradienterp"
+      },
+      "src_dir": "modules/automation/lambdas/manage_machines",
+      "timeout": 300
+    },
+    "gerp-automation-gradienterp-review_automation": {
+      "env": {
+        "AGENT_RUNTIME_ENDPOINT_ARN": "arn:aws:bedrock-agentcore:us-east-1:867637277314:runtime/agentcore_gradienterp-is2qoF7tii/runtime-endpoint/agentcore_gradienterp_endpoint",
+        "APPROVED_PREFIX": "automations/approved/",
+        "AUTOMATE_FUNCTION_ARN": "arn:aws:lambda:us-east-1:867637277314:function:gerp-automation-gradienterp-automate",
+        "AUTOMATION_ENV_PATH": "/gradienterp/customers/gradienterp/automation/env",
+        "AWS_ACCOUNT_ID": "867637277314",
+        "CABINET_BUCKET": "gerp-agent-gradienterp-uploads-867637277314",
+        "CLOSE_ACCOUNT_FN": "arn:aws:lambda:us-east-1:185369506315:function:tower-close-account",
+        "CLOSE_BUILD_PROJECT": "tower-per-customer",
+        "CLOSURE_REQUESTER_ROLE_ARN": "arn:aws:iam::185369506315:role/gerp-closure-requester",
+        "CMD_FUNCTION_ARN": "arn:aws:lambda:us-east-1:867637277314:function:gerp-cmd-gradienterp-cmd",
+        "CUSTOMERS_TABLE": "gerp-customers",
+        "CUSTOMER_ID": "gradienterp",
+        "GATEWAY_URL": "https://agentcore-gradienterp-gateway-nm7z9mk3tr.gateway.bedrock-agentcore.us-east-1.amazonaws.com/mcp",
+        "GERP_ID": "gradienterp",
+        "HOOKS_BASE_URL": "https://7asszow002.execute-api.us-east-1.amazonaws.com",
+        "MACHINES_PREFIX": "automations/approved/machines/",
+        "REVIEWS_TABLE": "gerp-automation-gradienterp-reviews",
+        "ROUTES_PREFIX": "automations/routes/",
+        "SCHEDULER_TARGET_ROLE": "arn:aws:iam::867637277314:role/gerp-automation-gradienterp-scheduler-target",
+        "SCHEDULE_GROUP": "gerp-automation-gradienterp-schedules",
+        "SEND_EMAIL_FUNCTION_ARN": "arn:aws:lambda:us-east-1:867637277314:function:gerp-mail-gradienterp-send_email",
+        "SFN_LOG_GROUP_ARN": "arn:aws:logs:us-east-1:867637277314:log-group:/aws/vendedlogs/states/gerp-automation-gradienterp:*",
+        "SFN_NAME_PREFIX": "gerp-automation-gradienterp-",
+        "SFN_ROLE_ARN": "arn:aws:iam::867637277314:role/gerp-automation-gradienterp-machine",
+        "STAGED_PREFIX": "automations/staged/",
+        "TASKS_FN": "gerp-tasks-gradienterp-manage_tasks",
+        "TENANT_PARAM": "/gradienterp/customers/gradienterp"
+      },
+      "src_dir": "modules/automation/lambdas/review_automation",
+      "timeout": 300
+    },
+    "gerp-calendar-gradienterp-agent_dispatcher": {
+      "env": {
+        "AGENT_RUNTIME_ENDPOINT_ARN": "arn:aws:bedrock-agentcore:us-east-1:867637277314:runtime/agentcore_gradienterp-is2qoF7tii/runtime-endpoint/agentcore_gradienterp_endpoint",
+        "CUSTOMER_ID": "gradienterp",
+        "GERP_ID": "gradienterp",
+        "GERP_TIMEZONE": "UTC"
+      },
+      "src_dir": "modules/calendar/lambdas/agent_dispatcher",
+      "timeout": 60
+    },
+    "gerp-calendar-gradienterp-manage_event": {
+      "env": {
+        "CUSTOMER_ID": "gradienterp",
+        "EVENTS_TABLE": "gerp-calendar-gradienterp-events",
+        "GERP_ID": "gradienterp",
+        "SCHEMA_TABLE": "gerp-schema-gradienterp"
+      },
+      "src_dir": "modules/calendar/lambdas/manage_event",
+      "timeout": 30
+    },
+    "gerp-calendar-gradienterp-manage_schedule": {
+      "env": {
+        "AGENT_DISPATCHER_ARN": "arn:aws:lambda:us-east-1:867637277314:function:gerp-calendar-gradienterp-agent_dispatcher",
+        "CUSTOMER_ID": "gradienterp",
+        "GERP_ID": "gradienterp",
+        "GERP_TIMEZONE": "UTC",
+        "SCHEDULER_TARGET_ROLE_ARN": "arn:aws:iam::867637277314:role/gerp-calendar-gradienterp-target",
+        "SCHEDULE_GROUP_NAME": "gerp-calendar-gradienterp",
+        "SETTINGS_TABLE": "gerp-settings-gradienterp"
+      },
+      "src_dir": "modules/calendar/lambdas/manage_schedule",
+      "timeout": 30
+    },
+    "gerp-cmd-gradienterp-build_layer": {
+      "env": {
+        "AGENT_ADDRESS": "agent@gradienterp.agents.gradienterp.cloud",
+        "CABINET_BUCKET": "gerp-agent-gradienterp-uploads-867637277314",
+        "CMD_FUNCTION": "gerp-cmd-gradienterp-cmd",
+        "CODEBUILD_PROJECT": "gerp-cmd-gradienterp-layers",
+        "CUSTOMER_ID": "gradienterp",
+        "ENV_PARAM_PATH": "/gradienterp/customers/gradienterp/automation/env",
+        "GERP_ID": "gradienterp",
+        "LAYER_PREFIX": "gerp-cmd-gradienterp"
+      },
+      "src_dir": "modules/cmd/lambdas/build_layer",
+      "timeout": 60
+    },
+    "gerp-cmd-gradienterp-cmd": {
+      "env": {
+        "AGENT_ADDRESS": "agent@gradienterp.agents.gradienterp.cloud",
+        "CABINET_BUCKET": "gerp-agent-gradienterp-uploads-867637277314",
+        "CMD_FUNCTION": "gerp-cmd-gradienterp-cmd",
+        "CODEBUILD_PROJECT": "gerp-cmd-gradienterp-layers",
+        "CUSTOMER_ID": "gradienterp",
+        "ENV_PARAM_PATH": "/gradienterp/customers/gradienterp/automation/env",
+        "GERP_ID": "gradienterp",
+        "LAYER_PREFIX": "gerp-cmd-gradienterp"
+      },
+      "src_dir": "modules/cmd/lambdas/cmd",
+      "timeout": 900
+    },
+    "gerp-contacts-gradienterp-manage_contacts": {
+      "env": {
+        "CONTACTS_TABLE": "gerp-contacts-gradienterp",
+        "CUSTOMER_ID": "gradienterp",
+        "GERP_ID": "gradienterp",
+        "SCHEMA_TABLE": "gerp-schema-gradienterp"
+      },
+      "src_dir": "modules/contacts/lambdas/manage_contacts",
+      "timeout": 30
+    },
+    "gerp-inbox-gradienterp-get_inbound": {
+      "env": {
+        "CUSTOMER_ID": "gradienterp",
+        "GERP_ID": "gradienterp",
+        "INBOUND_TABLE": "gerp-inbox-gradienterp-inbound"
+      },
+      "src_dir": "modules/inbox/lambdas/get_inbound",
+      "timeout": 30
+    },
+    "gerp-inbox-gradienterp-poke_agent": {
+      "env": {
+        "AGENT_RUNTIME_ENDPOINT_ARN": "arn:aws:bedrock-agentcore:us-east-1:867637277314:runtime/agentcore_gradienterp-is2qoF7tii/runtime-endpoint/agentcore_gradienterp_endpoint",
+        "CUSTOMER_ID": "gradienterp",
+        "GERP_ID": "gradienterp"
+      },
+      "src_dir": "modules/inbox/lambdas/poke_agent",
+      "timeout": 60
+    },
+    "gerp-inbox-gradienterp-receive_inbound": {
+      "env": {
+        "CUSTOMER_ID": "gradienterp",
+        "GERP_ID": "gradienterp",
+        "INBOUND_TABLE": "gerp-inbox-gradienterp-inbound"
+      },
+      "src_dir": "modules/inbox/lambdas/receive_inbound",
+      "timeout": 30
+    },
+    "gerp-inbox-gradienterp-router": {
+      "env": {
+        "CUSTOMER_ID": "gradienterp",
+        "GERP_ID": "gradienterp",
+        "POKE_ALSO": "[\"po.proposed\",\"offer.proposed\",\"offer.accepted\",\"po.declined\",\"offer.declined\",\"distribution.paid\"]",
+        "POKE_FN": "gerp-inbox-gradienterp-poke_agent",
+        "ROUTES": "{\"distribution.paid\":\"gerp-treasury-gradienterp-apply_inbound\",\"offer.accepted\":\"gerp-agreements-gradienterp-apply_inbound\",\"offer.declined\":\"gerp-agreements-gradienterp-apply_inbound\",\"offer.proposed\":\"gerp-agreements-gradienterp-apply_inbound\",\"po.accepted\":\"gerp-agreements-gradienterp-apply_inbound\",\"po.declined\":\"gerp-agreements-gradienterp-apply_inbound\",\"po.proposed\":\"gerp-agreements-gradienterp-apply_inbound\",\"shipment.sent\":\"gerp-shipping-gradienterp-apply_shipment_event\"}"
+      },
+      "src_dir": "modules/inbox/lambdas/router",
+      "timeout": 30
+    },
+    "gerp-inventory-gradienterp-manage_stock": {
+      "env": {
+        "AGREEMENTS_REQUEST_FN": "gerp-agreements-gradienterp-request",
+        "CUSTOMER_ID": "gradienterp",
+        "GERP_ID": "gradienterp",
+        "GERP_TIMEZONE": "UTC",
+        "ITEMS_TABLE": "gerp-inventory-gradienterp-items",
+        "MOVEMENTS_TABLE": "gerp-inventory-gradienterp-movements",
+        "POST_JOURNAL_ENTRY_FN": "gerp-accounting-gradienterp-post_journal_entry",
+        "RULE_INSTANCES_TABLE": "gerp-rules-gradienterp-instances",
+        "SCHEMA_TABLE": "gerp-schema-gradienterp",
+        "SETTINGS_TABLE": "gerp-settings-gradienterp"
+      },
+      "src_dir": "modules/inventory/lambdas/manage_stock",
+      "timeout": 30
+    },
+    "gerp-inventory-gradienterp-oob_inventory": {
+      "env": {
+        "CUSTOMER_ID": "gradienterp",
+        "GERP_ID": "gradienterp",
+        "ITEMS_TABLE": "gerp-inventory-gradienterp-items",
+        "SETTINGS_TABLE": "gerp-settings-gradienterp"
+      },
+      "src_dir": "modules/inventory/lambdas/oob_inventory",
+      "timeout": 15
+    },
+    "gerp-inventory-gradienterp-reserve": {
+      "env": {
+        "AGREEMENTS_REQUEST_FN": "gerp-agreements-gradienterp-request",
+        "CUSTOMER_ID": "gradienterp",
+        "GERP_ID": "gradienterp",
+        "GERP_TIMEZONE": "UTC",
+        "ITEMS_TABLE": "gerp-inventory-gradienterp-items",
+        "MOVEMENTS_TABLE": "gerp-inventory-gradienterp-movements",
+        "POST_JOURNAL_ENTRY_FN": "gerp-accounting-gradienterp-post_journal_entry",
+        "RULE_INSTANCES_TABLE": "gerp-rules-gradienterp-instances",
+        "SCHEMA_TABLE": "gerp-schema-gradienterp",
+        "SETTINGS_TABLE": "gerp-settings-gradienterp"
+      },
+      "src_dir": "modules/inventory/lambdas/reserve",
+      "timeout": 30
+    },
+    "gerp-invoicing-gradienterp-issue_invoice": {
+      "env": {
+        "AGREEMENTS_TABLE": "gerp-invoicing-gradienterp-agreements",
+        "CUSTOMER_ID": "gradienterp",
+        "DIRECTORY_TABLE_ARN": "arn:aws:dynamodb:us-east-1:185369506315:table/gerp-directory",
+        "GERP_ID": "gradienterp",
+        "GERP_TIMEZONE": "UTC",
+        "HUB_ID": "us-east-1",
+        "INTERNAL_BUS_NAME": "gerp-internal-gradienterp",
+        "INVOICES_TABLE": "gerp-invoicing-gradienterp-invoices",
+        "INVOICE_LINES_TABLE": "gerp-invoicing-gradienterp-invoice-lines",
+        "ITEMS_TABLE": "gerp-inventory-gradienterp-items",
+        "OP_EVENT_BUS_ARN": "arn:aws:events:us-east-1:582129522725:event-bus/gerp-events",
+        "POST_JOURNAL_ENTRY_FN": "gerp-accounting-gradienterp-post_journal_entry",
+        "RULE_INSTANCES_TABLE": "gerp-rules-gradienterp-instances",
+        "SCHEMA_TABLE": "gerp-schema-gradienterp",
+        "TRANSITIONS_TABLE": "gerp-invoicing-gradienterp-transitions"
+      },
+      "src_dir": "modules/invoicing/lambdas/issue_invoice",
+      "timeout": 30
+    },
+    "gerp-invoicing-gradienterp-manage_invoice": {
+      "env": {
+        "AGREEMENTS_TABLE": "gerp-invoicing-gradienterp-agreements",
+        "CUSTOMER_ID": "gradienterp",
+        "DIRECTORY_TABLE_ARN": "arn:aws:dynamodb:us-east-1:185369506315:table/gerp-directory",
+        "GERP_ID": "gradienterp",
+        "GERP_TIMEZONE": "UTC",
+        "HUB_ID": "us-east-1",
+        "INTERNAL_BUS_NAME": "gerp-internal-gradienterp",
+        "INVOICES_TABLE": "gerp-invoicing-gradienterp-invoices",
+        "INVOICE_LINES_TABLE": "gerp-invoicing-gradienterp-invoice-lines",
+        "ITEMS_TABLE": "gerp-inventory-gradienterp-items",
+        "OP_EVENT_BUS_ARN": "arn:aws:events:us-east-1:582129522725:event-bus/gerp-events",
+        "POST_JOURNAL_ENTRY_FN": "gerp-accounting-gradienterp-post_journal_entry",
+        "RULE_INSTANCES_TABLE": "gerp-rules-gradienterp-instances",
+        "SCHEMA_TABLE": "gerp-schema-gradienterp",
+        "TRANSITIONS_TABLE": "gerp-invoicing-gradienterp-transitions"
+      },
+      "src_dir": "modules/invoicing/lambdas/manage_invoice",
+      "timeout": 30
+    },
+    "gerp-invoicing-gradienterp-mark_unpaid": {
+      "env": {
+        "AGREEMENTS_TABLE": "gerp-invoicing-gradienterp-agreements",
+        "CUSTOMER_ID": "gradienterp",
+        "DIRECTORY_TABLE_ARN": "arn:aws:dynamodb:us-east-1:185369506315:table/gerp-directory",
+        "GERP_ID": "gradienterp",
+        "GERP_TIMEZONE": "UTC",
+        "HUB_ID": "us-east-1",
+        "INTERNAL_BUS_NAME": "gerp-internal-gradienterp",
+        "INVOICES_TABLE": "gerp-invoicing-gradienterp-invoices",
+        "INVOICE_LINES_TABLE": "gerp-invoicing-gradienterp-invoice-lines",
+        "ITEMS_TABLE": "gerp-inventory-gradienterp-items",
+        "OP_EVENT_BUS_ARN": "arn:aws:events:us-east-1:582129522725:event-bus/gerp-events",
+        "POST_JOURNAL_ENTRY_FN": "gerp-accounting-gradienterp-post_journal_entry",
+        "RULE_INSTANCES_TABLE": "gerp-rules-gradienterp-instances",
+        "SCHEMA_TABLE": "gerp-schema-gradienterp",
+        "TRANSITIONS_TABLE": "gerp-invoicing-gradienterp-transitions"
+      },
+      "src_dir": "modules/invoicing/lambdas/mark_unpaid",
+      "timeout": 30
+    },
+    "gerp-invoicing-gradienterp-on_incomplete_draft": {
+      "env": {
+        "AGENT_RUNTIME_ENDPOINT_ARN": "arn:aws:bedrock-agentcore:us-east-1:867637277314:runtime/agentcore_gradienterp-is2qoF7tii/runtime-endpoint/agentcore_gradienterp_endpoint",
+        "CUSTOMER_ID": "gradienterp",
+        "GERP_ID": "gradienterp"
+      },
+      "src_dir": "modules/invoicing/lambdas/on_incomplete_draft",
+      "timeout": 30
+    },
+    "gerp-invoicing-gradienterp-record_invoice_paid": {
+      "env": {
+        "AGREEMENTS_TABLE": "gerp-invoicing-gradienterp-agreements",
+        "CUSTOMER_ID": "gradienterp",
+        "DIRECTORY_TABLE_ARN": "arn:aws:dynamodb:us-east-1:185369506315:table/gerp-directory",
+        "GERP_ID": "gradienterp",
+        "GERP_TIMEZONE": "UTC",
+        "HUB_ID": "us-east-1",
+        "INTERNAL_BUS_NAME": "gerp-internal-gradienterp",
+        "INVOICES_TABLE": "gerp-invoicing-gradienterp-invoices",
+        "INVOICE_LINES_TABLE": "gerp-invoicing-gradienterp-invoice-lines",
+        "ITEMS_TABLE": "gerp-inventory-gradienterp-items",
+        "OP_EVENT_BUS_ARN": "arn:aws:events:us-east-1:582129522725:event-bus/gerp-events",
+        "POST_JOURNAL_ENTRY_FN": "gerp-accounting-gradienterp-post_journal_entry",
+        "RULE_INSTANCES_TABLE": "gerp-rules-gradienterp-instances",
+        "SCHEMA_TABLE": "gerp-schema-gradienterp",
+        "TRANSITIONS_TABLE": "gerp-invoicing-gradienterp-transitions"
+      },
+      "src_dir": "modules/invoicing/lambdas/record_invoice_paid",
+      "timeout": 30
+    },
+    "gerp-invoicing-gradienterp-settle_agreement": {
+      "env": {
+        "AGREEMENTS_TABLE": "gerp-invoicing-gradienterp-agreements",
+        "CUSTOMER_ID": "gradienterp",
+        "GERP_ID": "gradienterp",
+        "INVOICES_TABLE": "gerp-invoicing-gradienterp-invoices",
+        "INVOICE_LINES_TABLE": "gerp-invoicing-gradienterp-invoice-lines"
+      },
+      "src_dir": "modules/invoicing/lambdas/settle_agreement",
+      "timeout": 30
+    },
+    "gerp-labor-gradienterp-close-handler": {
+      "env": {
+        "CUSTOMER_ID": "gradienterp",
+        "GERP_ID": "gradienterp",
+        "POST_JOURNAL_ENTRY_FN": "gerp-accounting-gradienterp-post_journal_entry",
+        "RULE_INSTANCES_TABLE": "gerp-rules-gradienterp-instances",
+        "WORKER_TABLE": "gerp-labor-gradienterp-worker"
+      },
+      "src_dir": "modules/labor/lambdas/close_handler",
+      "timeout": 30
+    },
+    "gerp-labor-gradienterp-manage_labor": {
+      "env": {
+        "CUSTOMER_ID": "gradienterp",
+        "GERP_ID": "gradienterp",
+        "GERP_TIMEZONE": "UTC",
+        "POST_JOURNAL_ENTRY_FN": "gerp-accounting-gradienterp-post_journal_entry",
+        "SCHEMA_TABLE": "gerp-schema-gradienterp",
+        "SETTINGS_TABLE": "gerp-settings-gradienterp",
+        "TIME_ENTRIES_TABLE": "gerp-labor-gradienterp-time-entries",
+        "UPLOADS_BUCKET": "gerp-agent-gradienterp-uploads-867637277314",
+        "WORKER_LEGAL_TABLE": "gerp-labor-gradienterp-worker-legal",
+        "WORKER_TABLE": "gerp-labor-gradienterp-worker"
+      },
+      "src_dir": "modules/labor/lambdas/manage_labor",
+      "timeout": 30
+    },
+    "gerp-labor-gradienterp-pay-run": {
+      "env": {
+        "CUSTOMER_ID": "gradienterp",
+        "GERP_ID": "gradienterp",
+        "LEDGER_TABLE": "gerp-accounting-gradienterp-ledger",
+        "POST_JOURNAL_ENTRY_FN": "gerp-accounting-gradienterp-post_journal_entry",
+        "RULES_PARAMS_TABLE": "gerp-rules-gradienterp-params",
+        "RULE_INSTANCES_TABLE": "gerp-rules-gradienterp-instances",
+        "WORKER_TABLE": "gerp-labor-gradienterp-worker"
+      },
+      "src_dir": "modules/labor/lambdas/pay_run",
+      "timeout": 30
+    },
+    "gerp-mail-gradienterp-configure_smtp": {
+      "env": {
+        "CUSTOMER_ID": "gradienterp",
+        "GERP_ID": "gradienterp",
+        "SECRET_PARAM_PREFIX": "/gradienterp/customers/gradienterp/secrets",
+        "SEND_LOG_GROUP": "/aws/lambda/gerp-mail-gradienterp-send_email",
+        "SETTINGS_TABLE": "gerp-settings-gradienterp"
+      },
+      "src_dir": "modules/agent/lambdas/configure_smtp",
+      "timeout": 60
+    },
+    "gerp-mail-gradienterp-get_send_history": {
+      "env": {
+        "CUSTOMER_ID": "gradienterp",
+        "GERP_ID": "gradienterp",
+        "SECRET_PARAM_PREFIX": "/gradienterp/customers/gradienterp/secrets",
+        "SEND_LOG_GROUP": "/aws/lambda/gerp-mail-gradienterp-send_email",
+        "SETTINGS_TABLE": "gerp-settings-gradienterp"
+      },
+      "src_dir": "modules/agent/lambdas/get_send_history",
+      "timeout": 60
+    },
+    "gerp-mail-gradienterp-send_email": {
+      "env": {
+        "CUSTOMER_ID": "gradienterp",
+        "GERP_ID": "gradienterp",
+        "SECRET_PARAM_PREFIX": "/gradienterp/customers/gradienterp/secrets",
+        "SEND_LOG_GROUP": "/aws/lambda/gerp-mail-gradienterp-send_email",
+        "SETTINGS_TABLE": "gerp-settings-gradienterp"
+      },
+      "src_dir": "modules/agent/lambdas/send_email",
+      "timeout": 900
+    },
+    "gerp-mcp-gradienterp-complete_mcp_auth": {
+      "env": {
+        "AWS_DATA_PATH": "/var/task/botocore_data",
+        "CUSTOMER_ID": "gradienterp",
+        "GERP_ID": "gradienterp",
+        "LANDING_URL": "https://gradienterp.cloud/mcp/callback",
+        "SECRETS_PREFIX": "/gradienterp/customers/gradienterp/secrets/",
+        "SETTINGS_TABLE": "gerp-settings-gradienterp",
+        "VENDOR_GATEWAY_ARN": "arn:aws:bedrock-agentcore:us-east-1:867637277314:gateway/gerp-mcp-gradienterp-6vwv90bzbk",
+        "VENDOR_GATEWAY_ID": "gerp-mcp-gradienterp-6vwv90bzbk",
+        "VENDOR_GATEWAY_URL": "https://gerp-mcp-gradienterp-6vwv90bzbk.gateway.bedrock-agentcore.us-east-1.amazonaws.com/mcp"
+      },
+      "src_dir": "modules/mcp/lambdas/complete_mcp_auth",
+      "timeout": 60
+    },
+    "gerp-mcp-gradienterp-manage_mcp": {
+      "env": {
+        "AWS_DATA_PATH": "/var/task/botocore_data",
+        "CUSTOMER_ID": "gradienterp",
+        "GERP_ID": "gradienterp",
+        "LANDING_URL": "https://gradienterp.cloud/mcp/callback",
+        "SECRETS_PREFIX": "/gradienterp/customers/gradienterp/secrets/",
+        "SETTINGS_TABLE": "gerp-settings-gradienterp",
+        "VENDOR_GATEWAY_ARN": "arn:aws:bedrock-agentcore:us-east-1:867637277314:gateway/gerp-mcp-gradienterp-6vwv90bzbk",
+        "VENDOR_GATEWAY_ID": "gerp-mcp-gradienterp-6vwv90bzbk",
+        "VENDOR_GATEWAY_URL": "https://gerp-mcp-gradienterp-6vwv90bzbk.gateway.bedrock-agentcore.us-east-1.amazonaws.com/mcp"
+      },
+      "src_dir": "modules/mcp/lambdas/manage_mcp",
+      "timeout": 60
+    },
+    "gerp-notes-gradienterp-manage_notes": {
+      "env": {
+        "CUSTOMER_ID": "gradienterp",
+        "GERP_ID": "gradienterp",
+        "NOTES_TABLE": "gerp-notes-gradienterp",
+        "SCHEMA_TABLE": "gerp-schema-gradienterp"
+      },
+      "src_dir": "modules/notes/lambdas/manage_notes",
+      "timeout": 30
+    },
+    "gerp-payments-gradienterp-charge_saved_method": {
+      "env": {
+        "COLLECTION_WATCH_DELAY": "300",
+        "COLLECTION_WATCH_QUEUE": "https://sqs.us-east-1.amazonaws.com/867637277314/gerp-payments-gradienterp-collection-watch",
+        "CONTACTS_GET_FN": "gerp-contacts-gradienterp-manage_contacts",
+        "CONTACTS_PUT_FN": "gerp-contacts-gradienterp-manage_contacts",
+        "CONTACTS_UPDATE_FN": "gerp-contacts-gradienterp-manage_contacts",
+        "CUSTOMER_ID": "gradienterp",
+        "DLQ_BODIES_TABLE": "gerp-payments-gradienterp-dlq-bodies",
+        "DLQ_TABLE": "gerp-payments-gradienterp-dlq",
+        "GERP_ID": "gradienterp",
+        "GET_INVOICES_FN": "gerp-invoicing-gradienterp-manage_invoice",
+        "MARK_UNPAID_FN": "gerp-invoicing-gradienterp-mark_unpaid",
+        "PAYPAL_API_BASE": "https://api-m.paypal.com",
+        "PORTAL_URL": "https://usuqyssaqlgdkazs2qdqgskahq0jzezg.lambda-url.us-east-1.on.aws/portal-slug",
+        "POST_JOURNAL_ENTRY_FN": "gerp-accounting-gradienterp-post_journal_entry",
+        "RECORD_INVOICE_PAYMENT_FN": "gerp-invoicing-gradienterp-record_invoice_paid",
+        "SETTINGS_TABLE": "gerp-settings-gradienterp",
+        "SQUARE_API_BASE": "https://connect.squareup.com",
+        "WEBHOOK_BASE_URL": "https://7asszow002.execute-api.us-east-1.amazonaws.com",
+        "WEBHOOK_LOG_TABLE": "gerp-payments-gradienterp-webhook-log"
+      },
+      "src_dir": "modules/payments/lambdas/charge_saved_method",
+      "timeout": 30
+    },
+    "gerp-payments-gradienterp-check_collection": {
+      "env": {
+        "COLLECTION_WATCH_DELAY": "300",
+        "COLLECTION_WATCH_QUEUE": "https://sqs.us-east-1.amazonaws.com/867637277314/gerp-payments-gradienterp-collection-watch",
+        "CONTACTS_GET_FN": "gerp-contacts-gradienterp-manage_contacts",
+        "CONTACTS_PUT_FN": "gerp-contacts-gradienterp-manage_contacts",
+        "CONTACTS_UPDATE_FN": "gerp-contacts-gradienterp-manage_contacts",
+        "CUSTOMER_ID": "gradienterp",
+        "DLQ_BODIES_TABLE": "gerp-payments-gradienterp-dlq-bodies",
+        "DLQ_TABLE": "gerp-payments-gradienterp-dlq",
+        "GERP_ID": "gradienterp",
+        "GET_INVOICES_FN": "gerp-invoicing-gradienterp-manage_invoice",
+        "MARK_UNPAID_FN": "gerp-invoicing-gradienterp-mark_unpaid",
+        "PAYPAL_API_BASE": "https://api-m.paypal.com",
+        "PORTAL_URL": "https://usuqyssaqlgdkazs2qdqgskahq0jzezg.lambda-url.us-east-1.on.aws/portal-slug",
+        "POST_JOURNAL_ENTRY_FN": "gerp-accounting-gradienterp-post_journal_entry",
+        "RECORD_INVOICE_PAYMENT_FN": "gerp-invoicing-gradienterp-record_invoice_paid",
+        "SETTINGS_TABLE": "gerp-settings-gradienterp",
+        "SQUARE_API_BASE": "https://connect.squareup.com",
+        "WEBHOOK_BASE_URL": "https://7asszow002.execute-api.us-east-1.amazonaws.com",
+        "WEBHOOK_LOG_TABLE": "gerp-payments-gradienterp-webhook-log"
+      },
+      "src_dir": "modules/payments/lambdas/check_collection",
+      "timeout": 30
+    },
+    "gerp-payments-gradienterp-configure_webhook": {
+      "env": {
+        "COLLECTION_WATCH_DELAY": "300",
+        "COLLECTION_WATCH_QUEUE": "https://sqs.us-east-1.amazonaws.com/867637277314/gerp-payments-gradienterp-collection-watch",
+        "CONTACTS_GET_FN": "gerp-contacts-gradienterp-manage_contacts",
+        "CONTACTS_PUT_FN": "gerp-contacts-gradienterp-manage_contacts",
+        "CONTACTS_UPDATE_FN": "gerp-contacts-gradienterp-manage_contacts",
+        "CUSTOMER_ID": "gradienterp",
+        "DLQ_BODIES_TABLE": "gerp-payments-gradienterp-dlq-bodies",
+        "DLQ_TABLE": "gerp-payments-gradienterp-dlq",
+        "GERP_ID": "gradienterp",
+        "GET_INVOICES_FN": "gerp-invoicing-gradienterp-manage_invoice",
+        "MARK_UNPAID_FN": "gerp-invoicing-gradienterp-mark_unpaid",
+        "PAYPAL_API_BASE": "https://api-m.paypal.com",
+        "PORTAL_URL": "https://usuqyssaqlgdkazs2qdqgskahq0jzezg.lambda-url.us-east-1.on.aws/portal-slug",
+        "POST_JOURNAL_ENTRY_FN": "gerp-accounting-gradienterp-post_journal_entry",
+        "RECORD_INVOICE_PAYMENT_FN": "gerp-invoicing-gradienterp-record_invoice_paid",
+        "SETTINGS_TABLE": "gerp-settings-gradienterp",
+        "SQUARE_API_BASE": "https://connect.squareup.com",
+        "WEBHOOK_BASE_URL": "https://7asszow002.execute-api.us-east-1.amazonaws.com",
+        "WEBHOOK_LOG_TABLE": "gerp-payments-gradienterp-webhook-log"
+      },
+      "src_dir": "modules/payments/lambdas/configure_webhook",
+      "timeout": 30
+    },
+    "gerp-payments-gradienterp-ingest_paypal": {
+      "env": {
+        "COLLECTION_WATCH_DELAY": "300",
+        "COLLECTION_WATCH_QUEUE": "https://sqs.us-east-1.amazonaws.com/867637277314/gerp-payments-gradienterp-collection-watch",
+        "CONTACTS_GET_FN": "gerp-contacts-gradienterp-manage_contacts",
+        "CONTACTS_PUT_FN": "gerp-contacts-gradienterp-manage_contacts",
+        "CONTACTS_UPDATE_FN": "gerp-contacts-gradienterp-manage_contacts",
+        "CUSTOMER_ID": "gradienterp",
+        "DLQ_BODIES_TABLE": "gerp-payments-gradienterp-dlq-bodies",
+        "DLQ_TABLE": "gerp-payments-gradienterp-dlq",
+        "GERP_ID": "gradienterp",
+        "GET_INVOICES_FN": "gerp-invoicing-gradienterp-manage_invoice",
+        "MARK_UNPAID_FN": "gerp-invoicing-gradienterp-mark_unpaid",
+        "PAYPAL_API_BASE": "https://api-m.paypal.com",
+        "PORTAL_URL": "https://usuqyssaqlgdkazs2qdqgskahq0jzezg.lambda-url.us-east-1.on.aws/portal-slug",
+        "POST_JOURNAL_ENTRY_FN": "gerp-accounting-gradienterp-post_journal_entry",
+        "RECORD_INVOICE_PAYMENT_FN": "gerp-invoicing-gradienterp-record_invoice_paid",
+        "SETTINGS_TABLE": "gerp-settings-gradienterp",
+        "SQUARE_API_BASE": "https://connect.squareup.com",
+        "WEBHOOK_BASE_URL": "https://7asszow002.execute-api.us-east-1.amazonaws.com",
+        "WEBHOOK_LOG_TABLE": "gerp-payments-gradienterp-webhook-log"
+      },
+      "src_dir": "modules/payments/lambdas/ingest_paypal",
+      "timeout": 30
+    },
+    "gerp-payments-gradienterp-ingest_square": {
+      "env": {
+        "COLLECTION_WATCH_DELAY": "300",
+        "COLLECTION_WATCH_QUEUE": "https://sqs.us-east-1.amazonaws.com/867637277314/gerp-payments-gradienterp-collection-watch",
+        "CONTACTS_GET_FN": "gerp-contacts-gradienterp-manage_contacts",
+        "CONTACTS_PUT_FN": "gerp-contacts-gradienterp-manage_contacts",
+        "CONTACTS_UPDATE_FN": "gerp-contacts-gradienterp-manage_contacts",
+        "CUSTOMER_ID": "gradienterp",
+        "DLQ_BODIES_TABLE": "gerp-payments-gradienterp-dlq-bodies",
+        "DLQ_TABLE": "gerp-payments-gradienterp-dlq",
+        "GERP_ID": "gradienterp",
+        "GET_INVOICES_FN": "gerp-invoicing-gradienterp-manage_invoice",
+        "MARK_UNPAID_FN": "gerp-invoicing-gradienterp-mark_unpaid",
+        "PAYPAL_API_BASE": "https://api-m.paypal.com",
+        "PORTAL_URL": "https://usuqyssaqlgdkazs2qdqgskahq0jzezg.lambda-url.us-east-1.on.aws/portal-slug",
+        "POST_JOURNAL_ENTRY_FN": "gerp-accounting-gradienterp-post_journal_entry",
+        "RECORD_INVOICE_PAYMENT_FN": "gerp-invoicing-gradienterp-record_invoice_paid",
+        "SETTINGS_TABLE": "gerp-settings-gradienterp",
+        "SQUARE_API_BASE": "https://connect.squareup.com",
+        "WEBHOOK_BASE_URL": "https://7asszow002.execute-api.us-east-1.amazonaws.com",
+        "WEBHOOK_LOG_TABLE": "gerp-payments-gradienterp-webhook-log"
+      },
+      "src_dir": "modules/payments/lambdas/ingest_square",
+      "timeout": 30
+    },
+    "gerp-payments-gradienterp-ingest_stripe": {
+      "env": {
+        "COLLECTION_WATCH_DELAY": "300",
+        "COLLECTION_WATCH_QUEUE": "https://sqs.us-east-1.amazonaws.com/867637277314/gerp-payments-gradienterp-collection-watch",
+        "CONTACTS_GET_FN": "gerp-contacts-gradienterp-manage_contacts",
+        "CONTACTS_PUT_FN": "gerp-contacts-gradienterp-manage_contacts",
+        "CONTACTS_UPDATE_FN": "gerp-contacts-gradienterp-manage_contacts",
+        "CUSTOMER_ID": "gradienterp",
+        "DLQ_BODIES_TABLE": "gerp-payments-gradienterp-dlq-bodies",
+        "DLQ_TABLE": "gerp-payments-gradienterp-dlq",
+        "GERP_ID": "gradienterp",
+        "GET_INVOICES_FN": "gerp-invoicing-gradienterp-manage_invoice",
+        "MARK_UNPAID_FN": "gerp-invoicing-gradienterp-mark_unpaid",
+        "PAYPAL_API_BASE": "https://api-m.paypal.com",
+        "PORTAL_URL": "https://usuqyssaqlgdkazs2qdqgskahq0jzezg.lambda-url.us-east-1.on.aws/portal-slug",
+        "POST_JOURNAL_ENTRY_FN": "gerp-accounting-gradienterp-post_journal_entry",
+        "RECORD_INVOICE_PAYMENT_FN": "gerp-invoicing-gradienterp-record_invoice_paid",
+        "SETTINGS_TABLE": "gerp-settings-gradienterp",
+        "SQUARE_API_BASE": "https://connect.squareup.com",
+        "WEBHOOK_BASE_URL": "https://7asszow002.execute-api.us-east-1.amazonaws.com",
+        "WEBHOOK_LOG_TABLE": "gerp-payments-gradienterp-webhook-log"
+      },
+      "src_dir": "modules/payments/lambdas/ingest_stripe",
+      "timeout": 30
+    },
+    "gerp-payments-gradienterp-manage_saved_cards": {
+      "env": {
+        "COLLECTION_WATCH_DELAY": "300",
+        "COLLECTION_WATCH_QUEUE": "https://sqs.us-east-1.amazonaws.com/867637277314/gerp-payments-gradienterp-collection-watch",
+        "CONTACTS_GET_FN": "gerp-contacts-gradienterp-manage_contacts",
+        "CONTACTS_PUT_FN": "gerp-contacts-gradienterp-manage_contacts",
+        "CONTACTS_UPDATE_FN": "gerp-contacts-gradienterp-manage_contacts",
+        "CUSTOMER_ID": "gradienterp",
+        "DLQ_BODIES_TABLE": "gerp-payments-gradienterp-dlq-bodies",
+        "DLQ_TABLE": "gerp-payments-gradienterp-dlq",
+        "GERP_ID": "gradienterp",
+        "GET_INVOICES_FN": "gerp-invoicing-gradienterp-manage_invoice",
+        "MARK_UNPAID_FN": "gerp-invoicing-gradienterp-mark_unpaid",
+        "PAYPAL_API_BASE": "https://api-m.paypal.com",
+        "PORTAL_URL": "https://usuqyssaqlgdkazs2qdqgskahq0jzezg.lambda-url.us-east-1.on.aws/portal-slug",
+        "POST_JOURNAL_ENTRY_FN": "gerp-accounting-gradienterp-post_journal_entry",
+        "RECORD_INVOICE_PAYMENT_FN": "gerp-invoicing-gradienterp-record_invoice_paid",
+        "SETTINGS_TABLE": "gerp-settings-gradienterp",
+        "SQUARE_API_BASE": "https://connect.squareup.com",
+        "WEBHOOK_BASE_URL": "https://7asszow002.execute-api.us-east-1.amazonaws.com",
+        "WEBHOOK_LOG_TABLE": "gerp-payments-gradienterp-webhook-log"
+      },
+      "src_dir": "modules/payments/lambdas/manage_saved_cards",
+      "timeout": 30
+    },
+    "gerp-payments-gradienterp-payment_links": {
+      "env": {
+        "COLLECTION_WATCH_DELAY": "300",
+        "COLLECTION_WATCH_QUEUE": "https://sqs.us-east-1.amazonaws.com/867637277314/gerp-payments-gradienterp-collection-watch",
+        "CONTACTS_GET_FN": "gerp-contacts-gradienterp-manage_contacts",
+        "CONTACTS_PUT_FN": "gerp-contacts-gradienterp-manage_contacts",
+        "CONTACTS_UPDATE_FN": "gerp-contacts-gradienterp-manage_contacts",
+        "CUSTOMER_ID": "gradienterp",
+        "DLQ_BODIES_TABLE": "gerp-payments-gradienterp-dlq-bodies",
+        "DLQ_TABLE": "gerp-payments-gradienterp-dlq",
+        "GERP_ID": "gradienterp",
+        "GET_INVOICES_FN": "gerp-invoicing-gradienterp-manage_invoice",
+        "MARK_UNPAID_FN": "gerp-invoicing-gradienterp-mark_unpaid",
+        "PAYPAL_API_BASE": "https://api-m.paypal.com",
+        "PORTAL_URL": "https://usuqyssaqlgdkazs2qdqgskahq0jzezg.lambda-url.us-east-1.on.aws/portal-slug",
+        "POST_JOURNAL_ENTRY_FN": "gerp-accounting-gradienterp-post_journal_entry",
+        "RECORD_INVOICE_PAYMENT_FN": "gerp-invoicing-gradienterp-record_invoice_paid",
+        "SETTINGS_TABLE": "gerp-settings-gradienterp",
+        "SQUARE_API_BASE": "https://connect.squareup.com",
+        "WEBHOOK_BASE_URL": "https://7asszow002.execute-api.us-east-1.amazonaws.com",
+        "WEBHOOK_LOG_TABLE": "gerp-payments-gradienterp-webhook-log"
+      },
+      "src_dir": "modules/payments/lambdas/payment_links",
+      "timeout": 30
+    },
+    "gerp-payments-gradienterp-save_payment_method": {
+      "env": {
+        "COLLECTION_WATCH_DELAY": "300",
+        "COLLECTION_WATCH_QUEUE": "https://sqs.us-east-1.amazonaws.com/867637277314/gerp-payments-gradienterp-collection-watch",
+        "CONTACTS_GET_FN": "gerp-contacts-gradienterp-manage_contacts",
+        "CONTACTS_PUT_FN": "gerp-contacts-gradienterp-manage_contacts",
+        "CONTACTS_UPDATE_FN": "gerp-contacts-gradienterp-manage_contacts",
+        "CUSTOMER_ID": "gradienterp",
+        "DLQ_BODIES_TABLE": "gerp-payments-gradienterp-dlq-bodies",
+        "DLQ_TABLE": "gerp-payments-gradienterp-dlq",
+        "GERP_ID": "gradienterp",
+        "GET_INVOICES_FN": "gerp-invoicing-gradienterp-manage_invoice",
+        "MARK_UNPAID_FN": "gerp-invoicing-gradienterp-mark_unpaid",
+        "PAYPAL_API_BASE": "https://api-m.paypal.com",
+        "PORTAL_URL": "https://usuqyssaqlgdkazs2qdqgskahq0jzezg.lambda-url.us-east-1.on.aws/portal-slug",
+        "POST_JOURNAL_ENTRY_FN": "gerp-accounting-gradienterp-post_journal_entry",
+        "RECORD_INVOICE_PAYMENT_FN": "gerp-invoicing-gradienterp-record_invoice_paid",
+        "SETTINGS_TABLE": "gerp-settings-gradienterp",
+        "SQUARE_API_BASE": "https://connect.squareup.com",
+        "WEBHOOK_BASE_URL": "https://7asszow002.execute-api.us-east-1.amazonaws.com",
+        "WEBHOOK_LOG_TABLE": "gerp-payments-gradienterp-webhook-log"
+      },
+      "src_dir": "modules/payments/lambdas/save_payment_method",
+      "timeout": 30
+    },
+    "gerp-purchasing-gradienterp-create_po": {
+      "env": {
+        "AGREEMENTS_TABLE": "gerp-agreements-gradienterp",
+        "CUSTOMER_ID": "gradienterp",
+        "DIRECTORY_TABLE_ARN": "arn:aws:dynamodb:us-east-1:185369506315:table/gerp-directory",
+        "GERP_ID": "gradienterp",
+        "HUB_ID": "us-east-1",
+        "OP_EVENT_BUS_ARN": "arn:aws:events:us-east-1:582129522725:event-bus/gerp-events",
+        "ORDERS_TABLE": "gerp-purchasing-gradienterp-orders",
+        "POST_JOURNAL_ENTRY_FN": "gerp-accounting-gradienterp-post_journal_entry",
+        "SHIPMENTS_TABLE": "gerp-shipping-gradienterp"
+      },
+      "src_dir": "modules/purchasing/lambdas/create_po",
+      "timeout": 30
+    },
+    "gerp-purchasing-gradienterp-manage_po": {
+      "env": {
+        "AGREEMENTS_TABLE": "gerp-agreements-gradienterp",
+        "CUSTOMER_ID": "gradienterp",
+        "DIRECTORY_TABLE_ARN": "arn:aws:dynamodb:us-east-1:185369506315:table/gerp-directory",
+        "GERP_ID": "gradienterp",
+        "HUB_ID": "us-east-1",
+        "OP_EVENT_BUS_ARN": "arn:aws:events:us-east-1:582129522725:event-bus/gerp-events",
+        "ORDERS_TABLE": "gerp-purchasing-gradienterp-orders",
+        "POST_JOURNAL_ENTRY_FN": "gerp-accounting-gradienterp-post_journal_entry",
+        "SHIPMENTS_TABLE": "gerp-shipping-gradienterp"
+      },
+      "src_dir": "modules/purchasing/lambdas/manage_po",
+      "timeout": 30
+    },
+    "gerp-purchasing-gradienterp-on_po_received": {
+      "env": {
+        "CUSTOMER_ID": "gradienterp",
+        "GERP_ID": "gradienterp",
+        "UPDATE_STOCK_FN": "gerp-inventory-gradienterp-manage_stock"
+      },
+      "src_dir": "modules/purchasing/lambdas/on_po_received",
+      "timeout": 60
+    },
+    "gerp-purchasing-gradienterp-request_quote": {
+      "env": {
+        "AGREEMENTS_TABLE": "gerp-agreements-gradienterp",
+        "CUSTOMER_ID": "gradienterp",
+        "DIRECTORY_TABLE_ARN": "arn:aws:dynamodb:us-east-1:185369506315:table/gerp-directory",
+        "GERP_ID": "gradienterp",
+        "HUB_ID": "us-east-1",
+        "OP_EVENT_BUS_ARN": "arn:aws:events:us-east-1:582129522725:event-bus/gerp-events",
+        "ORDERS_TABLE": "gerp-purchasing-gradienterp-orders",
+        "POST_JOURNAL_ENTRY_FN": "gerp-accounting-gradienterp-post_journal_entry",
+        "SHIPMENTS_TABLE": "gerp-shipping-gradienterp"
+      },
+      "src_dir": "modules/purchasing/lambdas/request_quote",
+      "timeout": 30
+    },
+    "gerp-purchasing-gradienterp-settle_agreement": {
+      "env": {
+        "CUSTOMER_ID": "gradienterp",
+        "GERP_ID": "gradienterp",
+        "ORDERS_TABLE": "gerp-purchasing-gradienterp-orders"
+      },
+      "src_dir": "modules/purchasing/lambdas/settle_agreement",
+      "timeout": 30
+    },
+    "gerp-rules-gradienterp-manage_rules": {
+      "env": {
+        "CUSTOMER_ID": "gradienterp",
+        "GERP_ID": "gradienterp",
+        "RULES_PARAMS_TABLE": "gerp-rules-gradienterp-params",
+        "RULE_INSTANCES_TABLE": "gerp-rules-gradienterp-instances"
+      },
+      "src_dir": "modules/rules/lambdas/manage_rules",
+      "timeout": 30
+    },
+    "gerp-rules-gradienterp-rule_params": {
+      "env": {
+        "CUSTOMER_ID": "gradienterp",
+        "GERP_ID": "gradienterp",
+        "RULES_PARAMS_TABLE": "gerp-rules-gradienterp-params",
+        "RULE_INSTANCES_TABLE": "gerp-rules-gradienterp-instances"
+      },
+      "src_dir": "modules/rules/lambdas/rule_params",
+      "timeout": 30
+    },
+    "gerp-schemas-gradienterp-canonical_pull_invoke": {
+      "env": {
+        "AGENT_RUNTIME_ENDPOINT_ARN": "arn:aws:bedrock-agentcore:us-east-1:867637277314:runtime/agentcore_gradienterp-is2qoF7tii/runtime-endpoint/agentcore_gradienterp_endpoint",
+        "CANONICAL_BUCKET": "gerp-canonical-185369506315",
+        "CUSTOMER_ID": "gradienterp",
+        "GERP_ID": "gradienterp",
+        "OP_EVENT_BUS_ARN": "arn:aws:events:us-east-1:582129522725:event-bus/gerp-events",
+        "RULES_PARAMS_TABLE": "gerp-rules-gradienterp-params",
+        "SCHEMA_TABLE": "gerp-schema-gradienterp",
+        "SETTINGS_TABLE": "gerp-settings-gradienterp"
+      },
+      "src_dir": "modules/schemas/lambdas/canonical_pull_invoke",
+      "timeout": 60
+    },
+    "gerp-schemas-gradienterp-read_schema": {
+      "env": {
+        "AGENT_RUNTIME_ENDPOINT_ARN": "arn:aws:bedrock-agentcore:us-east-1:867637277314:runtime/agentcore_gradienterp-is2qoF7tii/runtime-endpoint/agentcore_gradienterp_endpoint",
+        "CANONICAL_BUCKET": "gerp-canonical-185369506315",
+        "CUSTOMER_ID": "gradienterp",
+        "GERP_ID": "gradienterp",
+        "OP_EVENT_BUS_ARN": "arn:aws:events:us-east-1:582129522725:event-bus/gerp-events",
+        "RULES_PARAMS_TABLE": "gerp-rules-gradienterp-params",
+        "SCHEMA_TABLE": "gerp-schema-gradienterp",
+        "SETTINGS_TABLE": "gerp-settings-gradienterp"
+      },
+      "src_dir": "modules/schemas/lambdas/read_schema",
+      "timeout": 60
+    },
+    "gerp-schemas-gradienterp-seed_schema": {
+      "env": {
+        "AGENT_RUNTIME_ENDPOINT_ARN": "arn:aws:bedrock-agentcore:us-east-1:867637277314:runtime/agentcore_gradienterp-is2qoF7tii/runtime-endpoint/agentcore_gradienterp_endpoint",
+        "CANONICAL_BUCKET": "gerp-canonical-185369506315",
+        "CUSTOMER_ID": "gradienterp",
+        "GERP_ID": "gradienterp",
+        "OP_EVENT_BUS_ARN": "arn:aws:events:us-east-1:582129522725:event-bus/gerp-events",
+        "RULES_PARAMS_TABLE": "gerp-rules-gradienterp-params",
+        "SCHEMA_TABLE": "gerp-schema-gradienterp",
+        "SETTINGS_TABLE": "gerp-settings-gradienterp"
+      },
+      "src_dir": "modules/schemas/lambdas/seed_schema",
+      "timeout": 60
+    },
+    "gerp-schemas-gradienterp-write_schema": {
+      "env": {
+        "AGENT_RUNTIME_ENDPOINT_ARN": "arn:aws:bedrock-agentcore:us-east-1:867637277314:runtime/agentcore_gradienterp-is2qoF7tii/runtime-endpoint/agentcore_gradienterp_endpoint",
+        "CANONICAL_BUCKET": "gerp-canonical-185369506315",
+        "CUSTOMER_ID": "gradienterp",
+        "GERP_ID": "gradienterp",
+        "OP_EVENT_BUS_ARN": "arn:aws:events:us-east-1:582129522725:event-bus/gerp-events",
+        "RULES_PARAMS_TABLE": "gerp-rules-gradienterp-params",
+        "SCHEMA_TABLE": "gerp-schema-gradienterp",
+        "SETTINGS_TABLE": "gerp-settings-gradienterp"
+      },
+      "src_dir": "modules/schemas/lambdas/write_schema",
+      "timeout": 60
+    },
+    "gerp-secrets-gradienterp-manage_secret": {
+      "env": {
+        "CUSTOMER_ID": "gradienterp",
+        "GERP_ID": "gradienterp"
+      },
+      "src_dir": "modules/secrets/lambdas/manage_secret",
+      "timeout": 10
+    },
+    "gerp-server-gradienterp-oob_discovery": {
+      "env": {
+        "CUSTOMER_ID": "gradienterp",
+        "GERP_ID": "gradienterp",
+        "SETTINGS_TABLE": "gerp-settings-gradienterp"
+      },
+      "src_dir": "modules/server/lambdas/oob_discovery",
+      "timeout": 10
+    },
+    "gerp-settings-gradienterp-manage_locations": {
+      "env": {
+        "CUSTOMER_ID": "gradienterp",
+        "GERP_ID": "gradienterp",
+        "SETTINGS_TABLE": "gerp-settings-gradienterp"
+      },
+      "src_dir": "modules/settings/lambdas/manage_locations",
+      "timeout": 10
+    },
+    "gerp-settings-gradienterp-tenant_settings": {
+      "env": {
+        "AGENT_EMAIL_PARENT_DOMAIN": "agents.gradienterp.cloud",
+        "CUSTOMER_ID": "gradienterp",
+        "GERP_ID": "gradienterp",
+        "OP_EVENT_BUS_ARN": "arn:aws:events:us-east-1:582129522725:event-bus/gerp-events",
+        "SETTINGS_TABLE": "gerp-settings-gradienterp"
+      },
+      "src_dir": "modules/settings/lambdas/tenant_settings",
+      "timeout": 10
+    },
+    "gerp-shipping-gradienterp-apply_shipment_event": {
+      "env": {
+        "CUSTOMER_ID": "gradienterp",
+        "GERP_ID": "gradienterp",
+        "POST_JOURNAL_ENTRY_FN": "gerp-accounting-gradienterp-post_journal_entry",
+        "SCHEMA_TABLE": "gerp-schema-gradienterp",
+        "SHIPMENTS_TABLE": "gerp-shipping-gradienterp"
+      },
+      "src_dir": "modules/shipping/lambdas/apply_shipment_event",
+      "timeout": 30
+    },
+    "gerp-shipping-gradienterp-manage_shipments": {
+      "env": {
+        "CUSTOMER_ID": "gradienterp",
+        "GERP_ID": "gradienterp",
+        "POST_JOURNAL_ENTRY_FN": "gerp-accounting-gradienterp-post_journal_entry",
+        "SCHEMA_TABLE": "gerp-schema-gradienterp",
+        "SHIPMENTS_TABLE": "gerp-shipping-gradienterp"
+      },
+      "src_dir": "modules/shipping/lambdas/manage_shipments",
+      "timeout": 30
+    },
+    "gerp-storage-gradienterp-inspect_document": {
+      "env": {
+        "CUSTOMER_ID": "gradienterp",
+        "GERP_ID": "gradienterp",
+        "STORAGE_BUCKET": "gerp-agent-gradienterp-uploads-867637277314"
+      },
+      "src_dir": "modules/storage/lambdas/inspect_document",
+      "timeout": 60
+    },
+    "gerp-storage-gradienterp-manage_storage": {
+      "env": {
+        "CUSTOMER_ID": "gradienterp",
+        "GERP_ID": "gradienterp",
+        "PORTAL_URL": "https://usuqyssaqlgdkazs2qdqgskahq0jzezg.lambda-url.us-east-1.on.aws/portal-slug",
+        "STORAGE_BUCKET": "gerp-agent-gradienterp-uploads-867637277314"
+      },
+      "src_dir": "modules/storage/lambdas/manage_storage",
+      "timeout": 30
+    },
+    "gerp-storage-gradienterp-ui": {
+      "env": {
+        "CUSTOMER_ID": "gradienterp",
+        "EMAIL_BUCKET": "gerp-agent-gradienterp-email-867637277314",
+        "GERP_ID": "gradienterp",
+        "PORTAL_SLUG": "portal-slug",
+        "STORAGE_BUCKET": "gerp-agent-gradienterp-uploads-867637277314",
+        "TASKS_TABLE": "gerp-tasks-gradienterp"
+      },
+      "function_url": {
+        "auth": "NONE"
+      },
+      "src_dir": "modules/storage/lambdas/ui",
+      "timeout": 15
+    },
+    "gerp-tasks-gradienterp-escalate": {
+      "env": {
+        "AGENT_RUNTIME_ENDPOINT_ARN": "arn:aws:bedrock-agentcore:us-east-1:867637277314:runtime/agentcore_gradienterp-is2qoF7tii/runtime-endpoint/agentcore_gradienterp_endpoint",
+        "CUSTOMER_ID": "gradienterp",
+        "GERP_ID": "gradienterp",
+        "OP_EVENT_BUS_ARN": "arn:aws:events:us-east-1:582129522725:event-bus/gerp-events",
+        "SCHEMA_TABLE": "gerp-schema-gradienterp",
+        "TASKS_TABLE": "gerp-tasks-gradienterp"
+      },
+      "src_dir": "modules/tasks/lambdas/escalate",
+      "timeout": 30
+    },
+    "gerp-tasks-gradienterp-manage_tasks": {
+      "env": {
+        "AGENT_RUNTIME_ENDPOINT_ARN": "arn:aws:bedrock-agentcore:us-east-1:867637277314:runtime/agentcore_gradienterp-is2qoF7tii/runtime-endpoint/agentcore_gradienterp_endpoint",
+        "CUSTOMER_ID": "gradienterp",
+        "GERP_ID": "gradienterp",
+        "OP_EVENT_BUS_ARN": "arn:aws:events:us-east-1:582129522725:event-bus/gerp-events",
+        "SCHEMA_TABLE": "gerp-schema-gradienterp",
+        "TASKS_TABLE": "gerp-tasks-gradienterp"
+      },
+      "src_dir": "modules/tasks/lambdas/manage_tasks",
+      "timeout": 30
+    },
+    "gerp-tasks-gradienterp-tasks_poke": {
+      "env": {
+        "AGENT_RUNTIME_ENDPOINT_ARN": "arn:aws:bedrock-agentcore:us-east-1:867637277314:runtime/agentcore_gradienterp-is2qoF7tii/runtime-endpoint/agentcore_gradienterp_endpoint",
+        "CUSTOMER_ID": "gradienterp",
+        "GERP_ID": "gradienterp",
+        "OP_EVENT_BUS_ARN": "arn:aws:events:us-east-1:582129522725:event-bus/gerp-events",
+        "SCHEMA_TABLE": "gerp-schema-gradienterp",
+        "TASKS_TABLE": "gerp-tasks-gradienterp"
+      },
+      "src_dir": "modules/tasks/lambdas/tasks_poke",
+      "timeout": 300
+    },
+    "gerp-treasury-gradienterp-apply_inbound": {
+      "env": {
+        "AGREEMENTS_TABLE": "gerp-agreements-gradienterp",
+        "CUSTOMER_ID": "gradienterp",
+        "GERP_ID": "gradienterp",
+        "POST_JOURNAL_ENTRY_FN": "gerp-accounting-gradienterp-post_journal_entry"
+      },
+      "src_dir": "modules/treasury/lambdas/apply_inbound",
+      "timeout": 30
+    },
+    "gerp-treasury-gradienterp-distribution": {
+      "env": {
+        "CUSTOMER_ID": "gradienterp",
+        "GERP_ID": "gradienterp",
+        "LEDGER_TABLE": "gerp-accounting-gradienterp-ledger",
+        "OP_EVENT_BUS_ARN": "arn:aws:events:us-east-1:582129522725:event-bus/gerp-events",
+        "POST_JOURNAL_ENTRY_FN": "gerp-accounting-gradienterp-post_journal_entry",
+        "RULE_INSTANCES_TABLE": "gerp-rules-gradienterp-instances",
+        "SETTINGS_TABLE": "gerp-settings-gradienterp"
+      },
+      "src_dir": "modules/treasury/lambdas/distribution",
+      "timeout": 60
+    },
+    "gerp-treasury-gradienterp-manage_capital": {
+      "env": {
+        "AGREEMENTS_TABLE": "gerp-agreements-gradienterp",
+        "CUSTOMER_ID": "gradienterp",
+        "GERP_ID": "gradienterp",
+        "LEDGER_TABLE": "gerp-accounting-gradienterp-ledger",
+        "OP_EVENT_BUS_ARN": "arn:aws:events:us-east-1:582129522725:event-bus/gerp-events",
+        "POST_JOURNAL_ENTRY_FN": "gerp-accounting-gradienterp-post_journal_entry"
+      },
+      "src_dir": "modules/treasury/lambdas/manage_capital",
+      "timeout": 30
+    },
+    "gerp-treasury-gradienterp-settlement": {
+      "env": {
+        "CUSTOMER_ID": "gradienterp",
+        "GERP_ID": "gradienterp",
+        "RULE_INSTANCES_TABLE": "gerp-rules-gradienterp-instances"
+      },
+      "src_dir": "modules/treasury/lambdas/settlement",
+      "timeout": 30
+    }
+  },
+  "gerp": "gradienterp",
+  "protocol": "HTTP",
+  "routes": [
+    {
+      "authorization": "JWT",
+      "function": "gerp-invoicing-gradienterp-manage_invoice",
+      "jwt": {
+        "Audience": [
+          "7jbo53d9kq8gvj0kglfnjuh17k"
+        ],
+        "Issuer": "https://cognito-idp.us-east-1.amazonaws.com/us-east-1_1803uNTZU"
+      },
+      "method": "GET",
+      "path": "/invoices",
+      "route_key": "GET /invoices"
+    },
+    {
+      "authorization": "JWT",
+      "function": "gerp-invoicing-gradienterp-manage_invoice",
+      "jwt": {
+        "Audience": [
+          "7jbo53d9kq8gvj0kglfnjuh17k"
+        ],
+        "Issuer": "https://cognito-idp.us-east-1.amazonaws.com/us-east-1_1803uNTZU"
+      },
+      "method": "GET",
+      "path": "/invoices/{invoice_id}",
+      "route_key": "GET /invoices/{invoice_id}"
+    },
+    {
+      "authorization": "NONE",
+      "function": "gerp-server-gradienterp-oob_discovery",
+      "jwt": null,
+      "method": "GET",
+      "path": "/oob",
+      "route_key": "GET /oob"
+    },
+    {
+      "authorization": "NONE",
+      "function": "gerp-accounting-gradienterp-oob_financials",
+      "jwt": null,
+      "method": "GET",
+      "path": "/oob/financials",
+      "route_key": "GET /oob/financials"
+    },
+    {
+      "authorization": "NONE",
+      "function": "gerp-inventory-gradienterp-oob_inventory",
+      "jwt": null,
+      "method": "GET",
+      "path": "/oob/inventory",
+      "route_key": "GET /oob/inventory"
+    },
+    {
+      "authorization": "NONE",
+      "function": "gerp-accounting-gradienterp-oob_metrics",
+      "jwt": null,
+      "method": "GET",
+      "path": "/oob/metrics",
+      "route_key": "GET /oob/metrics"
+    },
+    {
+      "authorization": "JWT",
+      "function": "gerp-settings-gradienterp-tenant_settings",
+      "jwt": {
+        "Audience": [
+          "7jbo53d9kq8gvj0kglfnjuh17k"
+        ],
+        "Issuer": "https://cognito-idp.us-east-1.amazonaws.com/us-east-1_1803uNTZU"
+      },
+      "method": "GET",
+      "path": "/settings",
+      "route_key": "GET /settings"
+    },
+    {
+      "authorization": "JWT",
+      "function": "gerp-automation-gradienterp-automate",
+      "jwt": {
+        "Audience": [
+          "7jbo53d9kq8gvj0kglfnjuh17k"
+        ],
+        "Issuer": "https://cognito-idp.us-east-1.amazonaws.com/us-east-1_1803uNTZU"
+      },
+      "method": "POST",
+      "path": "/automate/{proxy+}",
+      "route_key": "POST /automate/{proxy+}"
+    },
+    {
+      "authorization": "NONE",
+      "function": "gerp-automation-gradienterp-automate",
+      "jwt": null,
+      "method": "POST",
+      "path": "/hooks/{proxy+}",
+      "route_key": "POST /hooks/{proxy+}"
+    },
+    {
+      "authorization": "NONE",
+      "function": "gerp-payments-gradienterp-ingest_paypal",
+      "jwt": null,
+      "method": "POST",
+      "path": "/webhooks/paypal",
+      "route_key": "POST /webhooks/paypal"
+    },
+    {
+      "authorization": "NONE",
+      "function": "gerp-payments-gradienterp-ingest_square",
+      "jwt": null,
+      "method": "POST",
+      "path": "/webhooks/square",
+      "route_key": "POST /webhooks/square"
+    },
+    {
+      "authorization": "NONE",
+      "function": "gerp-payments-gradienterp-ingest_stripe",
+      "jwt": null,
+      "method": "POST",
+      "path": "/webhooks/stripe",
+      "route_key": "POST /webhooks/stripe"
+    },
+    {
+      "authorization": "JWT",
+      "function": "gerp-settings-gradienterp-tenant_settings",
+      "jwt": {
+        "Audience": [
+          "7jbo53d9kq8gvj0kglfnjuh17k"
+        ],
+        "Issuer": "https://cognito-idp.us-east-1.amazonaws.com/us-east-1_1803uNTZU"
+      },
+      "method": "PUT",
+      "path": "/settings",
+      "route_key": "PUT /settings"
+    }
+  ],
+  "stack": "per_customer"
+}

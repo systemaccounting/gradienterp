@@ -1,0 +1,60 @@
+{
+  "type": "object",
+  "description": "Post a balanced journal entry to the ledger. Debits must equal credits in account-space; otherwise the entry is rejected.",
+  "required": [
+    "lineItems"
+  ],
+  "properties": {
+    "entryId": {
+      "type": "string",
+      "description": "Optional client-supplied idempotency key. Auto-generated if omitted."
+    },
+    "lineItems": {
+      "type": "array",
+      "description": "2+ lines summing to zero across DEBIT/CREDIT sides.",
+      "items": {
+        "type": "object",
+        "required": [
+          "account",
+          "accountType",
+          "side",
+          "amount"
+        ],
+        "properties": {
+          "account": {
+            "type": "string",
+            "description": "Account name, e.g. 'cash', 'sales_revenue'."
+          },
+          "accountType": {
+            "type": "string",
+            "description": "ASSET | LIABILITY | EQUITY | REVENUE | EXPENSE."
+          },
+          "side": {
+            "type": "string",
+            "description": "DEBIT or CREDIT."
+          },
+          "amount": {
+            "type": "number",
+            "description": "Positive number; the side determines effect."
+          }
+        }
+      }
+    },
+    "memo": {
+      "type": "string",
+      "description": "Free-form note describing the entry."
+    },
+    "source": {
+      "type": "string",
+      "description": "Origin tag: stripe, square, manual, etc."
+    },
+    "timestamp": {
+      "type": "string",
+      "description": "ISO 8601 or epoch-millis. Defaults to now."
+    },
+    "dimensions": {
+      "type": "object",
+      "description": "Entry-level tags carried verbatim onto every ledger row (e.g. {\"location\": \"2\", \"worker_id\": ...}). location defaults to \"1\" (main) when omitted; statements slice by these."
+    }
+  }
+}

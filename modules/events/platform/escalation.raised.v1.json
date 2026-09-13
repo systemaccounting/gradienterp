@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "modules/events/platform/escalation.raised.v1",
+  "title": "escalation.raised",
+  "description": "LIVE. An agent hit a platform defect or a missing capability and escalated. `description` is a TEMPLATE \u2014 $1/$2 stand where a firm-specific value would go \u2014 and `private` carries those values in order. The template is public by construction, so the operator can file it verbatim as a public issue; the values stay on the private record. Templating also makes two firms' reports of one defect an exact string match instead of a judgment call. One event, one inc task on the operator gerp's books; triage is the operator's, never the reporter's.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "gerp_id",
+    "type",
+    "description",
+    "at"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "integer",
+      "const": 1,
+      "description": "Bumped on breaking shape change. Consumers branch on it."
+    },
+    "gerp_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The reporting tenant. Rides only to the operator collector \u2014 escalations are plain (unaddressed) events."
+    },
+    "type": {
+      "type": "string",
+      "enum": [
+        "bug",
+        "feature"
+      ],
+      "description": "bug = something built is broken; feature = the capability doesn't exist."
+    },
+    "description": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 4000,
+      "description": "What the agent was doing and what broke, with $1/$2 standing in for anything specific to the reporting business. Placeholders must run $1..$n with no gaps, and each needs a value in `private`. PUBLIC by construction \u2014 this text is what a public issue carries verbatim."
+    },
+    "at": {
+      "type": "integer",
+      "description": "ms-epoch at escalation."
+    },
+    "private": {
+      "class": "secret",
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "maxItems": 40,
+      "description": "The values the placeholders stand for, in order. NEVER published \u2014 lands only on the operator's private inc record. Absent when the description names nothing specific to the reporting firm."
+    }
+  }
+}

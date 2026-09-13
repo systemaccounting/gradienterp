@@ -1,0 +1,8 @@
+{
+  "type": "object",
+  "description": "Issue a draft invoice: post DR ACCOUNTS_RECEIVABLE / CR revenue (+ sales tax) and advance draft -> issued.",
+  "properties": {
+    "invoice_id": {"type": "string", "description": "The invoice to issue."}
+  },
+  "required": ["invoice_id"]
+}

@@ -1,0 +1,40 @@
+// Scenarios for replay.py — maps fixtures in tests/testdata/<provider>/
+// to provider-webhook transforms in modules/accounting/lambdas/ingest/transform.py.
+//
+// Comment entries in/out to control a replay run. `overrides` mutates fields
+// in the loaded fixture (dot-paths) before the transform is called — useful
+// for generating variants without duplicating fixtures.
+
+{
+  "scenarios": [
+    // stripe
+    { "provider": "stripe", "fixture": "charge.succeeded.json" },
+    { "provider": "stripe", "fixture": "charge.succeeded.json",
+      "overrides": {
+        "data.object.amount": 550,
+        "data.object.description": "drip coffee"
+      }
+    },
+    { "provider": "stripe", "fixture": "charge.refunded.json" },
+    { "provider": "stripe", "fixture": "invoice.paid.json" },
+    { "provider": "stripe", "fixture": "payout.paid.json" },
+    // { "provider": "stripe", "fixture": "payout.failed.json" },
+    // { "provider": "stripe", "fixture": "payment_intent.succeeded.json" },  // resolve PI-vs-charge first (see stripe/INVENTORY.md)
+
+    // paypal
+    { "provider": "paypal", "fixture": "PAYMENT.CAPTURE.COMPLETED.json" },
+    { "provider": "paypal", "fixture": "PAYMENT.CAPTURE.REFUNDED.json" },
+    // { "provider": "paypal", "fixture": "PAYMENT.CAPTURE.REVERSED.json" },
+    // { "provider": "paypal", "fixture": "PAYMENT.PAYOUTS-ITEM.SUCCEEDED.json" },
+
+    // square
+    { "provider": "square", "fixture": "payment.updated.json" },
+    { "provider": "square", "fixture": "refund.updated.json" },
+    { "provider": "square", "fixture": "payout.sent.json" }
+    // { "provider": "square", "fixture": "payout.failed.json" },
+
+    // plaid — webhook carries reference; sync_response is the actual data
+    // { "provider": "plaid", "fixture": "SYNC_UPDATES_AVAILABLE.json",
+    //   "sync_response": "transactions_sync_response.json" }
+  ]
+}

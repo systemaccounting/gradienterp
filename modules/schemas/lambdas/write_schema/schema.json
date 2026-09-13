@@ -1,0 +1,60 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "write_schema",
+  "description": "Write the registry. op=extend adds one row as origin='extension' (idempotent; 409 if it exists as canonical). op=merge bulk-writes owner-approved entries as origin='canonical'.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "op",
+    "registry"
+  ],
+  "properties": {
+    "op": {
+      "type": "string",
+      "enum": ["extend", "merge"],
+      "description": "extend: one extension row + the registry.extended event. merge: bulk canonical write."
+    },
+    "registry": {
+      "type": "string",
+      "description": "Which canonical registry. read_schema with source=canonical and no registry lists them."
+    },
+    "bucket": {
+      "type": "string",
+      "minLength": 1,
+      "description": "extend only, required there. Registry-specific path. chart_of_accounts: 'asset' | 'liability' | 'equity' | 'revenue' | 'expense'. contact_fields: 'common' | 'vendor' | 'customer' | 'employee'."
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "description": "extend only, required there. Entry identifier within the bucket. UPPER_SNAKE for chart_of_accounts (e.g. TIPS_REVENUE); snake_case for fields registries (e.g. loyalty_tier)."
+    },
+    "schema": {
+      "description": "extend only, required there. Registry-specific shape value. chart_of_accounts: pass true (presence is the schema). Fields registries: object with type/required/description and a `class` (economic | operational | subject | secret)."
+    },
+    "reason": {
+      "type": "string",
+      "minLength": 1,
+      "description": "extend only, required there. Why this entry is needed. The operator agent clusters by reason text when deciding what to promote."
+    },
+    "created_by": {
+      "type": "string",
+      "enum": ["agent_session", "owner_direct", "imported"],
+      "description": "extend only. Provenance; defaults to 'agent_session'."
+    },
+    "entries": {
+      "type": "array",
+      "minItems": 1,
+      "description": "merge only, required there. Entries to write; each row is keyed by (registry, bucket#name) and pre-existing rows at the same key are overwritten.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["bucket", "name", "schema"],
+        "properties": {
+          "bucket": {"type": "string", "minLength": 1, "description": "Registry-specific path (e.g. 'asset', 'common', 'schedule')."},
+          "name": {"type": "string", "minLength": 1, "description": "Entry identifier within the bucket."},
+          "schema": {"description": "Registry-specific shape value. true for chart_of_accounts; object for fields registries."}
+        }
+      }
+    }
+  }
+}

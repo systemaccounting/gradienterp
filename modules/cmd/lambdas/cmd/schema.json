@@ -1,0 +1,15 @@
+{
+  "type": "object",
+  "description": "Run a whole shell script on linux with outbound internet. Pass it inline, or script_key for one saved under scripts/. Returns exit code + output. Owner env vars preloaded.",
+  "required": [],
+  "properties": {
+    "script": {
+      "type": "string",
+      "description": "The complete shell script (sh -e), for a one-off. For a SAVED script use script_key instead \u2014 smaller payload, and what runs is what is stored. Owner secrets are already env vars \u2014 reference $NAME, never a value. 15 min ceiling; /tmp is scratch."
+    },
+    "script_key": {
+      "type": "string",
+      "description": "Cabinet key of a saved script: 'scripts/<name>' for one you run on request, or 'automations/approved/external/<name>' for one that has passed review and can be scheduled. If both this and script are given, script wins and the run logs it."
+    }
+  }
+}

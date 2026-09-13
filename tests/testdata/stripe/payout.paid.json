@@ -1,0 +1,47 @@
+{
+  "id": "evt_1TgFKCRBdN4u5GufWQ7Vd0JE",
+  "object": "event",
+  "api_version": "2026-04-22.dahlia",
+  "created": 1780971812,
+  "data": {
+    "object": {
+      "id": "po_1TgFKBRBdN4u5Guf8Nz2dgLe",
+      "object": "payout",
+      "amount": 4825,
+      "application_fee": null,
+      "application_fee_amount": null,
+      "arrival_date": 1780963200,
+      "automatic": false,
+      "balance_transaction": "txn_1TgFKBRBdN4u5GufA2LVNXWl",
+      "created": 1780971811,
+      "currency": "usd",
+      "description": null,
+      "destination": "ba_1Ta6lnRBdN4u5GufG6lWq4i7",
+      "failure_balance_transaction": null,
+      "failure_code": null,
+      "failure_message": null,
+      "livemode": false,
+      "metadata": {},
+      "method": "standard",
+      "original_payout": null,
+      "payout_method": null,
+      "reconciliation_status": "not_applicable",
+      "reversed_by": null,
+      "source_type": "card",
+      "statement_descriptor": null,
+      "status": "paid",
+      "trace_id": {
+        "status": "supported",
+        "value": "7UF6L35cV4gF4Pq4Q85Cu7nx4l36o45E23M46sW1d"
+      },
+      "type": "bank_account"
+    }
+  },
+  "livemode": false,
+  "pending_webhooks": 0,
+  "request": {
+    "id": "req_tsgv2YIc9OnrFO",
+    "idempotency_key": "00000000-0000-4000-8000-000000000002"
+  },
+  "type": "payout.paid"
+}

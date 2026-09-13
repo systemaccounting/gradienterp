@@ -1,0 +1,67 @@
+{
+  "common": {
+    "note_id": {
+      "type": "string",
+      "required": true,
+      "description": "hash key; opaque slug or uuid",
+      "class": "operational",
+      "shape": "copied"
+    },
+    "version_ts": {
+      "type": "string",
+      "required": true,
+      "description": "range key; <ms-epoch>-<4-digit-suffix> for tie-breaking on writes within the same millisecond. lambda-assigned, not caller-supplied",
+      "class": "operational",
+      "shape": "copied"
+    },
+    "content": {
+      "type": "string",
+      "required": true,
+      "class": "operational",
+      "shape": "copied",
+      "description": "the note's text, as a TEMPLATE: `$1`/`$2` stand where a firm-specific value goes and `private_values` carries those values in order. PUBLIC BY CONSTRUCTION \u2014 a note is where someone writes 'call Dana about the late invoice', and splitting it publishes the SHAPE of the annotation (what it is about, against which invoice) while the specifics stay unserved. A writer that types a name into this field breaks the contract rather than tripping a filter"
+    },
+    "contact_id": {
+      "type": "string",
+      "required": false,
+      "description": "FK into modules/contacts/ when this note is about a contact",
+      "class": "subject",
+      "shape": "referenced"
+    },
+    "journal_entry_id": {
+      "type": "string",
+      "required": false,
+      "description": "FK into the accounting ledger when this note annotates a journal entry",
+      "class": "operational",
+      "shape": "referenced"
+    },
+    "purchase_order_id": {
+      "type": "string",
+      "required": false,
+      "description": "FK into modules/purchasing/ (future) when this note is about a PO",
+      "class": "operational",
+      "shape": "referenced"
+    },
+    "invoice_id": {
+      "type": "string",
+      "required": false,
+      "description": "FK into modules/invoicing/ (future) when this note is about an invoice",
+      "class": "operational",
+      "shape": "referenced"
+    },
+    "created_at": {
+      "type": "timestamp_ms",
+      "required": true,
+      "description": "first version's ms-epoch; copied forward unchanged on subsequent versions",
+      "class": "operational",
+      "shape": "copied"
+    },
+    "private_values": {
+      "type": "list<string>",
+      "required": false,
+      "class": "secret",
+      "shape": "copied",
+      "description": "what `content`'s $1..$n stand for, in order. Never served to anyone; `template.expand(content, private_values)` reconstitutes the note for whoever holds both halves, so the owner's own view reads as written"
+    }
+  }
+}

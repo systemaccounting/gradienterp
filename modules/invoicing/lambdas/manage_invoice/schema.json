@@ -1,0 +1,137 @@
+{
+  "description": "An invoice's plumbing: create or from_template, complete_line on a draft, transition one item's state, get, and the firm's tags. issue_invoice and record_invoice_paid post the ledger.",
+  "type": "object",
+  "required": [
+    "op"
+  ],
+  "properties": {
+    "op": {
+      "type": "string",
+      "enum": [
+        "create",
+        "from_template",
+        "complete_line",
+        "transition",
+        "get",
+        "tag",
+        "untag",
+        "tags",
+        "find_by_tag"
+      ],
+      "description": "create: customer+lines. from_template: customer+ctx. complete_line/transition: invoice_id+item_id. get: id or filters. tag/untag/tags/find_by_tag: labels."
+    },
+    "customer": {
+      "type": "string",
+      "description": "contact_id billed; a filter on get."
+    },
+    "lines": {
+      "type": "array",
+      "description": "create: each credits its account at issue.",
+      "items": {
+        "type": "object",
+        "required": [
+          "account",
+          "accountType",
+          "amount"
+        ],
+        "properties": {
+          "description": {
+            "type": "string"
+          },
+          "account": {
+            "type": "string"
+          },
+          "accountType": {
+            "type": "string",
+            "description": "REVENUE"
+          },
+          "amount": {
+            "type": "number"
+          }
+        }
+      }
+    },
+    "ctx": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "from_template: quantities, e.g. {nights: 2}."
+    },
+    "template": {
+      "type": "string",
+      "description": "from_template: which template."
+    },
+    "due_date": {
+      "type": "string",
+      "description": "ISO date."
+    },
+    "memo": {
+      "type": "string",
+      "description": "on the invoice or the transition."
+    },
+    "job": {
+      "type": "string",
+      "description": "job tag (per-job P&L)."
+    },
+    "created_by": {
+      "type": "string",
+      "description": "account_id the sale is attributed to."
+    },
+    "invoice_id": {
+      "type": "string",
+      "description": "the invoice."
+    },
+    "item_id": {
+      "type": "string",
+      "description": "the line ('i0'…); transition may omit it."
+    },
+    "state": {
+      "type": "string",
+      "description": "transition: paid, earned, refunded, or the owner's own."
+    },
+    "dims": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "transition: extra journal dimensions."
+    },
+    "transition_id": {
+      "type": "string",
+      "description": "transition: idempotency key."
+    },
+    "description": {
+      "type": "string",
+      "description": "complete_line: the line's text."
+    },
+    "unit_price": {
+      "type": "number",
+      "description": "complete_line: price for ONE."
+    },
+    "quantity": {
+      "type": "number",
+      "description": "complete_line: how many."
+    },
+    "account": {
+      "type": "string",
+      "description": "complete_line: where revenue lands."
+    },
+    "accountType": {
+      "type": "string",
+      "description": "complete_line: REVENUE or LIABILITY."
+    },
+    "catalog_item_id": {
+      "type": "string",
+      "description": "complete_line: the inventory item."
+    },
+    "status": {
+      "type": "string",
+      "description": "get: draft|issued|paid."
+    },
+    "incomplete": {
+      "type": "boolean",
+      "description": "get: drafts missing values only."
+    },
+    "tag": {
+      "type": "string",
+      "description": "a label from the invoice_tags registry."
+    }
+  }
+}

@@ -1,0 +1,95 @@
+{
+  "dimensions": {
+    "location": {
+      "type": "string",
+      "required": false,
+      "class": "operational",
+      "shape": "copied",
+      "description": "location ordinal the entry belongs to (settings LOCATION# rows). Copied — a worker or item moving location later must not restate old entries. Defaulted to \"1\" at post when absent, so every entry is sliceable by branch"
+    },
+    "job": {
+      "type": "string",
+      "required": false,
+      "class": "operational",
+      "shape": "copied",
+      "description": "the job tag this money belongs to (kebab-case, owner-chosen). Revenue in, parts + hours + freight out = margin per job, as a statement slice"
+    },
+    "task": {
+      "type": "string",
+      "required": false,
+      "class": "operational",
+      "shape": "copied",
+      "description": "modules/tasks task_id the work was logged against — what makes cost-per-task a statement slice, so fix work logged against a defect task IS that defect's cost"
+    },
+    "period": {
+      "type": "string",
+      "required": false,
+      "class": "operational",
+      "shape": "copied",
+      "description": "the pay or reporting period an entry settles (e.g. a pay-run period). The window the amount belongs to, not when it posted"
+    },
+    "instrument_id": {
+      "type": "string",
+      "required": false,
+      "class": "operational",
+      "shape": "copied",
+      "description": "the capital instrument (a distribution_share rule) a distribution pays. Names a rule, not a party"
+    },
+    "rule": {
+      "type": "string",
+      "required": false,
+      "class": "operational",
+      "shape": "copied",
+      "description": "the rule that produced this posting — provenance for an automated leg (a tax, a burn, a distribution)"
+    },
+    "started_at": {
+      "type": "timestamp_ms",
+      "required": false,
+      "class": "operational",
+      "shape": "copied",
+      "description": "start of the span an accrual covers (a shift's clock-in). The measurement's own window"
+    },
+    "ended_at": {
+      "type": "timestamp_ms",
+      "required": false,
+      "class": "operational",
+      "shape": "copied",
+      "description": "end of the span an accrual covers (a shift's clock-out)"
+    },
+    "issuer": {
+      "type": "string",
+      "required": false,
+      "class": "operational",
+      "shape": "referenced",
+      "description": "the FIRM that issued a capital instrument, as a gerp_id — a business, already a public identity, not a private person"
+    },
+    "holder": {
+      "type": "string",
+      "required": false,
+      "class": "operational",
+      "shape": "referenced",
+      "description": "the party a distribution pays, as a gerp_id. A gerp_profile_id is polymorphic, so an individual investor holding one is public by having it — that is what the id means"
+    },
+    "worker_id": {
+      "type": "string",
+      "required": false,
+      "class": "subject",
+      "shape": "referenced",
+      "description": "the PERSON a wage accrual is for, as a contact_id. Never published raw: a reader resolves it through the contact, which names them only if that contact references a public profile. A REFERENCE, so someone publishing a profile later has their history resolve retroactively"
+    },
+    "role": {
+      "type": "string",
+      "required": false,
+      "class": "operational",
+      "shape": "copied",
+      "description": "the role worked, priced at the rate in force then. About the work, not the worker — a role publishes; who filled it is `worker_id`"
+    },
+    "created_by": {
+      "type": "string",
+      "required": false,
+      "class": "subject",
+      "shape": "referenced",
+      "description": "the PERSON who entered the transaction, as their account subject. Attribution, so a P&L can be sliced by who booked it — resolves like any other subject, never published raw"
+    }
+  }
+}

@@ -1,0 +1,85 @@
+{
+  "merchant_id": "MLVASSBGBB05Z",
+  "type": "payment.updated",
+  "event_id": "44973994-85b8-4f0f-bd35-fe6d07d9712d",
+  "created_at": "2026-06-05T03:11:20.382Z",
+  "data": {
+    "type": "payment",
+    "id": "Xp1vsL7hvOKCOnxJJrBcMR7K4jJZY",
+    "object": {
+      "payment": {
+        "id": "Xp1vsL7hvOKCOnxJJrBcMR7K4jJZY",
+        "created_at": "2026-06-05T01:56:05.335Z",
+        "updated_at": "2026-06-05T03:11:20.382Z",
+        "amount_money": {
+          "amount": 100,
+          "currency": "USD"
+        },
+        "refunded_money": {
+          "amount": 100,
+          "currency": "USD"
+        },
+        "status": "COMPLETED",
+        "delay_duration": "PT168H",
+        "source_type": "CARD",
+        "card_details": {
+          "status": "CAPTURED",
+          "card": {
+            "card_brand": "VISA",
+            "last_4": "5858",
+            "exp_month": 6,
+            "exp_year": 2028,
+            "fingerprint": "sq-1-FakeFingerprint000000000000000000000000000000000000000000000000000",
+            "card_type": "CREDIT",
+            "prepaid_type": "NOT_PREPAID",
+            "bin": "453275"
+          },
+          "entry_method": "KEYED",
+          "cvv_status": "CVV_ACCEPTED",
+          "avs_status": "AVS_ACCEPTED",
+          "statement_description": "SQ *DEFAULT TEST ACCOUNT",
+          "card_payment_timeline": {
+            "authorized_at": "2026-06-05T01:56:05.468Z",
+            "captured_at": "2026-06-05T01:56:05.572Z"
+          }
+        },
+        "location_id": "LYBDR6Y0NV8S1",
+        "order_id": "FqxVGTPa9tAHaAj5ywXmsyY640dZY",
+        "refund_ids": [
+          "Xp1vsL7hvOKCOnxJJrBcMR7K4jJZY_ZsDNUOL1dCdZ1xlP7r6LgD8RZnw84IV7tqziBAwcswb"
+        ],
+        "risk_evaluation": {
+          "created_at": "2026-06-05T01:56:05.468Z",
+          "risk_level": "NORMAL"
+        },
+        "processing_fee": [
+          {
+            "effective_at": "2026-06-05T03:56:06.000Z",
+            "type": "INITIAL",
+            "amount_money": {
+              "amount": 33,
+              "currency": "USD"
+            }
+          }
+        ],
+        "total_money": {
+          "amount": 100,
+          "currency": "USD"
+        },
+        "approved_money": {
+          "amount": 100,
+          "currency": "USD"
+        },
+        "receipt_number": "Xp1v",
+        "receipt_url": "https://squareupsandbox.com/receipt/preview/Xp1vsL7hvOKCOnxJJrBcMR7K4jJZY",
+        "delay_action": "CANCEL",
+        "delayed_until": "2026-06-12T01:56:05.335Z",
+        "application_details": {
+          "square_product": "ECOMMERCE_API",
+          "application_id": "sandbox-sq0idb-FsIfAs2BNHdrNrqGpQrcfw"
+        },
+        "version_token": "FakeVersionToken00000000000000000000000000000"
+      }
+    }
+  }
+}

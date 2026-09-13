@@ -1,0 +1,54 @@
+{
+  "type": "object",
+  "description": "The firm's scheduled automations: op schedule puts an approved script on a timer, unschedule stops one, list joins scripts with their schedules, get reads one in full with its review history.",
+  "required": [
+    "op"
+  ],
+  "properties": {
+    "op": {
+      "type": "string",
+      "enum": ["schedule", "unschedule", "list", "get"],
+      "description": "schedule: create a timer for an approved script. unschedule: stop one. list: every script with its schedules. get: one schedule in full."
+    },
+    "script": {
+      "type": "string",
+      "description": "The script file, e.g. 'dunning.py'. Required for schedule; on unschedule an alternative to name (pair with subject); on list a filter for one script's schedules."
+    },
+    "schedule_expression": {
+      "type": "string",
+      "description": "schedule only, required there: 'rate(3 days)', 'cron(0 9 * * ? *)', or 'at(2026-09-01T09:00:00)' for a single run."
+    },
+    "subject": {
+      "type": "string",
+      "description": "What a run is about — an invoice id, a contact. Distinguishes one schedule of a script from another (schedule), and finds it again (unschedule with script)."
+    },
+    "name": {
+      "type": "string",
+      "description": "The schedule name as list reports it, e.g. 'auto-dunning-INV_1042'. Required for get; on unschedule an alternative to script+subject."
+    },
+    "params": {
+      "type": "object",
+      "description": "schedule only: arguments for the script's run(ctx, **params). Pass references (an incident id, a rule key), not copied values; they are read fresh each time it fires."
+    },
+    "timezone": {
+      "type": "string",
+      "description": "schedule only: IANA name, e.g. 'America/Los_Angeles'. Defaults to UTC."
+    },
+    "one_shot": {
+      "type": "boolean",
+      "description": "schedule only: true for a schedule that deletes itself after it fires once. Use with an at() expression."
+    },
+    "start_date": {
+      "type": "string",
+      "description": "schedule only, ISO-8601 UTC: nothing runs before this."
+    },
+    "end_date": {
+      "type": "string",
+      "description": "schedule only, ISO-8601 UTC: the last moment it may run, after which it deletes itself. A repeat with no end_date runs until someone unschedules it."
+    },
+    "rules": {
+      "type": "object",
+      "description": "schedule only: `{subject: [instance rows]}` the script will ask for with ctx.rules. Resolved now and frozen — automate holds no table, so it cannot look them up when the schedule runs."
+    }
+  }
+}

@@ -1,0 +1,81 @@
+{
+  "type": "object",
+  "description": "Labor CRUD over three tables: worker (the rate book), time_entry (clock-in/out), worker_legal (masked PII docs). op picks the verb, entity the table. delete also removes files the row references.",
+  "required": [
+    "op",
+    "entity"
+  ],
+  "properties": {
+    "op": {
+      "type": "string",
+      "enum": [
+        "get",
+        "put",
+        "update",
+        "query",
+        "delete"
+      ],
+      "description": "get (404 if absent) | put (create/replace) | update (patch via updates) | query (one partition) | delete (the row and its uploads; irreversible)."
+    },
+    "entity": {
+      "type": "string",
+      "enum": [
+        "worker",
+        "time_entry",
+        "worker_legal"
+      ],
+      "description": "worker: rate book, keys contact_id + role. time_entry: clock event, keys worker_id + entry_id. worker_legal: legal doc row, keys worker_id + sk; SSN-masked JSON only."
+    },
+    "contact_id": {
+      "type": "string",
+      "description": "worker hash key (the contact paid); required for worker."
+    },
+    "role": {
+      "type": "string",
+      "description": "worker range key; required for worker."
+    },
+    "worker_id": {
+      "type": "string",
+      "description": "time_entry / worker_legal hash key; required there."
+    },
+    "entry_id": {
+      "type": "string",
+      "description": "time_entry range key; generated on put, required on get/update/delete."
+    },
+    "sk": {
+      "type": "string",
+      "description": "worker_legal range key, role#type e.g. barista#W-4; required there."
+    },
+    "attributes": {
+      "type": "object",
+      "description": "put: the entity's non-key fields (top level also works), validated against labor_fields. worker: rate, classification (W-2|1099). time_entry: role, started_at, ended_at (ms-epoch or ISO 8601), status (open|closed). worker_legal: type (W-4, I-9, DE-4, PASSPORT…), value (masked JSON)."
+    },
+    "job": {
+      "type": "string",
+      "description": "put: job tag on a time entry; the accrual carries dimensions.job."
+    },
+    "task_id": {
+      "type": "string",
+      "description": "put: task on a time entry; the accrual carries dimensions.task. Log fix work against the class task (ISSUE#<hash>)."
+    },
+    "updates": {
+      "type": "object",
+      "description": "update, required: non-key changes; keys and created_at immutable. worker: rate, classification. time_entry: ended_at, status (closed + ended_at clocks out, then the accrual runs). worker_legal: type, value."
+    },
+    "limit": {
+      "type": "number",
+      "description": "query: page size, default 100."
+    },
+    "exclusive_start_key": {
+      "type": "object",
+      "description": "query: the prior page's next_key."
+    },
+    "fields": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "query: only these attributes per row; keys always included."
+    }
+  }
+}

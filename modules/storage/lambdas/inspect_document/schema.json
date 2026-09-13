@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "inspect_document",
+  "description": "Read a document into structured fields by key. Receipt: vendor, total, tax, date, line items (Textract + confidence). Inspect BEFORE filing (e.g. a submissions/ file); don't guess from the filename.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [],
+  "properties": {
+    "key": {
+      "type": "string",
+      "description": "The object key/path to inspect — a portal submission file (submissions/receipt/<id>/<name>) or an already-filed document (receipts/office-supply/staples-2026-06-14.jpg)."
+    },
+    "schema": {
+      "type": "string",
+      "enum": [
+        "receipt"
+      ],
+      "description": "What to extract. receipt = vendor / total / tax / date / line_items via Textract AnalyzeExpense. Default receipt."
+    },
+    "refresh": {
+      "type": "boolean",
+      "description": "Re-run inspection instead of returning the result cached on the object. Default false."
+    }
+  }
+}

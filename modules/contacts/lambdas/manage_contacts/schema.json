@@ -1,0 +1,198 @@
+{
+  "type": "object",
+  "description": "Contacts CRUD in one tool — op: get | put | update | query | scan. put/update validate against the contact_fields registry; query lists by role flag or resolves an account id to its contact.",
+  "properties": {
+    "op": {
+      "type": "string",
+      "description": "get|put|update|query|scan. get/put/update: contact_id. query: role, account_id or gerp_profile_id. scan: filter_expression."
+    },
+    "contact_id": {
+      "type": "string",
+      "description": "hash key; get/put/update."
+    },
+    "entity_type": {
+      "type": "string",
+      "description": "put, required: person (first/middle/last_name) | organization (name/legal_name)."
+    },
+    "is_vendor": {
+      "type": "boolean",
+      "description": "the firm buys from them; vendor fields."
+    },
+    "is_customer": {
+      "type": "boolean",
+      "description": "the firm sells to them; customer fields."
+    },
+    "is_employee": {
+      "type": "boolean",
+      "description": "the firm employs them; employee fields."
+    },
+    "first_name": {
+      "type": "string",
+      "description": "person"
+    },
+    "middle_name": {
+      "type": "string",
+      "description": "person, optional"
+    },
+    "last_name": {
+      "type": "string",
+      "description": "person"
+    },
+    "name": {
+      "type": "string",
+      "description": "organization"
+    },
+    "legal_name": {
+      "type": "string",
+      "description": "organization, if different"
+    },
+    "email": {
+      "type": "string",
+      "description": "primary"
+    },
+    "phone": {
+      "type": "string",
+      "description": "E.164, e.g. '+14155551212'"
+    },
+    "tax_id": {
+      "type": "string",
+      "description": "EIN or SSN/ITIN"
+    },
+    "notes": {
+      "type": "string",
+      "description": "free-form"
+    },
+    "addresses": {
+      "type": "array",
+      "description": "address_type: business|home|office|billing|shipping|mailing",
+      "items": {
+        "type": "object",
+        "required": [
+          "address_type"
+        ],
+        "properties": {
+          "address_type": {
+            "type": "string",
+            "description": "business | home | office | billing | shipping | mailing"
+          },
+          "street_number": {
+            "type": "string",
+            "description": "House/building number (e.g. '123', '456A')."
+          },
+          "street_name": {
+            "type": "string",
+            "description": "Street name without number (e.g. 'Main St')."
+          },
+          "unit": {
+            "type": "string",
+            "description": "Apartment / suite / unit / floor / room — whichever applies."
+          },
+          "city": {
+            "type": "string"
+          },
+          "county": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string"
+          },
+          "postal_code": {
+            "type": "string"
+          },
+          "country": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "terms": {
+      "type": "string",
+      "description": "vendor: prepaid|due_on_receipt|net_15|net_30|net_60|custom"
+    },
+    "website": {
+      "type": "string",
+      "description": "vendor"
+    },
+    "categories": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "vendor: tags"
+    },
+    "preferred_payment_method": {
+      "type": "string",
+      "description": "vendor: ach|wire|check|stripe|paypal|other"
+    },
+    "stripe_customer_id": {
+      "type": "string",
+      "description": "customer"
+    },
+    "credit_limit": {
+      "type": "number",
+      "description": "customer: open-receivables cap"
+    },
+    "tax_exempt": {
+      "type": "boolean",
+      "description": "customer"
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "customer: labels"
+    },
+    "hire_date": {
+      "type": "string",
+      "description": "employee: YYYY-MM-DD"
+    },
+    "role": {
+      "type": "string",
+      "description": "query: vendor|customer|employee filter. put: employee job title."
+    },
+    "hourly_rate": {
+      "type": "number",
+      "description": "employee: rate at hire"
+    },
+    "employment_status": {
+      "type": "string",
+      "description": "employee: active|on_leave|terminated"
+    },
+    "payroll_processor_id": {
+      "type": "string",
+      "description": "employee"
+    },
+    "updates": {
+      "type": "object",
+      "description": "update, required: field to value; nested structures replaced whole."
+    },
+    "limit": {
+      "type": "number",
+      "description": "query/scan: page size, default 100"
+    },
+    "exclusive_start_key": {
+      "type": "object",
+      "description": "query/scan: prior next_key"
+    },
+    "account_id": {
+      "type": "string",
+      "description": "query: the contact for a login account id (Cognito sub)"
+    },
+    "filter_expression": {
+      "type": "string",
+      "description": "scan: DDB FilterExpression"
+    },
+    "expression_attribute_names": {
+      "type": "object",
+      "description": "scan"
+    },
+    "expression_attribute_values": {
+      "type": "object",
+      "description": "scan"
+    }
+  },
+  "required": [
+    "op"
+  ]
+}

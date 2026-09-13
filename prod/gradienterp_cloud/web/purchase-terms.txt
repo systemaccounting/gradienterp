@@ -1,0 +1,8 @@
+You are purchasing a member account in the gradientERP AWS organization. gradientERP provisions your
+AWS account with an AgentCore-administered ERP application and enables its communication with other
+accounts through an event bus hosted in the operator account. You will receive a monthly invoice for
+your AWS account use. gradientERP adds a 20% operator markup to your monthly AWS bill for managing
+infrastructure and code. You may cancel anytime by closing the account. Your books and documents are
+exported to you at closure and stay downloadable for 15 days. The ERP application and everything
+running in your AWS account are destroyed at once and cannot be brought back. After the 15 days the
+export is deleted and the AWS account is closed.

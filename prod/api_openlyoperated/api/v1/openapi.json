@@ -1,0 +1,210 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "openlyoperated.biz — the read api",
+    "version": "1",
+    "description": "The openly-operated data, the same JSON the pages render. /v1 is the stage; each path names its backend folder (x-backend) and whether it streams (x-stream). Anonymous reads share the stage throttle; a key in the keyed plan lifts it and is metered."
+  },
+  "servers": [
+    {
+      "url": "https://api.openlyoperated.biz/v1"
+    }
+  ],
+  "paths": {
+    "/gerps": {
+      "get": {
+        "operationId": "listGerps",
+        "summary": "The directory: which gerps publish, and where each one's reads live.",
+        "x-backend": "gerps",
+        "x-stream": false,
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "a name prefix"
+          },
+          {
+            "name": "sector",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "a NAICS code the gerp says it is in"
+          },
+          {
+            "name": "city",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "state",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "{gerps: [{gerp_id, gerp_profile_id, label, city, state, naics_intended, sources: [{key, kind, label}], api}]}"
+          }
+        }
+      }
+    },
+    "/gerps/{gerp_id}/sources": {
+      "get": {
+        "operationId": "listSources",
+        "summary": "A gerp's own catalog: what it publishes, the same list the directory carries.",
+        "x-backend": "gerps_sources",
+        "x-stream": true,
+        "parameters": [
+          {
+            "name": "gerp_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "{gerp_id, sources: [{key, kind, label}]}"
+          },
+          "404": {
+            "description": "no such published gerp"
+          }
+        }
+      }
+    },
+    "/gerps/{gerp_id}/sources/{source}": {
+      "get": {
+        "operationId": "readSource",
+        "summary": "The read-through: the gerp's own /oob/<source>, byte for byte, streamed as it arrives; the query string passes through.",
+        "x-backend": "gerps_sources",
+        "x-stream": true,
+        "parameters": [
+          {
+            "name": "gerp_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "source",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "a catalog key: financials, inventory, metrics, ..."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "the gerp's own JSON"
+          },
+          "404": {
+            "description": "no such published gerp, or the gerp says unpublished"
+          },
+          "429": {
+            "description": "the gerp's own throttle"
+          }
+        }
+      }
+    },
+    "/economy/counters": {
+      "get": {
+        "operationId": "readCounters",
+        "summary": "Economic data: the counters every gerp's events add to, in the metric shape; no signal names the catalog.",
+        "x-backend": "economy_counters",
+        "x-stream": false,
+        "parameters": [
+          {
+            "name": "signal",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "revenue",
+                "expense",
+                "margin"
+              ]
+            }
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "YYYY-MM, inclusive"
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "YYYY-MM, inclusive"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "{signals: [...]} or {key, label, unit, grain, headline, points, definition, source}"
+          },
+          "404": {
+            "description": "no such signal"
+          }
+        }
+      }
+    },
+    "/events": {
+      "get": {
+        "operationId": "streamEvents",
+        "summary": "The stream, as server-sent events: a channel of the Events API relayed while the request runs.",
+        "x-backend": "events",
+        "x-stream": true,
+        "x-keyed": true,
+        "parameters": [
+          {
+            "name": "channel",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "/oob/counters (every counter delta) or /oob/<gerp_id>/<kind> (a published gerp's events of one kind, dots and underscores as dashes)"
+          },
+          {
+            "name": "x-api-key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "a key in the keyed plan; a held stream is metered as one call"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "text/event-stream: `id: <ms>` `event: <channel>` `data: <json>` per event, a comment heartbeat every 15s, `: reconnect` and the end before the 15-minute ceiling"
+          },
+          "400": {
+            "description": "channel missing or not under /oob"
+          },
+          "403": {
+            "description": "no key"
+          }
+        }
+      }
+    }
+  }
+}

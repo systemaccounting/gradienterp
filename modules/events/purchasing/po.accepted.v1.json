@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "modules/events/purchasing/po.accepted.v1",
+  "title": "po.accepted",
+  "description": "LIVE RAIL (addressed event). The seller's acceptance echoed back; an accepted row drafts the seller's invoice and opens the buyer's PO.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "openly_operated",
+    "customer_id",
+    "thread",
+    "terms_hash",
+    "to"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "integer",
+      "const": 1,
+      "description": "Bumped on breaking shape change. Consumers branch on it."
+    },
+    "openly_operated": {
+      "type": "boolean",
+      "description": "Set at emit time from the gerp's settings. The publication rule's filter — a private gerp's events never leave the operator plane."
+    },
+    "customer_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Emitting tenant (gerp_id). Redundant with the envelope account id but saves consumers a join."
+    },
+    "thread": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The exchange id."
+    },
+    "terms_hash": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Must equal the proposal's."
+    },
+    "to": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Recipient gerp_profile_id."
+    }
+  }
+}

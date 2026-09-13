@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "modules/events/iot/device.telemetry.v1",
+  "title": "device.telemetry",
+  "description": "SPECULATIVE (module unbuilt). A metered physical reading — the ground-truth floor of the stack. The device registry row carries the device's location; the ingesting lambda stamps it (a meter attributes to where it sits).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "openly_operated",
+    "customer_id",
+    "device_id",
+    "measurement",
+    "value",
+    "at_ms",
+    "location"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "integer",
+      "const": 1,
+      "description": "Bumped on breaking shape change. Consumers branch on it."
+    },
+    "openly_operated": {
+      "type": "boolean",
+      "description": "Set at emit time from the gerp's settings. The publication rule's filter — a private gerp's events never leave the operator plane."
+    },
+    "customer_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Emitting tenant (gerp_id). Redundant with the envelope account id but saves consumers a join."
+    },
+    "device_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Registry device id."
+    },
+    "measurement": {
+      "type": "string",
+      "minLength": 1,
+      "description": "What was measured, e.g. 'kwh', 'temp_c', 'level_pct'."
+    },
+    "value": {
+      "type": "number",
+      "description": "The reading."
+    },
+    "at_ms": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Reading time."
+    },
+    "location": {
+      "type": "string",
+      "pattern": "^[0-9]+$",
+      "description": "Location ordinal (the 1 in LOCATION#1#...). Present on placeful objects so cross-firm matches can be geo/loc-scoped; '1' = the emitter's main location."
+    }
+  }
+}

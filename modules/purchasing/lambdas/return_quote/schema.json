@@ -1,0 +1,25 @@
+{
+  "type": "object",
+  "description": "Answer a buyer's quote request or counter their purchase order with priced terms: the seller's own proposal on the buyer's thread. The buyer's rules or agent accept, counter, or decline it.",
+  "properties": {
+    "vendor": {"type": "string", "description": "This firm's gerp_id (the seller)."},
+    "buyer": {"type": "string", "description": "The buyer's gerp_id (who asked, or who proposed the PO being countered)."},
+    "thread": {"type": "string", "description": "The buyer's thread: the quote request's or the PO's. A new row lands on it; the history stays."},
+    "lines": {
+      "type": "array",
+      "description": "The priced terms, each {description, amount, sku?, qty?}. sku is THIS firm's item id; qty the count offered. amount is the line total.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "description": {"type": "string", "description": "What is offered."},
+          "amount": {"type": "number", "description": "Line total (the price offered)."},
+          "sku": {"type": "string", "description": "This firm's item id for the line, from its own inventory."},
+          "qty": {"type": "number", "description": "Units offered on this line."}
+        },
+        "required": ["description", "amount"]
+      }
+    },
+    "memo": {"type": "string", "description": "Optional note carried on the row."}
+  },
+  "required": ["buyer", "thread", "lines"]
+}

@@ -1,0 +1,21 @@
+{
+  "type": "object",
+  "description": "Record payment on an issued invoice: DR cash / CR ACCOUNTS_RECEIVABLE, plus CR SALES_TAX_PAYABLE for any tax collected on top; advances issued -> paid.",
+  "properties": {
+    "invoice_id": {
+      "type": "string",
+      "description": "The invoice that was paid."
+    },
+    "cash_account": {
+      "type": "string",
+      "description": "Where the money landed. Omit for CASH (handed over, deposited). A processor collection names its in-transit account, e.g. CASH_IN_TRANSIT_STRIPE."
+    },
+    "tax": {
+      "type": "number",
+      "description": "Sales tax collected on top of the invoice total, if any (a processor's calculation). Posted to SALES_TAX_PAYABLE; omit when none."
+    }
+  },
+  "required": [
+    "invoice_id"
+  ]
+}

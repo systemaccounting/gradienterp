@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "modules/events/inventory/byproduct.offered.v1",
+  "title": "byproduct.offered",
+  "description": "SPECULATIVE. Waste/offcuts/heat offered as someone else's input — industrial symbiosis; the most literal negentropic match.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "openly_operated",
+    "customer_id",
+    "material",
+    "qty",
+    "unit"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "integer",
+      "const": 1,
+      "description": "Bumped on breaking shape change. Consumers branch on it."
+    },
+    "openly_operated": {
+      "type": "boolean",
+      "description": "Set at emit time from the gerp's settings. The publication rule's filter — a private gerp's events never leave the operator plane."
+    },
+    "customer_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Emitting tenant (gerp_id). Redundant with the envelope account id but saves consumers a join."
+    },
+    "material": {
+      "type": "string",
+      "minLength": 1,
+      "description": "What it is, e.g. 'coffee chaff', 'waste heat'."
+    },
+    "qty": {
+      "type": "number",
+      "description": "Amount available.",
+      "exclusiveMinimum": 0
+    },
+    "unit": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Unit of measure."
+    },
+    "cadence": {
+      "type": "string",
+      "description": "one-off | recurring; recurring streams are contract.offered candidates."
+    },
+    "location": {
+      "type": "string",
+      "pattern": "^[0-9]+$",
+      "description": "Location ordinal (the 1 in LOCATION#1#...). Present on placeful objects so cross-firm matches can be geo/loc-scoped; '1' = the emitter's main location."
+    }
+  }
+}

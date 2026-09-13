@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="robots" content="noindex" />
+  <title>Payment — gradientERP</title>
+  <link rel="icon" href="/art/gradientERP-lockup.svg" />
+  <style>
+    :root{
+      --bg:#0f1115; --panel:#181b22; --card:#1a1f29;
+      --ink:#e7e9ee; --mut:#8b93a7; --line:#262b36;
+      --acc:#5b8cff; --acc2:#9d6bff;
+    }
+    html{background:var(--bg); color-scheme:dark;}
+    body{margin:0; min-height:100vh; background:var(--bg); color:var(--ink);
+      font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Inter,Helvetica,Arial,sans-serif;}
+    a{color:var(--acc); text-decoration:none;} a:hover{text-decoration:underline;}
+    .auth{max-width:25rem; margin:11vh auto 0; padding:0 1rem;}
+    .wm-big{display:block; width:14rem; max-width:100%; aspect-ratio:602 / 142; margin:0 auto 1.4rem;
+      background:center/contain no-repeat url(/art/gradientERP-lockup.svg);}
+    h2{text-align:center; font-size:1.4rem; margin:0 0 .3rem; letter-spacing:-.01em;}
+    .sub{color:var(--mut); margin:0 0 1.4rem; text-align:center;}
+    label{display:block; margin:1.1rem 0 .35rem; font-weight:600; font-size:.92rem;}
+    input,textarea{width:100%; padding:.65rem .75rem; box-sizing:border-box; background:var(--panel); color:var(--ink);
+      border:1px solid var(--line); border-radius:10px; font:inherit; outline:none;}
+    textarea{min-height:9rem; resize:vertical;}
+    input:focus,textarea:focus{border-color:var(--acc);}
+    button{width:100%; margin-top:1.4rem; padding:.7rem 1.2rem; color:#fff; border:0; border-radius:10px; font:inherit;
+      font-weight:600; cursor:pointer; background:linear-gradient(95deg,var(--acc),var(--acc2));}
+    button:hover{filter:brightness(1.08);} button:disabled{opacity:.5; cursor:default;}
+    .status{margin:1rem 0 0; font-size:.9rem; color:var(--mut); text-align:center; min-height:1.4rem;}
+    .status.ok{color:#7fd39a;} .status.err{color:#ff7d7d;}
+    /* a field no person sees; a form-filler fills it and the send is refused */
+    .website{position:absolute; left:-10000px; top:auto; width:1px; height:1px; overflow:hidden;}
+    .foot{margin-top:2rem; text-align:center; font-size:.85rem; color:var(--mut);}
+  </style>
+</head>
+<body>
+  <!-- Where a payer lands from a payment link when the business named nowhere else. Stripe sends
+       the payer here after paying (`?paid=<invoice_id>`) or after cancelling (no parameter). -->
+  <div class="auth">
+    <a href="/" class="wm-big" aria-label="gradientERP"></a>
+    <h2 id="title">Payment</h2>
+    <p class="sub" id="note"></p>
+  </div>
+  <script>
+    const paid = new URLSearchParams(location.search).get("paid");
+    document.getElementById("title").textContent = paid ? "Payment received" : "No payment was taken";
+    document.getElementById("note").textContent = paid
+      ? "The business will see it on invoice " + paid + ". You can close this window."
+      : "The payment was cancelled. The link you were sent still works when you're ready.";
+  </script>
+</body>
+</html>

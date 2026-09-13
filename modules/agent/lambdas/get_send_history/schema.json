@@ -1,0 +1,19 @@
+{
+  "type": "object",
+  "description": "What email went out recently and what failed \u2014 for sends you were not part of, like a scheduled run. Each entry carries the sender, the counts, and every failed recipient with its reason.",
+  "properties": {
+    "hours": {
+      "type": "integer",
+      "description": "How far back to look. Defaults to 24."
+    },
+    "from": {
+      "type": "string",
+      "description": "Only sends from this address."
+    },
+    "failures_only": {
+      "type": "boolean",
+      "description": "Only invocations where something failed."
+    }
+  },
+  "required": []
+}

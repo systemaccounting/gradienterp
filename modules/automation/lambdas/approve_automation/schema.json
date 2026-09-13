@@ -1,0 +1,18 @@
+{
+  "type": "object",
+  "description": "Approve a staged automation script so it can run, using the ticket review_automation returned. Approving is what makes a script runnable; review it first to get a ticket.",
+  "required": [
+    "script",
+    "ticket"
+  ],
+  "properties": {
+    "script": {
+      "type": "string",
+      "description": "File name of the staged script, e.g. 'close_stale_incidents.py'."
+    },
+    "ticket": {
+      "type": "string",
+      "description": "The ticket review_automation returned on a pass. It expires, is good once, and only covers this script at the version that was reviewed \u2014 edit the script and you need a fresh review."
+    }
+  }
+}

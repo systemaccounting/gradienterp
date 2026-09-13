@@ -1,0 +1,23 @@
+{
+  "type": "object",
+  "description": "Accept a buyer's proposed purchase order (the seller approving). Stamps the agreement and emits po.accepted back to the buyer; both stamps make it agreed and draft the invoice.",
+  "properties": {
+    "buyer": {"type": "string", "description": "The buyer's gerp_id (who proposed)."},
+    "thread": {"type": "string", "description": "The PO thread being accepted (from the inbound po.proposed)."},
+    "items": {
+      "type": "array",
+      "description": "The terms being accepted (must match the proposal), each {description, qty}.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "description": {"type": "string", "description": "What was ordered."},
+          "qty": {"type": "number", "description": "Quantity."}
+        },
+        "required": ["description", "qty"]
+      }
+    },
+    "total": {"type": "number", "description": "The agreed total (must match the proposal)."},
+    "terms_hash": {"type": "string", "description": "Optional fingerprint from the proposal; recomputed from items+total if omitted."}
+  },
+  "required": ["buyer", "thread", "items", "total"]
+}

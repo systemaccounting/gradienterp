@@ -1,0 +1,11 @@
+{
+  "type": "object",
+  "description": "A purchase order after it exists. receive: goods arrived, posts DR lines / CR ACCOUNTS_PAYABLE (open→received). pay: DR AP / CR CASH (received→paid). get: one by po_id, or filtered.",
+  "properties": {
+    "op": {"type": "string", "enum": ["receive", "pay", "get"], "description": "receive | pay | get"},
+    "po_id": {"type": "string", "description": "The PO. Required for receive and pay; on get, fetches that one."},
+    "status": {"type": "string", "description": "get only, filter: open | received | paid."},
+    "vendor": {"type": "string", "description": "get only, filter: vendor contact_id."}
+  },
+  "required": ["op"]
+}

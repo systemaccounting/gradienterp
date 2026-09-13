@@ -1,0 +1,121 @@
+{
+  "common": {
+    "item_id": {
+      "type": "string",
+      "required": true,
+      "description": "hash key; opaque slug or uuid (e.g. 'espresso_beans', 'latte_12oz', 'room_101')",
+      "class": "operational",
+      "shape": "copied"
+    },
+    "subject_contact": {
+      "type": "string",
+      "required": false,
+      "class": "subject",
+      "shape": "referenced",
+      "description": "for a capacity item that IS a person's time (a worker's shifts), the contact this capacity belongs to. A REFERENCE, so whether the person appears in published data follows their contact's gerp_profile_id and can change later. The person must never be in `item_id` or `name`: those are copied into every movement row and published by the inventory read, and a key cannot be reclassified"
+    },
+    "name": {
+      "type": "string",
+      "required": true,
+      "description": "human-readable name",
+      "class": "operational",
+      "shape": "copied"
+    },
+    "unit": {
+      "type": "string",
+      "required": false,
+      "description": "unit of measure (e.g. 'lb', 'each', 'dozen', 'oz', 'night'). Defaults to 'each' on put",
+      "class": "operational",
+      "shape": "copied"
+    },
+    "unit_cost": {
+      "type": "decimal",
+      "required": true,
+      "description": "acquisition / production cost per unit. used as the COGS amount when stock is SOLD (debit COGS / credit INVENTORY) and the AP amount on RECEIVED",
+      "class": "economic",
+      "shape": "copied"
+    },
+    "vendors": {
+      "type": "list<string>",
+      "required": false,
+      "description": "contact_ids of who this is bought from, preferred first \u2014 so a restock knows where to send the PO without asking. A cross-firm vendor's contact_id doubles as its gerp_id.. contact_ids, and a contact can be a person (a sole proprietor). Handed back for resolution rather than inlined",
+      "class": "subject",
+      "shape": "referenced"
+    },
+    "unit_price": {
+      "type": "decimal",
+      "required": false,
+      "description": "sell price per unit. 0 for raw ingredients not sold as-is",
+      "class": "economic",
+      "shape": "copied"
+    },
+    "revenue_account": {
+      "type": "string",
+      "required": false,
+      "description": "which chart account this item's SALES credit (SALES_REVENUE for goods, SERVICE_REVENUE for services, or an account the owner created). unit_price says how much; this says where it lands. Stamped on create by the `revenue_account` catalog rule (defaulting off the item's own shape: an item with an availability_rule sells time, so a service), which the owner re-points via set_rule_param \u2014 so it is explicit on the row and the posting path never has to infer it",
+      "class": "operational",
+      "shape": "copied"
+    },
+    "quantity": {
+      "type": "number",
+      "required": true,
+      "description": "on-hand count for a STOCK item \u2014 a materialized cache of the movement log (the fold of its +/- movements), maintained by update_stock; create_item initializes to 0. Meaningless for a capacity item, whose meter is availability over time, not a count",
+      "class": "economic",
+      "shape": "copied"
+    },
+    "availability_rule": {
+      "type": "string",
+      "required": false,
+      "description": "RFC 5545 RRULE generating this item's DEFAULT availability (e.g. 'FREQ=DAILY' for a nightly room, 'FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR' for a weekday-only resource). Its presence makes the item a CAPACITY item: a reusable quantity-1 unit (a room, a seat, a chair, a bay) metered by availability over time rather than by a stock count. Absent = a stock item",
+      "class": "operational",
+      "shape": "copied"
+    },
+    "availability_duration": {
+      "type": "number",
+      "required": false,
+      "description": "seconds each availability_rule occurrence stays open (e.g. 86400 = a full day/night, 3600 = a one-hour slot). With availability_rule it generates the default availability windows; a booking subtracts an interval from them (net availability = default - scheduled)",
+      "class": "operational",
+      "shape": "copied"
+    },
+    "location": {
+      "type": "string",
+      "required": false,
+      "description": "the location ordinal this item belongs to (the 1 in LOCATION#1#...; settings LOCATION# rows are the registry). item_id leads with it (<n>#<sku>); posting paths copy it into journal dimensions. defaults to \"1\" (main) at create",
+      "class": "operational",
+      "shape": "copied"
+    },
+    "components": {
+      "type": "map",
+      "required": false,
+      "description": "the recipe of a COMPOSITE stock item: component item_id -> quantity consumed per unit (e.g. {\"wax_lb\": 0.5, \"wick\": 1, \"jar\": 1}). PRODUCED on update_stock assembles from it: +N to this item, -N x per-unit from each component, no journal entry (value stays in INVENTORY; this item's unit_cost prices its COGS at SOLD). Stock items only \u2014 mutually exclusive with availability_rule. the recipe \u2014 the physical cost structure, which is the primary data product",
+      "class": "economic",
+      "shape": "copied"
+    },
+    "created_at": {
+      "type": "timestamp_ms",
+      "required": true,
+      "class": "operational",
+      "shape": "copied"
+    },
+    "updated_at": {
+      "type": "timestamp_ms",
+      "required": true,
+      "class": "operational",
+      "shape": "copied"
+    },
+    "rule_key": {
+      "type": "string",
+      "required": false,
+      "description": "the rule instance that CREATED this record (`pk|sk`, e.g. INVOICE_LINE#beans|0300#ca_sales_tax). Absent when no rule created it.",
+      "class": "operational",
+      "shape": "copied"
+    },
+    "rule_exec_id": {
+      "type": "list",
+      "required": false,
+      "description": "one id per rule execution that READ or CREATED this record. Links a record to what a rule produced from it (a room to the tax it triggered).",
+      "class": "operational",
+      "shape": "copied"
+    }
+  }
+}

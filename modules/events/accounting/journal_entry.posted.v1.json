@@ -1,0 +1,120 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "modules/events/accounting/journal_entry.posted.v1",
+  "title": "journal_entry.posted",
+  "description": "Emitted by post_journal_entry after a balanced entry is written to the ledger. Carries the logical entry shape, not the pair-decomposed storage rows.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "openly_operated",
+    "customer_id",
+    "entry_id",
+    "posted_at_ms",
+    "origin",
+    "line_items"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "integer",
+      "const": 1,
+      "description": "Bumped on breaking shape change. Consumers branch on it."
+    },
+    "openly_operated": {
+      "type": "boolean",
+      "description": "Set at emit time from local SSM tenant metadata. The publication rule's filter."
+    },
+    "customer_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Tenant identifier. Redundant with envelope account-id but saves consumers a join."
+    },
+    "entry_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Idempotency key matching the ledger row. Either supplied by caller or generated uuid."
+    },
+    "posted_at_ms": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "ms-epoch timestamp when the entry was written."
+    },
+    "origin": {
+      "type": "string",
+      "description": "Provenance tag. Renamed from input `source` to avoid envelope-`source` collision. Examples: stripe, square, manual."
+    },
+    "line_items": {
+      "type": "array",
+      "minItems": 2,
+      "description": "Logical entry shape. Sums to zero across DEBIT/CREDIT (kirchhoff check happens in the lambda pre-emit; not expressible in JSON Schema).",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "account",
+          "accountType",
+          "side",
+          "amount"
+        ],
+        "properties": {
+          "account": {
+            "type": "string",
+            "minLength": 1
+          },
+          "accountType": {
+            "type": "string",
+            "enum": [
+              "ASSET",
+              "LIABILITY",
+              "EQUITY",
+              "REVENUE",
+              "EXPENSE"
+            ]
+          },
+          "side": {
+            "type": "string",
+            "enum": [
+              "DEBIT",
+              "CREDIT"
+            ]
+          },
+          "amount": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          }
+        }
+      }
+    },
+    "counters": {
+      "type": "array",
+      "description": "Economic-index signals, stamped ONLY when the entry carries one (a revenue credit today). The platform's counter lambda applies them with no accounting knowledge \u2014 this module decides what revenue is and how much; the platform just adds. Absent means no signal, which is why it is optional rather than an empty array.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "op",
+          "key",
+          "magnitude"
+        ],
+        "properties": {
+          "op": {
+            "type": "string",
+            "enum": [
+              "add"
+            ],
+            "description": "How the counter lambda applies it. Only additive today."
+          },
+          "key": {
+            "type": "string",
+            "minLength": 1,
+            "description": "The counter to move, e.g. `revenue`. The lambda partitions it by the event's month."
+          },
+          "magnitude": {
+            "type": "number",
+            "description": "The amount to add. Positive; direction lives in `op`."
+          }
+        }
+      }
+    }
+  }
+}

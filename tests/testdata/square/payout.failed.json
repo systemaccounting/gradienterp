@@ -1,0 +1,32 @@
+{
+  "merchant_id": "TESTMERCHANTID12",
+  "type": "payout.failed",
+  "event_id": "TEST-payout-failed-0001",
+  "created_at": "2026-03-31T10:30:00.000Z",
+  "data": {
+    "type": "payout",
+    "id": "TESTpayout000000000000002",
+    "object": {
+      "payout": {
+        "id": "TESTpayout000000000000002",
+        "status": "FAILED",
+        "location_id": "TESTLOCATION01",
+        "created_at": "2026-03-30T07:00:00.000Z",
+        "updated_at": "2026-03-31T10:30:00.000Z",
+        "amount_money": {
+          "amount": 21050,
+          "currency": "USD"
+        },
+        "destination": {
+          "type": "BANK_ACCOUNT",
+          "id": "TESTbankAccount0000000001"
+        },
+        "version": 2,
+        "payout_fee": [],
+        "arrival_date": "2026-03-31",
+        "end_to_end_id": "TESTendToEnd00000002",
+        "type": "BATCH"
+      }
+    }
+  }
+}

@@ -1,0 +1,69 @@
+{
+  "type": "object",
+  "description": "The customer's EventBridge Scheduler entries - dated commitments that fire the agent, a lambda, or SNS. op: create | get | list | update | delete.",
+  "required": [
+    "op"
+  ],
+  "properties": {
+    "op": {
+      "type": "string",
+      "description": "create | get | list | update | delete."
+    },
+    "name": {
+      "type": "string",
+      "description": "Required by every op but list. group='calendar': an owner-meaningful slug ('reporting'). group='timers': compose with modules/calendar/timers.py name(module, record_id, action) from a script — a hand-written name is invisible to the prefix lookup that cancels a record's timers. Unique within the group."
+    },
+    "schedule_expression": {
+      "type": "string",
+      "description": "cron(M H D M ? Y) | rate(N units) | at(YYYY-MM-DDTHH:MM:SS). create: required. update: omit to keep."
+    },
+    "timezone": {
+      "type": "string",
+      "description": "IANA name, e.g. America/Los_Angeles; defaults to the business's clock. update: omit to keep."
+    },
+    "target_type": {
+      "type": "string",
+      "description": "create/update: agent_runtime (default; target_input becomes the agent's turn) | lambda | sns. update: omit to keep."
+    },
+    "target_arn": {
+      "type": "string",
+      "description": "create/update: only for lambda or sns; agent_runtime is wired automatically."
+    },
+    "target_input": {
+      "type": "string",
+      "description": "create/update: payload delivered on fire; for agent_runtime, the message the agent receives."
+    },
+    "description": {
+      "type": "string",
+      "description": "create/update: what this schedule does. update: omit to keep."
+    },
+    "start_date": {
+      "type": "string",
+      "description": "create: ISO-8601 UTC; a recurrence does not fire before it."
+    },
+    "end_date": {
+      "type": "string",
+      "description": "create: ISO-8601 UTC; a recurrence stops after it."
+    },
+    "delete_after": {
+      "type": "boolean",
+      "description": "create: remove the schedule after its last run (default true); false to keep it."
+    },
+    "name_prefix": {
+      "type": "string",
+      "description": "list: names starting with this."
+    },
+    "name_contains": {
+      "type": "string",
+      "description": "list: substring match, walks the group; narrow with name_prefix."
+    },
+    "max_results": {
+      "type": "number",
+      "description": "list: page size, default 100."
+    },
+    "next_token": {
+      "type": "string",
+      "description": "list: token from the previous page."
+    }
+  }
+}

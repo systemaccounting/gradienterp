@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="robots" content="noindex" />
+  <title>Private support — gradientERP</title>
+  <link rel="icon" href="/art/gradientERP-lockup.svg" />
+  <style>
+    :root{
+      --bg:#0f1115; --panel:#181b22; --card:#1a1f29;
+      --ink:#e7e9ee; --mut:#8b93a7; --line:#262b36;
+      --acc:#5b8cff; --acc2:#9d6bff;
+    }
+    html{background:var(--bg); color-scheme:dark;}
+    body{margin:0; min-height:100vh; background:var(--bg); color:var(--ink);
+      font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Inter,Helvetica,Arial,sans-serif;}
+    a{color:var(--acc); text-decoration:none;} a:hover{text-decoration:underline;}
+    .auth{max-width:25rem; margin:11vh auto 0; padding:0 1rem;}
+    .wm-big{display:block; width:14rem; max-width:100%; aspect-ratio:602 / 142; margin:0 auto 1.4rem;
+      background:center/contain no-repeat url(/art/gradientERP-lockup.svg);}
+    h2{text-align:center; font-size:1.4rem; margin:0 0 .3rem; letter-spacing:-.01em;}
+    .sub{color:var(--mut); margin:0 0 1.4rem; text-align:center;}
+    label{display:block; margin:1.1rem 0 .35rem; font-weight:600; font-size:.92rem;}
+    input,textarea{width:100%; padding:.65rem .75rem; box-sizing:border-box; background:var(--panel); color:var(--ink);
+      border:1px solid var(--line); border-radius:10px; font:inherit; outline:none;}
+    textarea{min-height:9rem; resize:vertical;}
+    input:focus,textarea:focus{border-color:var(--acc);}
+    button{width:100%; margin-top:1.4rem; padding:.7rem 1.2rem; color:#fff; border:0; border-radius:10px; font:inherit;
+      font-weight:600; cursor:pointer; background:linear-gradient(95deg,var(--acc),var(--acc2));}
+    button:hover{filter:brightness(1.08);} button:disabled{opacity:.5; cursor:default;}
+    .status{margin:1rem 0 0; font-size:.9rem; color:var(--mut); text-align:center; min-height:1.4rem;}
+    .status.ok{color:#7fd39a;} .status.err{color:#ff7d7d;}
+    /* a field no person sees; a form-filler fills it and the send is refused */
+    .website{position:absolute; left:-10000px; top:auto; width:1px; height:1px; overflow:hidden;}
+    .foot{margin-top:2rem; text-align:center; font-size:.85rem; color:var(--mut);}
+  </style>
+</head>
+<body>
+  <div class="auth">
+    <a href="/" class="wm-big" aria-label="gradientERP"></a>
+    <h2>Private support</h2>
+    <p class="sub">A message to the operator. Replies go to the email you give.</p>
+    <form id="f" novalidate>
+      <label for="email">Your email</label>
+      <input id="email" name="email" type="email" autocomplete="email" placeholder="you@company.com" required />
+      <label for="subject">Subject</label>
+      <input id="subject" name="subject" type="text" maxlength="200" required />
+      <label for="message">Message</label>
+      <textarea id="message" name="message" maxlength="5000" required></textarea>
+      <div class="website" aria-hidden="true"><label for="website">Website</label><input id="website" name="website" type="text" tabindex="-1" autocomplete="off" /></div>
+      <button id="send" type="submit">Send</button>
+      <p id="status" class="status" role="status"></p>
+    </form>
+    <p class="foot">For anything that can be public, the <a href="https://discord.gg/87FHhUhQmK" target="_blank" rel="noopener">community Discord</a> answers faster.</p>
+  </div>
+  <script>
+    const f = document.getElementById("f"), st = document.getElementById("status"), btn = document.getElementById("send");
+    const say = (msg, cls) => { st.textContent = msg; st.className = "status " + (cls || ""); };
+    f.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const body = { email: f.email.value.trim(), subject: f.subject.value.trim(), message: f.message.value.trim(), website: f.website.value };
+      if (!body.email || !body.subject || !body.message) { say("email, subject and message are all needed", "err"); return; }
+      btn.disabled = true; say("sending…");
+      try {
+        const r = await fetch("/api/support", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+        const out = await r.json().catch(() => ({}));
+        if (r.ok) { say("Sent. Replies go to " + body.email + ".", "ok"); f.subject.value = ""; f.message.value = ""; }
+        else say(out.error || ("not sent (" + r.status + ")"), "err");
+      } catch (_) { say("not sent, try again", "err"); }
+      btn.disabled = false;
+    });
+  </script>
+</body>
+</html>

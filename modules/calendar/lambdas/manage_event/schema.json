@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "manage_event",
+  "description": "Calendar events \u2014 standalone dated commitments (a conference, an appointment). op: put/get/query/delete; query lists a subject's events with starts_at in a [start,end] window.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "op"
+  ],
+  "properties": {
+    "op": {
+      "type": "string",
+      "description": "put | get | query | delete. query returns one subject's events whose starts_at falls in [start,end]."
+    },
+    "event_id": {
+      "type": "string",
+      "description": "Key of an event. Created on put if omitted; required for get/delete."
+    },
+    "subject": {
+      "type": "string",
+      "description": "Whose calendar this event is on \u2014 the person's contact_id (from modules/contacts), the same id labor and inventory use for a person. Required on put and query."
+    },
+    "expr": {
+      "type": "string",
+      "description": "When: an ISO date/datetime for a one-off, or an RFC 5545 RRULE for recurring (pass starts_at explicitly for recurring)."
+    },
+    "description": {
+      "type": "string",
+      "description": "Human description of the event (e.g. 'AcmeConf, Vegas')."
+    },
+    "starts_at": {
+      "type": "string",
+      "description": "Concrete first/next occurrence (ISO) \u2014 the date index. Defaults to expr for a one-off; required for a recurring expr."
+    },
+    "duration": {
+      "type": "number",
+      "description": "Optional length in minutes."
+    },
+    "contact_id": {
+      "type": "string",
+      "description": "Optional FK \u2014 a contact this event is about."
+    },
+    "invoice_id": {
+      "type": "string",
+      "description": "Optional FK \u2014 an invoice this event is about."
+    },
+    "start": {
+      "type": "string",
+      "description": "Query only: window start (ISO), inclusive."
+    },
+    "end": {
+      "type": "string",
+      "description": "Query only: window end (ISO), inclusive."
+    }
+  }
+}

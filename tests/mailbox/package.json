@@ -1,0 +1,12 @@
+{
+  "name": "gerp-mailbox",
+  "private": true,
+  "type": "module",
+  "description": "Read real inbound email from the gradienterp.cloud SES catch-all — standing tooling for any test or CLI that has to complete an email verification.",
+  "bin": { "mailbox": "./cli.mjs" },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.0.0",
+    "@aws-sdk/client-sts": "^3.0.0",
+    "@aws-sdk/credential-providers": "^3.0.0"
+  }
+}

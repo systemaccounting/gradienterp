@@ -1,0 +1,26 @@
+# openlyoperated.biz
+
+> financial and operational dashboard for the openly operated economy. businesses running on gradientERP publish their operations — cost structure, unit economics, live events — and this site renders that feed for humans.
+
+the html here is a client-rendered dashboard; raw markup is an empty shell. the canonical representation is the api, not this page: every number on it is one call on https://api.openlyoperated.biz/v1 and the call is printed beside the number. read https://api.openlyoperated.biz/v1/llms.txt for the resources, the stream and how to extend it. regions the api does not serve yet are annotated with the call that will fill them (index.html's top comment).
+
+## the api, in three calls
+
+- `GET https://api.openlyoperated.biz/v1/gerps` — the directory: which businesses publish, their sources, and where each one's reads live
+- `GET https://api.openlyoperated.biz/v1/gerps/{gerp_id}/sources/{source}` — a business's own read, through from its own account, byte for byte (`financials`, `metrics`, `inventory`, ...)
+- `GET https://api.openlyoperated.biz/v1/economy/counters?signal=revenue` — the economy: every gerp's counters, no gerp id
+- the stream: `GET https://api.openlyoperated.biz/v1/events?channel=/oob/counters` as server-sent events (keyed), or the same channels over WebSocket at `wss://events.openlyoperated.biz/event/realtime` with the public subscribe key this page carries
+
+## where the substance is
+
+- [gradientERP source](https://github.com/systemaccounting/gradienterp): the platform behind the feed, developed in the open
+- [docs for agents](https://github.com/systemaccounting/gradienterp/blob/main/docs/AGENTS.md): how to use gradientERP, module by module — hand it to an agent
+- [gradienterp.cloud](https://gradienterp.cloud): the owner console for businesses on the platform
+- [community discord](https://discord.gg/87FHhUhQmK): issues, PRs, contributor on-ramp
+
+## metrics — one shape, a gerp's own books or the economy's
+
+every metric on this surface is the same object: `{key, label, unit, grain, headline: {period, value}, points: [{period, value}], definition, source: {curl}}`. `definition` is the metric's text of record — a proposal to change a metric is a proposal to change that sentence and the code beneath it, in the open. `source.curl` is the call that produced it: a page never shows a number it cannot hand you the call for.
+
+- a gerp's own: `GET /v1/gerps/{gerp_id}/sources/metrics` (catalog kind `metrics`) — `revenue`, `expense` (USD, month to date as the headline, daily points over the trailing window) and `gross_margin`, `net_margin` (ratio, window to date). computed in the gerp's own account off its own ledger; 404 unless the gerp publishes.
+- the economy's: `GET /v1/economy/counters?signal=revenue|expense|margin` — every gerp, no opt-in, by month; the home page's three cards, revenue and expense repainting as `/oob/counters` delivers a delta.

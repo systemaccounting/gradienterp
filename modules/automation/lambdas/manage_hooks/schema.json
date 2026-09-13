@@ -1,0 +1,31 @@
+{
+  "type": "object",
+  "description": "Publish or unpublish a url an outside caller may POST to run an approved script. Publish mints the bearer secret and returns it once; the same caller again rotates it. Unpublish deletes both.",
+  "required": [
+    "op",
+    "path"
+  ],
+  "properties": {
+    "op": {
+      "type": "string",
+      "enum": ["publish", "unpublish"],
+      "description": "publish: write the route record and mint the caller's secret. unpublish: delete both."
+    },
+    "path": {
+      "type": "string",
+      "description": "The url path under /hooks/, e.g. 'customers/upsert'. Lowercase, digits, _ - and /."
+    },
+    "script": {
+      "type": "string",
+      "description": "publish only, required there: an approved script the hook runs, e.g. 'upsert_customer_contact.py'."
+    },
+    "caller": {
+      "type": "string",
+      "description": "publish only, required there: who this hook is for, e.g. 'bff' or 'acme'. Names the secret (HOOK_TOKEN_<CALLER>)."
+    },
+    "params": {
+      "type": "object",
+      "description": "publish only: arguments fixed by the publisher. Baked in last, so a caller cannot override them."
+    }
+  }
+}

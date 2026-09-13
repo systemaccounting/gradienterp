@@ -1,0 +1,86 @@
+{
+  "id": "WH-00L58982TJ968771S-54V34202R8526752A",
+  "create_time": "2026-06-08T04:09:34.582Z",
+  "resource_type": "capture",
+  "event_type": "PAYMENT.CAPTURE.COMPLETED",
+  "summary": "Payment completed for $ 4.25 USD",
+  "resource": {
+    "amount": {
+      "value": "4.25",
+      "currency_code": "USD"
+    },
+    "seller_protection": {
+      "status": "NOT_ELIGIBLE"
+    },
+    "create_time": "2026-06-08T04:08:56Z",
+    "network_transaction_reference": {
+      "id": "923404408631024",
+      "network": "VISA"
+    },
+    "payee": {
+      "email_address": "sb-cspa751544480@business.example.com",
+      "merchant_id": "MU6PMHCPRQ2XS"
+    },
+    "supplementary_data": {
+      "related_ids": {
+        "order_id": "7KX68176U7213251M"
+      }
+    },
+    "update_time": "2026-06-08T04:08:56Z",
+    "final_capture": true,
+    "seller_receivable_breakdown": {
+      "paypal_fee": {
+        "value": "0.60",
+        "currency_code": "USD"
+      },
+      "gross_amount": {
+        "value": "4.25",
+        "currency_code": "USD"
+      },
+      "net_amount": {
+        "value": "3.65",
+        "currency_code": "USD"
+      }
+    },
+    "processor_response": {
+      "cvv_code": "M",
+      "response_code": "0000",
+      "avs_code": ""
+    },
+    "links": [
+      {
+        "method": "GET",
+        "rel": "self",
+        "href": "https://api.sandbox.paypal.com/v2/payments/captures/3WM40379GT784835Y"
+      },
+      {
+        "method": "POST",
+        "rel": "refund",
+        "href": "https://api.sandbox.paypal.com/v2/payments/captures/3WM40379GT784835Y/refund"
+      },
+      {
+        "method": "GET",
+        "rel": "up",
+        "href": "https://api.sandbox.paypal.com/v2/checkout/orders/7KX68176U7213251M"
+      }
+    ],
+    "id": "3WM40379GT784835Y",
+    "status": "COMPLETED"
+  },
+  "links": [
+    {
+      "href": "https://api.sandbox.paypal.com/v1/notifications/webhooks-events/WH-00L58982TJ968771S-54V34202R8526752A",
+      "rel": "self",
+      "method": "GET",
+      "encType": "application/json"
+    },
+    {
+      "href": "https://api.sandbox.paypal.com/v1/notifications/webhooks-events/WH-00L58982TJ968771S-54V34202R8526752A/resend",
+      "rel": "resend",
+      "method": "POST",
+      "encType": "application/json"
+    }
+  ],
+  "event_version": "1.0",
+  "resource_version": "2.0"
+}

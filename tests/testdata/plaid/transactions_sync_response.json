@@ -1,0 +1,364 @@
+{
+  "added": [
+    {
+      "account_id": "JLME1Nb57XHxDWZgXNQ3UJw9mKVXR6uavEXLPk",
+      "account_owner": null,
+      "amount": 2900,
+      "authorized_date": "2026-06-19",
+      "authorized_datetime": null,
+      "category": [
+        "Service",
+        "Business Services"
+      ],
+      "category_id": "18008000",
+      "check_number": null,
+      "counterparties": [
+        {
+          "confidence_level": "VERY_HIGH",
+          "entity_id": "jaq45Nqm05p64rzbB6Y4YjzjX4y6nRkJdQ3BO",
+          "logo_url": "https://plaid-merchant-logos.plaid.com/gusto_464.png",
+          "name": "Gusto",
+          "phone_number": null,
+          "type": "merchant",
+          "website": "gusto.com"
+        }
+      ],
+      "date": "2026-06-20",
+      "datetime": null,
+      "iso_currency_code": "USD",
+      "location": {
+        "address": null,
+        "city": null,
+        "country": null,
+        "lat": null,
+        "lon": null,
+        "postal_code": null,
+        "region": null,
+        "store_number": null
+      },
+      "logo_url": "https://plaid-merchant-logos.plaid.com/gusto_464.png",
+      "merchant_entity_id": "jaq45Nqm05p64rzbB6Y4YjzjX4y6nRkJdQ3BO",
+      "merchant_name": "Gusto",
+      "name": "GUSTO; GUSTO:6HA8310KNB. Merchant name: GUSTO",
+      "payment_channel": "in store",
+      "payment_meta": {
+        "by_order_of": null,
+        "payee": null,
+        "payer": null,
+        "payment_method": null,
+        "payment_processor": null,
+        "ppd_id": null,
+        "reason": null,
+        "reference_number": null
+      },
+      "pending": false,
+      "pending_transaction_id": null,
+      "personal_finance_category": {
+        "confidence_level": "VERY_HIGH",
+        "detailed": "GENERAL_SERVICES_ACCOUNTING_AND_FINANCIAL_PLANNING",
+        "primary": "GENERAL_SERVICES",
+        "version": "v2"
+      },
+      "personal_finance_category_icon_url": "https://plaid-category-icons.plaid.com/PFC_GENERAL_SERVICES.png",
+      "transaction_code": null,
+      "transaction_id": "wEWKgX5j8ZUgGB7DNM4ltJEbPBqNdnfkJM58xy",
+      "transaction_type": "place",
+      "unofficial_currency_code": null,
+      "website": "gusto.com"
+    },
+    {
+      "account_id": "JLME1Nb57XHxDWZgXNQ3UJw9mKVXR6uavEXLPk",
+      "account_owner": null,
+      "amount": 142.3,
+      "authorized_date": "2026-06-24",
+      "authorized_datetime": null,
+      "category": [
+        "Service",
+        "Telecommunication Services"
+      ],
+      "category_id": "18063000",
+      "check_number": null,
+      "counterparties": [
+        {
+          "confidence_level": "VERY_HIGH",
+          "entity_id": "ZoqgR5z4O2WvzzYD7Oma8veqwENWMrQkrayav",
+          "logo_url": "https://plaid-merchant-logos.plaid.com/att_75.png",
+          "name": "AT&T",
+          "phone_number": null,
+          "type": "merchant",
+          "website": "att.com"
+        }
+      ],
+      "date": "2026-06-25",
+      "datetime": null,
+      "iso_currency_code": "USD",
+      "location": {
+        "address": null,
+        "city": null,
+        "country": null,
+        "lat": null,
+        "lon": null,
+        "postal_code": null,
+        "region": null,
+        "store_number": null
+      },
+      "logo_url": "https://plaid-merchant-logos.plaid.com/att_75.png",
+      "merchant_entity_id": "ZoqgR5z4O2WvzzYD7Oma8veqwENWMrQkrayav",
+      "merchant_name": "AT&T",
+      "name": "ATT PAYMENT 998877. Merchant name: AT&T",
+      "payment_channel": "online",
+      "payment_meta": {
+        "by_order_of": null,
+        "payee": null,
+        "payer": null,
+        "payment_method": null,
+        "payment_processor": null,
+        "ppd_id": null,
+        "reason": null,
+        "reference_number": null
+      },
+      "pending": false,
+      "pending_transaction_id": null,
+      "personal_finance_category": {
+        "confidence_level": "VERY_HIGH",
+        "detailed": "RENT_AND_UTILITIES_TELEPHONE",
+        "primary": "RENT_AND_UTILITIES",
+        "version": "v2"
+      },
+      "personal_finance_category_icon_url": "https://plaid-category-icons.plaid.com/PFC_RENT_AND_UTILITIES.png",
+      "transaction_code": null,
+      "transaction_id": "5pvoLMVg98IlRQLWxMK8TDXdZ7NwnBfR9JWmAz",
+      "transaction_type": "place",
+      "unofficial_currency_code": null,
+      "website": "att.com"
+    },
+    {
+      "account_id": "JLME1Nb57XHxDWZgXNQ3UJw9mKVXR6uavEXLPk",
+      "account_owner": null,
+      "amount": -250,
+      "authorized_date": "2026-06-27",
+      "authorized_datetime": null,
+      "category": [
+        "Transfer",
+        "Deposit",
+        "Check"
+      ],
+      "category_id": "21007001",
+      "check_number": null,
+      "counterparties": [],
+      "date": "2026-06-28",
+      "datetime": null,
+      "iso_currency_code": "USD",
+      "location": {
+        "address": null,
+        "city": null,
+        "country": null,
+        "lat": null,
+        "lon": null,
+        "postal_code": null,
+        "region": null,
+        "store_number": null
+      },
+      "logo_url": null,
+      "merchant_entity_id": null,
+      "merchant_name": null,
+      "name": "MOBILE CHECK DEPOSIT 000000012345",
+      "payment_channel": "other",
+      "payment_meta": {
+        "by_order_of": null,
+        "payee": null,
+        "payer": null,
+        "payment_method": null,
+        "payment_processor": null,
+        "ppd_id": null,
+        "reason": null,
+        "reference_number": null
+      },
+      "pending": false,
+      "pending_transaction_id": null,
+      "personal_finance_category": {
+        "confidence_level": "HIGH",
+        "detailed": "TRANSFER_IN_DEPOSIT",
+        "primary": "TRANSFER_IN",
+        "version": "v2"
+      },
+      "personal_finance_category_icon_url": "https://plaid-category-icons.plaid.com/PFC_TRANSFER_IN.png",
+      "transaction_code": null,
+      "transaction_id": "JLME1Nb57XHxDWZgXNQ3UJwjXgMyn3famx9Pvb",
+      "transaction_type": "special",
+      "unofficial_currency_code": null,
+      "website": null
+    },
+    {
+      "account_id": "JLME1Nb57XHxDWZgXNQ3UJw9mKVXR6uavEXLPk",
+      "account_owner": null,
+      "amount": 12,
+      "authorized_date": "2026-06-29",
+      "authorized_datetime": null,
+      "category": [
+        "Bank Fees"
+      ],
+      "category_id": "10000000",
+      "check_number": null,
+      "counterparties": [],
+      "date": "2026-06-30",
+      "datetime": null,
+      "iso_currency_code": "USD",
+      "location": {
+        "address": null,
+        "city": null,
+        "country": null,
+        "lat": null,
+        "lon": null,
+        "postal_code": null,
+        "region": null,
+        "store_number": null
+      },
+      "logo_url": null,
+      "merchant_entity_id": null,
+      "merchant_name": null,
+      "name": "MONTHLY MAINTENANCE FEE 000. Merchant name: Bank Fee",
+      "payment_channel": "other",
+      "payment_meta": {
+        "by_order_of": null,
+        "payee": null,
+        "payer": null,
+        "payment_method": null,
+        "payment_processor": null,
+        "ppd_id": null,
+        "reason": null,
+        "reference_number": null
+      },
+      "pending": false,
+      "pending_transaction_id": null,
+      "personal_finance_category": {
+        "confidence_level": "HIGH",
+        "detailed": "BANK_FEES_OTHER_BANK_FEES",
+        "primary": "BANK_FEES",
+        "version": "v2"
+      },
+      "personal_finance_category_icon_url": "https://plaid-category-icons.plaid.com/PFC_BANK_FEES.png",
+      "transaction_code": null,
+      "transaction_id": "kE7yJQmq8BUA6RKlzk7XCa6GmjyZX4INkaXveW",
+      "transaction_type": "special",
+      "unofficial_currency_code": null,
+      "website": null
+    },
+    {
+      "account_id": "JLME1Nb57XHxDWZgXNQ3UJw9mKVXR6uavEXLPk",
+      "account_owner": null,
+      "amount": 3500,
+      "authorized_date": "2026-06-30",
+      "authorized_datetime": null,
+      "category": [
+        "Payment",
+        "Rent"
+      ],
+      "category_id": "16002000",
+      "check_number": null,
+      "counterparties": [],
+      "date": "2026-07-01",
+      "datetime": null,
+      "iso_currency_code": "USD",
+      "location": {
+        "address": null,
+        "city": null,
+        "country": null,
+        "lat": null,
+        "lon": null,
+        "postal_code": null,
+        "region": null,
+        "store_number": null
+      },
+      "logo_url": null,
+      "merchant_entity_id": null,
+      "merchant_name": null,
+      "name": "ACH DEBIT PROLOGIS RENT 7781. Merchant name: Prologis",
+      "payment_channel": "online",
+      "payment_meta": {
+        "by_order_of": null,
+        "payee": null,
+        "payer": null,
+        "payment_method": "ACH",
+        "payment_processor": null,
+        "ppd_id": null,
+        "reason": null,
+        "reference_number": null
+      },
+      "pending": false,
+      "pending_transaction_id": null,
+      "personal_finance_category": {
+        "confidence_level": "LOW",
+        "detailed": "RENT_AND_UTILITIES_RENT",
+        "primary": "RENT_AND_UTILITIES",
+        "version": "v2"
+      },
+      "personal_finance_category_icon_url": "https://plaid-category-icons.plaid.com/PFC_RENT_AND_UTILITIES.png",
+      "transaction_code": null,
+      "transaction_id": "lEeZqQ1Ky3UmGyvkobNWFdG5qZEoW1ujlNkxep",
+      "transaction_type": "special",
+      "unofficial_currency_code": null,
+      "website": null
+    },
+    {
+      "account_id": "JLME1Nb57XHxDWZgXNQ3UJw9mKVXR6uavEXLPk",
+      "account_owner": null,
+      "amount": -96.5,
+      "authorized_date": "2026-07-02",
+      "authorized_datetime": null,
+      "category": [
+        "Transfer",
+        "Credit"
+      ],
+      "category_id": "21005000",
+      "check_number": null,
+      "counterparties": [],
+      "date": "2026-07-03",
+      "datetime": null,
+      "iso_currency_code": "USD",
+      "location": {
+        "address": null,
+        "city": null,
+        "country": null,
+        "lat": null,
+        "lon": null,
+        "postal_code": null,
+        "region": null,
+        "store_number": null
+      },
+      "logo_url": null,
+      "merchant_entity_id": null,
+      "merchant_name": null,
+      "name": "STRIPE TRANSFER ST-A1B2C3D4. Merchant name: Stripe",
+      "payment_channel": "other",
+      "payment_meta": {
+        "by_order_of": null,
+        "payee": null,
+        "payer": null,
+        "payment_method": null,
+        "payment_processor": null,
+        "ppd_id": null,
+        "reason": null,
+        "reference_number": null
+      },
+      "pending": false,
+      "pending_transaction_id": null,
+      "personal_finance_category": {
+        "confidence_level": "LOW",
+        "detailed": "INCOME_OTHER",
+        "primary": "INCOME",
+        "version": "v2"
+      },
+      "personal_finance_category_icon_url": "https://plaid-category-icons.plaid.com/PFC_INCOME.png",
+      "transaction_code": null,
+      "transaction_id": "qwLRN1jx8kI4Wyd3kPz9HMWzbaNk9BH9nxZ316",
+      "transaction_type": "special",
+      "unofficial_currency_code": null,
+      "website": null
+    }
+  ],
+  "modified": [],
+  "removed": [],
+  "next_cursor": "CAESJnF3TFJOMWp4OGtJNFd5ZDNrUHo5SE1XemJhTms5Qkg5bnhaMzE2GgwIkdeq0gYQyInZrwEiDAiR16rSBhDIidmvASoMCJHXqtIGEMiJ2a8B",
+  "has_more": false
+}

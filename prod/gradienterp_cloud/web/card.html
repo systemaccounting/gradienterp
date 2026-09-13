@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="robots" content="noindex" />
+  <title>Save a card — gradientERP</title>
+  <link rel="icon" href="/art/gradientERP-lockup.svg" />
+  <!-- the card page: an Indian business saves its card here, on a SetupIntent that registers the
+       RBI e-mandate with it. The card number is Stripe's Payment Element, never this page's. -->
+  <script src="https://js.stripe.com/dahlia/stripe.js"></script>
+  <style>
+    :root{ --bg:#0f1115; --panel:#181b22; --ink:#e7e9ee; --mut:#8b93a7; --line:#262b36; --acc:#5b8cff; --acc2:#9d6bff; }
+    html{background:var(--bg); color-scheme:dark;}
+    body{margin:0; min-height:100vh; background:var(--bg); color:var(--ink);
+      font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Inter,Helvetica,Arial,sans-serif;}
+    .auth{max-width:28rem; margin:9vh auto 0; padding:0 1rem;}
+    .wm-big{display:block; width:14rem; max-width:100%; aspect-ratio:602 / 142; margin:0 auto 1.4rem;
+      background:center/contain no-repeat url(/art/gradientERP-lockup.svg);}
+    h2{text-align:center; font-size:1.4rem; margin:0 0 .3rem; letter-spacing:-.01em;}
+    .sub{color:var(--mut); margin:0 0 1.4rem; text-align:center; font-size:.92rem;}
+    #element{padding:1rem; background:var(--panel); border:1px solid var(--line); border-radius:10px; min-height:3rem;}
+    button{width:100%; margin-top:1.4rem; padding:.7rem 1.2rem; color:#fff; border:0; border-radius:10px; font:inherit;
+      font-weight:600; cursor:pointer; background:linear-gradient(95deg,var(--acc),var(--acc2));}
+    button:disabled{opacity:.5; cursor:default;}
+    .status{margin:1rem 0 0; font-size:.9rem; color:var(--mut); text-align:center; min-height:1.4rem;}
+    .status.err{color:#ff7d7d;}
+  </style>
+</head>
+<body>
+  <div class="auth">
+    <span class="wm-big" role="img" aria-label="gradientERP"></span>
+    <h2>Save a card</h2>
+    <p class="sub">Your bank registers a monthly e-mandate for the hosting invoice and sends a notice
+      before each charge. Nothing is charged now.</p>
+    <form id="f">
+      <div id="element"></div>
+      <button id="save" type="submit" disabled>Save card</button>
+      <p id="status" class="status" role="status"></p>
+    </form>
+  </div>
+  <script>
+    const say = (msg, cls) => { const s = document.getElementById("status"); s.textContent = msg; s.className = "status " + (cls || ""); };
+    const frag = new URLSearchParams(location.hash.slice(1));
+    const clientSecret = frag.get("cs") || "";
+    // the return is ours or nothing: a url from another origin would make this page a redirector
+    let returnUrl = "";
+    try { const u = new URL(frag.get("return") || "", location.origin); if (u.origin === location.origin) returnUrl = u.href; } catch (_) {}
+    history.replaceState(null, "", location.pathname);   // the secret leaves the address bar
+    const key = "<!--STRIPE-PUBLISHABLE-KEY-->";
+    if (!clientSecret || !returnUrl || !key || !window.Stripe) {
+      say("This card link is incomplete. Go back and start the card step again.", "err");
+    } else {
+      const stripe = Stripe(key);
+      const elements = stripe.elements({ clientSecret, appearance: { theme: "night" } });
+      const el = elements.create("payment");
+      el.mount("#element");
+      el.on("ready", () => { document.getElementById("save").disabled = false; });
+      document.getElementById("f").addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const btn = document.getElementById("save");
+        btn.disabled = true; say("saving…");
+        const { error } = await stripe.confirmSetup({ elements, confirmParams: { return_url: returnUrl } });
+        // confirmSetup leaves the page on success; an error is the only thing that comes back
+        if (error) { say(error.message || "The card was not saved.", "err"); btn.disabled = false; }
+      });
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,15 @@
+{
+  "type": "object",
+  "description": "Run one of this firm's approved automation scripts now. Scripts are authored with manage_storage, reviewed, then approved; only approved ones run. Shapes: search_guides.",
+  "required": ["script"],
+  "properties": {
+    "script": {
+      "type": "string",
+      "description": "File name of an approved script, e.g. 'close_stale_incidents.py'. A script that has not been approved will not run — approve it first."
+    },
+    "params": {
+      "type": "object",
+      "description": "Arguments for the script's run(ctx, **params) entrypoint. Pass what that script's signature declares; a mismatch comes back naming the parameter."
+    }
+  }
+}

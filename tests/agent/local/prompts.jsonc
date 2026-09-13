@@ -1,0 +1,102 @@
+// Scripted prompts for the agent dev harness. Used by:
+//   - tests/agent/local/smoke.sh — live runner, hits Anthropic API, costs cents
+//   - tests/agent/local/test_bookkeeper_flow.py — mocked pytest (phase 0 TODO)
+//
+// Prompts run in list order as one continuous conversation — the ledger
+// accumulates, so later queries see earlier posts. Categories are tags for
+// filtering (--category post,query), not isolated runs.
+//
+// Each entry has:
+//   input        — what the user types
+//   category     — tag for filtering
+//   expect_tool  — (optional) the tool call the mocked pytest asserts dispatched
+
+{
+  "prompts": [
+    // ---- basic single-leg posts ----
+    { "category": "post",       "input": "I sold a cortado for $4.00 via Square.",
+      "expect_tool": "post_journal_entry" },
+    { "category": "post",       "input": "Paid $75 for electricity, check.",
+      "expect_tool": "post_journal_entry" },
+    { "category": "post",       "input": "Got $200 rent from the sublet tenant in cash.",
+      "expect_tool": "post_journal_entry" },
+    { "category": "post",       "input": "Paid Jose $120 for his Saturday shift, cash.",
+      "expect_tool": "post_journal_entry" },
+
+    // ---- multi-leg (exercises pair decomposition) ----
+    { "category": "multi_leg",  "input": "Stripe charge for $20 came through — processing fee was $0.88.",
+      "expect_tool": "post_journal_entry" },
+    { "category": "multi_leg",  "input": "Bought $50 of pastries on a Square credit card — tax was $4.50.",
+      "expect_tool": "post_journal_entry" },
+
+    // ---- refunds ----
+    { "category": "refund",     "input": "Customer from this morning wanted a refund on that $4 coffee — refunded via Stripe.",
+      "expect_tool": "post_journal_entry" },
+
+    // ---- payouts (processor → bank) ----
+    { "category": "payout",     "input": "Stripe paid out $387 to my bank this morning.",
+      "expect_tool": "post_journal_entry" },
+    { "category": "payout",     "input": "Square deposited $1,204 into the checking account.",
+      "expect_tool": "post_journal_entry" },
+
+    // ---- unclassified / pending flow ----
+    { "category": "unclassified", "input": "There's a $42.80 charge from 'AWS' on my card — not sure which account.",
+      "expect_tool": "post_journal_entry" },
+    { "category": "unclassified", "input": "AWS is utilities — we run our POS and online ordering on it.",
+      "expect_tool": "add_classification" },
+    { "category": "unclassified", "input": "Some subscription called 'Brevo' hit for $19 — whatever that is." },
+    { "category": "unclassified", "input": "Anything pending classification right now?",
+      "expect_tool": "list_pending_entries" },
+
+    // ---- queries (tool required, not answered from memory) ----
+    { "category": "query",      "input": "What's my cash balance?",
+      "expect_tool": "get_statement" },
+    { "category": "query",      "input": "How much have I spent on wages this week?",
+      "expect_tool": "get_statement" },
+    { "category": "query",      "input": "Show me everything that hit Stripe this month.",
+      "expect_tool": "get_statement" },
+    { "category": "query",      "input": "Trial balance as of today.",
+      "expect_tool": "get_statement" },
+
+    // ---- statement generation ----
+    { "category": "statement",  "input": "Can you run the month's income statement?",
+      "expect_tool": "get_statement" },
+    { "category": "statement",  "input": "Where do I stand on the balance sheet?",
+      "expect_tool": "get_statement" },
+    { "category": "statement",  "input": "Refresh the cached balances for this month.",
+      "expect_tool": "get_statement" },
+    { "category": "statement",  "input": "Generate the reports for this period.",
+      "expect_tool": "get_statement" },
+
+    // ---- maintenance ----
+    { "category": "maintenance", "input": "Work through any pending classifications.",
+      "expect_tool": "classify_pending" },
+
+    // ---- setup / integration (agent must consult instruction docs, not memory) ----
+    { "category": "integration", "input": "How do I connect Stripe to my books?",
+      "expect_tool": "list_instructions" },
+    { "category": "integration", "input": "Read me the Stripe integration guide so I can follow the steps.",
+      "expect_tool": "read_instruction" },
+    // negative: no QuickBooks guide exists — agent should still list to discover that, then say so
+    { "category": "integration", "input": "How do I integrate QuickBooks?",
+      "expect_tool": "list_instructions" },
+    { "category": "integration", "input": "I saved my Stripe key as 'stripe_setup'. Connect it.",
+      "expect_tool": "configure_webhook" },
+
+    // ---- verify a live endpoint (self-test the gateway edge, no signing) ----
+    { "category": "verify", "input": "Can you hit my API and confirm the gateway is actually responding?",
+      "expect_tool": "invoke_endpoint" },
+    { "category": "verify", "input": "Send a test charge through Stripe so I can see it flow into my books.",
+      "expect_tool": "payment_links" },
+
+    // ---- conversational / reasoning (forces fresh fetch + numeric reasoning) ----
+    { "category": "reasoning",  "input": "Are my margins holding up this month?" },
+    { "category": "reasoning",  "input": "Am I spending too much on supplies compared to last month?" },
+    { "category": "reasoning",  "input": "What's the biggest cash outflow this week?" },
+    { "category": "reasoning",  "input": "If I paid off all my AP right now, would I still have cash?" },
+
+    // ---- corrections / edit-the-story ----
+    { "category": "correction", "input": "The coffee I said was $4.00 was actually $4.50 — fix it.",
+      "expect_tool": "post_journal_entry" }
+  ]
+}

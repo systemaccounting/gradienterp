@@ -1,0 +1,280 @@
+# CodeBuild buildspec — runs prod/per_customer/ terraform against a customer sub-account.
+#
+# Driven by aws_codebuild_project.per_customer in prod/tower/main.tf.
+# Triggered by tower's provision_customer lambda (pass 5) after the lambda
+# uploads a fresh repo zip to s3://gerp-codebuild-source-<account>/per-customer-source.zip.
+#
+# Per-build env vars (overridden via StartBuild --environment-variables-override):
+#   CUSTOMER_ID            — logical tenant identifier
+#   CUSTOMER_ACCOUNT_ID    — AWS sub-account ID returned by organizations:CreateAccount
+#   TF_ACTION              — apply (default) | destroy | stop. `apply` stands up prod/init_customer
+#                            (the export bucket and its lambda, `<gerp>/init.tfstate`) and then
+#                            prod/per_customer. `destroy` is CLOSURE: it exports the firm's records
+#                            first and only then tears per_customer down; the row goes closing, then
+#                            closed; init_customer stands. `stop` is the operator's teardown: the
+#                            same export, then the row set to `stopped` with its stashes removed,
+#                            then the same destroy — nothing scheduled, nothing mailed, and the next
+#                            `apply` brings the gerp back. See the build phase below.
+#
+# Project-level env vars (set in the codebuild project):
+#   SENDER_EMAIL           — operator-wide SES sender
+#   CHAT_BASE_URL          — operator-wide chat base URL
+
+version: 0.2
+
+env:
+  variables:
+    TF_VERSION: "1.10.3"
+    TF_IN_AUTOMATION: "1"
+
+phases:
+  install:
+    commands:
+      - echo "==> installing terraform ${TF_VERSION}"
+      - curl -fsSL -o /tmp/tf.zip "https://releases.hashicorp.com/terraform/${TF_VERSION}/terraform_${TF_VERSION}_linux_amd64.zip"
+      - unzip -q /tmp/tf.zip -d /usr/local/bin/
+      - terraform version
+      # the web-chat lambda is Node; bundle its SDK deps (node_modules is excluded
+      # from the source zip — see scripts/build-codebuild-source.sh) before apply
+      - echo "==> npm ci for the chat lambda"
+      - (cd modules/agent/lambdas/chat && npm ci --omit=dev --loglevel=error --no-audit --no-fund)
+
+  pre_build:
+    commands:
+      - echo "==> validating required env vars"
+      - 'test -n "${CUSTOMER_ID}" || { echo "missing CUSTOMER_ID"; exit 1; }'
+      - 'test -n "${CUSTOMER_ACCOUNT_ID}" || { echo "missing CUSTOMER_ACCOUNT_ID"; exit 1; }'
+      - 'test -n "${SENDER_EMAIL}" || { echo "missing SENDER_EMAIL"; exit 1; }'
+      - 'test -n "${CHAT_BASE_URL}" || { echo "missing CHAT_BASE_URL"; exit 1; }'
+      - 'export TF_ACTION="${TF_ACTION:-apply}"'
+      # the gerp's region (the vend's; the row's for a re-run): the stacks and every arn built
+      # here are in it. The build itself runs in the operator's region, kept as OPERATOR_REGION
+      # for the calls below that write the operator's tables and topic; AWS_REGION is set for
+      # the commands that name a lambda or a knowledge base in the gerp's account
+      - 'export OPERATOR_REGION="${AWS_REGION}"'
+      - 'export CUSTOMER_REGION="${CUSTOMER_REGION:-us-east-1}" && export TF_VAR_aws_region="${CUSTOMER_REGION}" && export AWS_REGION="${CUSTOMER_REGION}" && export AWS_DEFAULT_REGION="${CUSTOMER_REGION}"'
+      - 'case "${TF_ACTION}" in apply|destroy|stop) ;; *) echo "TF_ACTION must be apply, destroy or stop, got ${TF_ACTION}"; exit 1;; esac'
+      - echo "    customer_id=${CUSTOMER_ID} customer_account_id=${CUSTOMER_ACCOUNT_ID} region=${CUSTOMER_REGION} action=${TF_ACTION}"
+
+  build:
+    commands:
+      # ── closure and stop: the firm gets its books BEFORE the instance goes ─────────────────
+      #
+      # Order is the whole point. The export reads the gerp's live tables and copies its filing
+      # cabinet; the destroy takes those away. Reversed or interleaved, the records are gone before
+      # anyone copied them. Both destroys export; they differ only in what the row says after.
+      #
+      # A loop, because `export_gerp` does as much as fits in its 900s and answers 202 with a
+      # `resume` when it runs out — a firm with years of documents needs several rounds. Only 200
+      # means every planned unit is stamped done and the manifest is written, and that manifest is
+      # what `_latest_export` requires before it will hand anyone a download. So it is also the
+      # only thing that makes destroying the instance defensible.
+      #
+      # This runs HERE rather than in a driver lambda because Lambda's 900s wall would force one
+      # round per invocation plus a self-re-invoke, a round counter and a runaway backstop — all of
+      # it machinery to work around a limit CodeBuild does not have. `set -e` gives the refusal for
+      # free: the export failing means the destroy command is never reached.
+      - |
+        if [ "${TF_ACTION}" != "apply" ]; then
+          set -e
+          EXPORT_FN="arn:aws:lambda:${AWS_REGION}:${CUSTOMER_ACCOUNT_ID}:function:gerp-export-${CUSTOMER_ID}-export_gerp"
+          PAYLOAD='{}'
+          for ROUND in $(seq 1 40); do
+            echo "==> export round ${ROUND}"
+            aws lambda invoke --function-name "${EXPORT_FN}" \
+              --cli-binary-format raw-in-base64-out --payload "${PAYLOAD}" /tmp/export.json >/tmp/invoke.json
+            test "$(jq -r '.FunctionError // empty' /tmp/invoke.json)" = "" \
+              || { echo "export_gerp raised:"; cat /tmp/export.json; exit 1; }
+            CODE=$(jq -r '.statusCode' /tmp/export.json)
+            BODY=$(jq -r '.body' /tmp/export.json)
+            EXPORT_ID=$(echo "${BODY}" | jq -r '.export_id // empty')
+            if [ "${CODE}" = "200" ]; then
+              echo "==> export complete: ${EXPORT_ID}"
+              break
+            elif [ "${CODE}" = "202" ]; then
+              # resume carries the export id, so the next round adds to the copy in progress
+              # rather than starting a second one beside it
+              PAYLOAD="{\"resume\":\"${EXPORT_ID}\"}"
+            else
+              echo "export_gerp returned ${CODE} — NOT destroying:"; echo "${BODY}"; exit 1
+            fi
+          done
+          test "${CODE}" = "200" || { echo "export unfinished after 40 rounds — NOT destroying"; exit 1; }
+          # the row is written before the destroy starts, so an interrupted build can be read rather
+          # than guessed at. Closure stamps the export and the download window (the day-30 sweep
+          # reads that date instead of recomputing the policy). Stop sets `stopped` and drops the
+          # stashes the apply wrote: the gateway, the chat door and the runtime are about to go, and
+          # the next apply's post_build writes the new ones.
+          if [ "${TF_ACTION}" = "destroy" ]; then
+            DOWNLOAD_UNTIL=$(date -u -d "+15 days" +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || date -u -v+15d +%Y-%m-%dT%H:%M:%SZ)
+            aws dynamodb update-item --region "${OPERATOR_REGION}" --table-name "${CUSTOMERS_TABLE}" \
+              --key "{\"gerp_id\":{\"S\":\"${CUSTOMER_ID}\"}}" \
+              --update-expression "SET #s = :s, export_id = :e, exported_at = :t, download_until = :d" \
+              --expression-attribute-names '{"#s":"status"}' \
+              --expression-attribute-values "{\":s\":{\"S\":\"closing\"},\":e\":{\"S\":\"${EXPORT_ID}\"},\":t\":{\"S\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"},\":d\":{\"S\":\"${DOWNLOAD_UNTIL}\"}}"
+          else
+            aws dynamodb update-item --region "${OPERATOR_REGION}" --table-name "${CUSTOMERS_TABLE}" \
+              --key "{\"gerp_id\":{\"S\":\"${CUSTOMER_ID}\"}}" \
+              --update-expression "SET #s = :s, stopped_at = :t REMOVE gateway_url, chat_url, runtime_endpoint_arn" \
+              --expression-attribute-names '{"#s":"status"}' \
+              --expression-attribute-values "{\":s\":{\"S\":\"stopped\"},\":t\":{\"S\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"}}"
+            echo "marked ${CUSTOMER_ID} stopped; export ${EXPORT_ID}"
+          fi
+        fi
+      # ── init_customer first: the part of a gerp that outlives the gerp ────────────────────
+      #
+      # The uploads bucket, its CMK, the reader role and export_gerp live in their own state
+      # (`<gerp>/init.tfstate`) so that closure can destroy per_customer whole and the owner can
+      # still download their export for fifteen days. per_customer finds them by name with data
+      # sources, so it fails at plan time if this stack is missing — which is why it applies first
+      # on an apply and is never touched on a destroy. A subshell, so the cd below still lands.
+      - |
+        if [ "${TF_ACTION}" = "apply" ]; then
+          echo "==> init_customer: terraform init (key=${CUSTOMER_ID}/init.tfstate)"
+          ( cd prod/init_customer \
+            && terraform init -backend-config="key=${CUSTOMER_ID}/init.tfstate" -reconfigure -input=false -no-color \
+            && echo "==> init_customer: terraform apply" \
+            && terraform apply -auto-approve -input=false -no-color \
+                 -var "gerp_id=${CUSTOMER_ID}" \
+                 -var "aws_account_id=${CUSTOMER_ACCOUNT_ID}" )
+        fi
+      - echo "==> terraform init (key=${CUSTOMER_ID}/terraform.tfstate)"
+      - cd prod/per_customer
+      - terraform init -backend-config="key=${CUSTOMER_ID}/terraform.tfstate" -reconfigure -input=false -no-color
+      # destroy and stop take prod/per_customer ONLY. prod/init_customer keeps standing — the bucket,
+      # its CMK, the reader role and export_gerp survive so the owner can still download for fifteen
+      # days, after the agent that used to mint their links is gone. The day-30 sweep destroys that.
+      # The plan is written to a file and applied from it; the log gets one line per change
+      # (`# module.x.aws_y.z will be created`) and the counts, not every attribute of five
+      # hundred resources. The apply's own per-resource lines stay: they are the timing.
+      - |
+        TFVARS="-var gerp_id=${CUSTOMER_ID} -var aws_account_id=${CUSTOMER_ACCOUNT_ID} -var sender_email=${SENDER_EMAIL} -var chat_base_url=${CHAT_BASE_URL}"
+        # An apply that fails on an IAM race — a resource that tests its role at create before IAM
+        # has the policy — is applied once more, from a fresh plan, after a wait: terraform picks
+        # up from state, so the second pass is the missing resources only. The allowlist is the
+        # IAM-propagation family and nothing else; any other failure fails at once. The retry is
+        # never silent: the line below and a mail to ops carry the resource's address, and the
+        # fix is that resource's own `time_sleep` edge in its module — the retry keeps a vend up,
+        # it does not keep a race. The destroy and stop paths never retry.
+        RETRY_CAUSES='not authorized|does not have permission|AccessDenied|is not authorized to perform'
+        tf_plan_apply() {
+          label="$1"; shift
+          echo "==> terraform plan: ${label}"
+          terraform plan -input=false -no-color -out=/tmp/tf.plan ${TFVARS} "$@" > /tmp/plan.out 2>&1 || { cat /tmp/plan.out; return 1; }
+          grep -E '^  # |^Plan:|^No changes' /tmp/plan.out || true
+          echo "==> terraform apply: ${label}"
+          terraform apply -input=false -no-color /tmp/tf.plan > /tmp/apply.out 2>&1; rc=$?
+          grep -vE '^[[:space:]]*$' /tmp/apply.out
+          return "${rc}"
+        }
+        tf_apply() {
+          label="$1"; shift
+          tf_plan_apply "${label}" "$@" && return 0
+          CAUSE=$(grep -oE "${RETRY_CAUSES}" /tmp/apply.out | head -1)
+          [ -n "${CAUSE}" ] || exit 1
+          RESOURCE=$(grep -oE '^  with [^,]+' /tmp/apply.out | head -1 | sed 's/^  with //')
+          echo "==> apply.retry cause=${CAUSE} resource=${RESOURCE:-?}"
+          if [ -n "${OPS_ALERTS_TOPIC_ARN}" ]; then
+            aws sns publish --region "${OPERATOR_REGION}" --topic-arn "${OPS_ALERTS_TOPIC_ARN}" \
+              --subject "recovered after retry: ${CUSTOMER_ID}" \
+              --message "$(printf 'tower-per-customer applied %s a second time after an IAM race.\n\nresource: %s\ncause: %s\n\nThe fix is that resource'"'"'s own time_sleep edge on the policy it tests, in its module. The gerp came up.\n\nbuild: %s\nlog: https://console.aws.amazon.com/cloudwatch/home?region=%s#logsV2:log-groups/log-group/$252Faws$252Fcodebuild$252Ftower-per-customer' \
+                "${CUSTOMER_ID}" "${RESOURCE:-?}" "${CAUSE}" "${CODEBUILD_BUILD_ID}" "${AWS_REGION}")" >/dev/null \
+              || echo "WARN: the retry mail did not send"
+          fi
+          sleep 20
+          tf_plan_apply "${label} (retry)" "$@" || exit 1
+        }
+        if [ "${TF_ACTION}" = "apply" ]; then
+          # one pass: the agent's gateway reaches every module as an input through the graph
+          tf_apply "per_customer"
+        else
+          echo "==> terraform destroy"
+          terraform destroy -auto-approve -input=false -no-color ${TFVARS} > /tmp/destroy.out 2>&1; rc=$?
+          grep -vE '^[[:space:]]*$' /tmp/destroy.out
+          [ "${rc}" -eq 0 ] || exit "${rc}"
+        fi
+
+  post_build:
+    commands:
+      # post_build runs whether the build phase passed or failed, so every command here is guarded
+      # on CODEBUILD_BUILD_SUCCEEDING as well as TF_ACTION: a failed apply must not stamp the row
+      # active over a partial stack (westwood's re-apply, 2026-09-06, did), and a failed destroy
+      # must not stamp it closed. The row keeps the status the build phase left it — provisioning,
+      # closing, stopped — and the build_failed alert says why. One command per outcome, since an
+      # `exit` ends only the command it is in, not the phase.
+      #
+      # A destroyed stack has no outputs to stash. Closure stamps the row closed here; a stopped
+      # row was written before its destroy and there is nothing left to say.
+      - |
+        if [ "${CODEBUILD_BUILD_SUCCEEDING}" != "1" ]; then
+          echo "build phase failed: the row stays as the build left it; nothing stamped"
+        elif [ "${TF_ACTION}" = "destroy" ]; then
+          aws dynamodb update-item --region "${OPERATOR_REGION}" --table-name "${CUSTOMERS_TABLE}" \
+            --key "{\"gerp_id\":{\"S\":\"${CUSTOMER_ID}\"}}" \
+            --update-expression "SET #s = :s, closed_at = :t" \
+            --expression-attribute-names '{"#s":"status"}' \
+            --expression-attribute-values "{\":s\":{\"S\":\"closed\"},\":t\":{\"S\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"}}"
+          echo "closed ${CUSTOMER_ID}; export downloadable until ${DOWNLOAD_UNTIL}"
+        elif [ "${TF_ACTION}" = "stop" ]; then
+          echo "stopped ${CUSTOMER_ID}; an apply brings it back"
+        fi
+      # The apply's ending, in one command so a failure in any step fails the build and nothing
+      # after it stamps the row.
+      #
+      # The guides shelf. The agent's search_guides reads the gerp's own knowledge base, and
+      # terraform only creates it: every modules/**/kb.md is ingested here, before the row is
+      # marked active, so no gerp is ready with an empty shelf. The script runs in the customer
+      # account on OperatorOrchestration, in a subshell so the credentials do not reach the row
+      # stashes below, which are the build role's own in the operator account.
+      #
+      # Then the gerp's API endpoint, and the row marked live. Unlike the two stashes after it
+      # this is NOT best-effort and NOT optional: `gateway_url` is what the BFF forwards to, and
+      # `status=active` is what the card, bill_customer and the public list read. Without both, a
+      # fully provisioned gerp reads "provisioning… about 15 minutes" forever and never appears
+      # in a billing run. The chat Function URL and the runtime endpoint arn (the operator hub's
+      # ask_spoke resolves this spoke through it) are stashed best-effort: never fail the build
+      # over them.
+      - |
+        if [ "${TF_ACTION}" = "apply" ] && [ "${CODEBUILD_BUILD_SUCCEEDING}" = "1" ]; then
+          set -e
+          echo "==> outputs"
+          terraform output -json
+          echo "==> playbooks: syncing the guides into the gerp's knowledge base"
+          ( set -e
+            KB_ID=$(terraform output -raw playbook_kb_id); DS_ID=$(terraform output -raw playbook_data_source_id)
+            CREDS=$(aws sts assume-role --role-arn "arn:aws:iam::${CUSTOMER_ACCOUNT_ID}:role/OperatorOrchestration" \
+                      --role-session-name "playbooks-${CUSTOMER_ID}" --query 'Credentials.[AccessKeyId,SecretAccessKey,SessionToken]' --output text)
+            export AWS_ACCESS_KEY_ID=$(echo "${CREDS}" | cut -f1) AWS_SECRET_ACCESS_KEY=$(echo "${CREDS}" | cut -f2) AWS_SESSION_TOKEN=$(echo "${CREDS}" | cut -f3)
+            cd "${CODEBUILD_SRC_DIR}" && bash scripts/sync_playbooks.sh "${CUSTOMER_ID}" "${KB_ID}" "${DS_ID}" env "${AWS_REGION}" )
+          GATEWAY_URL=$(terraform output -raw gateway_url)
+          test -n "${GATEWAY_URL}" || { echo "no gateway_url output — the gerp would never read ready"; exit 1; }
+          aws dynamodb update-item --region "${OPERATOR_REGION}" \
+            --table-name "${CUSTOMERS_TABLE}" \
+            --key "{\"gerp_id\":{\"S\":\"${CUSTOMER_ID}\"}}" \
+            --update-expression "SET gateway_url = :g, #s = :s, provisioned_at = :t" \
+            --expression-attribute-names '{"#s":"status"}' \
+            --expression-attribute-values "{\":g\":{\"S\":\"${GATEWAY_URL}\"},\":s\":{\"S\":\"active\"},\":t\":{\"S\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"}}"
+          echo "marked ${CUSTOMER_ID} active with gateway_url=${GATEWAY_URL}"
+          CHAT_URL=$(terraform output -raw chat_url 2>/dev/null || echo "")
+          if [ -n "${CHAT_URL}" ]; then
+            aws dynamodb update-item --region "${OPERATOR_REGION}" \
+              --table-name "${CUSTOMERS_TABLE}" \
+              --key "{\"gerp_id\":{\"S\":\"${CUSTOMER_ID}\"}}" \
+              --update-expression "SET chat_url = :u" \
+              --expression-attribute-values "{\":u\":{\"S\":\"${CHAT_URL}\"}}" \
+              && echo "stashed chat_url=${CHAT_URL} on ${CUSTOMERS_TABLE}/${CUSTOMER_ID}" \
+              || echo "WARN: chat_url stash failed (non-fatal)"
+          else
+            echo "no chat_url output (cognito unwired?) — skipping stash"
+          fi
+          RT_EP_ARN=$(terraform output -raw runtime_endpoint_arn 2>/dev/null || echo "")
+          if [ -n "${RT_EP_ARN}" ]; then
+            aws dynamodb update-item --region "${OPERATOR_REGION}" \
+              --table-name "${CUSTOMERS_TABLE}" \
+              --key "{\"gerp_id\":{\"S\":\"${CUSTOMER_ID}\"}}" \
+              --update-expression "SET runtime_endpoint_arn = :r" \
+              --expression-attribute-values "{\":r\":{\"S\":\"${RT_EP_ARN}\"}}" \
+              && echo "stashed runtime_endpoint_arn on ${CUSTOMERS_TABLE}/${CUSTOMER_ID}" \
+              || echo "WARN: runtime_endpoint_arn stash failed (non-fatal)"
+          fi
+        fi

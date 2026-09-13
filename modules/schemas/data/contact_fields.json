@@ -1,0 +1,287 @@
+{
+  "common": {
+    "contact_id": {
+      "type": "string",
+      "required": true,
+      "description": "hash key; opaque slug or uuid (e.g. \"blue_bottle_wholesale\", or a v4 uuid). A SUBJECT: this row IS a party. The id is opaque and gerp-scoped, so a reader groups on it (repeat rate, distinct-customer counts) without publishing it; the name comes only from gerp_profile_id, which a private party does not have",
+      "class": "subject",
+      "shape": "referenced"
+    },
+    "gerp_profile_id": {
+      "type": "string",
+      "required": false,
+      "class": "subject",
+      "shape": "referenced",
+      "description": "the person's or organization's PUBLIC profile (gerp-profiles, one per account, keyed by their account sub). Present = this party is public, so a published row can carry this id and a reader can resolve a display name from it. ABSENT = they are private: the gerp holds their private values and nothing about them is published. This is a REFERENCE, never copied onto a transaction row \u2014 someone who publishes a profile later has their whole history resolve retroactively, which stamping at write time could not express"
+    },
+    "entity_type": {
+      "type": "enum",
+      "values": [
+        "person",
+        "organization"
+      ],
+      "required": true,
+      "description": "discriminates which name bucket applies (person vs organization); orthogonal to vendor/customer/employee relationship flags below",
+      "class": "operational",
+      "shape": "copied"
+    },
+    "email": {
+      "type": "string",
+      "required": false,
+      "class": "secret",
+      "shape": "copied",
+      "description": "the party's private channel, held by the gerp. A PUBLIC party's contact channel lives on their public profile, which they own; this one is never served"
+    },
+    "phone": {
+      "type": "string",
+      "required": false,
+      "description": "e164 preferred; the agent normalizes on write. private channel, same as email",
+      "class": "secret",
+      "shape": "copied"
+    },
+    "addresses": {
+      "type": "list<object>",
+      "required": false,
+      "description": "a contact can have multiple addresses; each tagged by address_type (e.g., business + billing + shipping). modules looking for a typed address pick the first matching element, falling back to whichever exists. where a person or firm physically is; never served from the CRM row",
+      "fields": {
+        "address_type": {
+          "type": "enum",
+          "values": [
+            "business",
+            "home",
+            "office",
+            "billing",
+            "shipping",
+            "mailing"
+          ],
+          "required": true
+        },
+        "street_number": "string",
+        "street_name": "string",
+        "unit": {
+          "type": "string",
+          "required": false,
+          "description": "apartment, suite, unit, floor, room \u2014 whichever applies"
+        },
+        "city": "string",
+        "county": "string",
+        "state": "string",
+        "postal_code": "string",
+        "country": "string"
+      },
+      "class": "secret",
+      "shape": "copied"
+    },
+    "tax_id": {
+      "type": "string",
+      "required": false,
+      "description": "EIN for organizations; SSN/ITIN for persons; used for 1099s, W-2s, cross-border billing. a legal identity document",
+      "class": "secret",
+      "shape": "copied"
+    },
+    "is_vendor": {
+      "type": "boolean",
+      "required": false,
+      "description": "true when the firm purchases from this contact; activates the vendor.* bucket",
+      "class": "operational",
+      "shape": "copied"
+    },
+    "is_customer": {
+      "type": "boolean",
+      "required": false,
+      "description": "true when the firm sells to this contact; activates the customer.* bucket",
+      "class": "operational",
+      "shape": "copied"
+    },
+    "is_employee": {
+      "type": "boolean",
+      "required": false,
+      "description": "true when the firm employs this contact; activates the employee.* bucket; persons only",
+      "class": "operational",
+      "shape": "copied"
+    },
+    "metadata": {
+      "type": "map",
+      "required": false,
+      "description": "arbitrary key/value for fields not yet promoted into this registry. an unpromoted bag \u2014 the registry cannot say what is in it, so it takes the default. Promote a field into the registry with a class to publish it",
+      "class": "secret",
+      "shape": "copied"
+    },
+    "created_at": {
+      "type": "timestamp_ms",
+      "required": true,
+      "class": "operational",
+      "shape": "copied"
+    },
+    "updated_at": {
+      "type": "timestamp_ms",
+      "required": true,
+      "class": "operational",
+      "shape": "copied"
+    }
+  },
+  "person": {
+    "first_name": {
+      "type": "string",
+      "required": true,
+      "description": "given name. a private value of a person; the public name lives on their profile",
+      "class": "secret",
+      "shape": "copied"
+    },
+    "middle_name": {
+      "type": "string",
+      "required": false,
+      "class": "secret",
+      "shape": "copied"
+    },
+    "last_name": {
+      "type": "string",
+      "required": true,
+      "description": "family name; used for alphabetical sort and formal address",
+      "class": "secret",
+      "shape": "copied"
+    }
+  },
+  "organization": {
+    "name": {
+      "type": "string",
+      "required": true,
+      "description": "common business name (e.g. \"Blue Bottle Coffee\"). a FIRM, already a public identity \u2014 counterparties publish",
+      "class": "operational",
+      "shape": "copied"
+    },
+    "legal_name": {
+      "type": "string",
+      "required": false,
+      "description": "registered legal entity name when different from the common name",
+      "class": "operational",
+      "shape": "copied"
+    }
+  },
+  "vendor": {
+    "terms": {
+      "type": "enum",
+      "values": [
+        "prepaid",
+        "due_on_receipt",
+        "net_15",
+        "net_30",
+        "net_60",
+        "custom"
+      ],
+      "required": false,
+      "description": "default payment terms on POs to this vendor",
+      "class": "economic",
+      "shape": "copied"
+    },
+    "website": {
+      "type": "string",
+      "required": false,
+      "class": "operational",
+      "shape": "copied"
+    },
+    "categories": {
+      "type": "list<string>",
+      "required": false,
+      "description": "free-form tags (e.g. [\"coffee_supplier\", \"local\", \"fair_trade\"])",
+      "class": "operational",
+      "shape": "copied"
+    },
+    "preferred_payment_method": {
+      "type": "enum",
+      "values": [
+        "ach",
+        "wire",
+        "check",
+        "stripe",
+        "paypal",
+        "other"
+      ],
+      "required": false,
+      "class": "operational",
+      "shape": "copied"
+    }
+  },
+  "customer": {
+    "stripe_customer_id": {
+      "type": "string",
+      "required": false,
+      "description": "for recurring billing; set when the agent or payments module first charges. a handle into the processor's records for this party \u2014 resolves to their name, card and address in a system this platform does not govern",
+      "class": "secret",
+      "shape": "copied"
+    },
+    "stripe_own_customer_id": {
+      "type": "string",
+      "required": false,
+      "description": "the processor customer this party's OWN saved methods hang off. `stripe_customer_id` is whichever customer the SELECTED method belongs to, which may be someone else's \u2014 a gerp billed to a card its account owner saved. Kept apart so choosing that card does not lose track of this party's own.",
+      "class": "secret",
+      "shape": "copied"
+    },
+    "credit_limit": {
+      "type": "decimal",
+      "required": false,
+      "description": "cap on open receivables before the agent declines new invoices",
+      "class": "economic",
+      "shape": "copied"
+    },
+    "tax_exempt": {
+      "type": "boolean",
+      "required": false,
+      "class": "economic",
+      "shape": "copied"
+    },
+    "tags": {
+      "type": "list<string>",
+      "required": false,
+      "class": "operational",
+      "shape": "copied"
+    },
+    "stripe_payment_method_id": {
+      "type": "string",
+      "required": false,
+      "description": "the card this customer saved for off-session charges (pm_\u2026). written by payments' save_payment_method after they complete a hosted setup page; charged only where a rule instance turns autopay on. a handle into the processor's records \u2014 it resolves to a real instrument in a system this platform does not govern",
+      "class": "secret",
+      "shape": "copied"
+    }
+  },
+  "employee": {
+    "hire_date": {
+      "type": "date",
+      "required": false,
+      "class": "operational",
+      "shape": "copied"
+    },
+    "role": {
+      "type": "string",
+      "required": false,
+      "description": "job title or scope (e.g. \"barista\", \"senior_engineer\"). the role, not the worker \u2014 a role publishes",
+      "class": "operational",
+      "shape": "copied"
+    },
+    "hourly_rate": {
+      "type": "decimal",
+      "required": false,
+      "description": "snapshot at hire; shift rows in the labor module carry the rate at shift time. cost structure, which is the product. It publishes on a row whose subject is absent unless that person is public",
+      "class": "economic",
+      "shape": "copied"
+    },
+    "employment_status": {
+      "type": "enum",
+      "values": [
+        "active",
+        "on_leave",
+        "terminated"
+      ],
+      "required": false,
+      "class": "operational",
+      "shape": "copied"
+    },
+    "payroll_processor_id": {
+      "type": "string",
+      "required": false,
+      "description": "the ID this employee has in the owner's payroll processor (ADP, Gusto, Stripe). a handle into the payroll processor's record of this person",
+      "class": "secret",
+      "shape": "copied"
+    }
+  }
+}

@@ -1,0 +1,66 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "modules/events/payments/webhook.received.v1",
+  "title": "webhook.received",
+  "description": "SPECULATIVE (emit call pending). A provider webhook landed (post-dedup). The fee/gross pair across tenants is the engineer-side match's raw signal (fee-drag benchmarks).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "openly_operated",
+    "customer_id",
+    "provider",
+    "event_type",
+    "event_id"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "integer",
+      "const": 1,
+      "description": "Bumped on breaking shape change. Consumers branch on it."
+    },
+    "openly_operated": {
+      "type": "boolean",
+      "description": "Set at emit time from the gerp's settings. The publication rule's filter — a private gerp's events never leave the operator plane."
+    },
+    "customer_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Emitting tenant (gerp_id). Redundant with the envelope account id but saves consumers a join."
+    },
+    "provider": {
+      "type": "string",
+      "enum": [
+        "stripe",
+        "square",
+        "paypal"
+      ],
+      "description": "Which processor."
+    },
+    "event_type": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Provider's event type."
+    },
+    "event_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Provider's event id (idempotency key — never location-prefixed)."
+    },
+    "gross_amount": {
+      "type": "number",
+      "description": "Gross amount, when the event carries one.",
+      "minimum": 0
+    },
+    "fee_amount": {
+      "type": "number",
+      "description": "Processor fee, when derivable.",
+      "minimum": 0
+    },
+    "location": {
+      "type": "string",
+      "pattern": "^[0-9]+$",
+      "description": "Location ordinal (the 1 in LOCATION#1#...). Present on placeful objects so cross-firm matches can be geo/loc-scoped; '1' = the emitter's main location."
+    }
+  }
+}

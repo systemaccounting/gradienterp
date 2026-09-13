@@ -1,0 +1,78 @@
+out/
+logs/
+.venv/
+# scratch: requirement drafts, issue drafts, captures, receipts, screenshots
+tmp/
+
+# only the doc-split set commits: README (why) / AGENTS (how) / TODO (open work),
+# plus the load-bearing md classes: agent system prompts (container-baked), kb.md files (the
+# KB playbook sources scripts/sync_playbooks.sh harvests), and the legal documents under docs/
+# the app links as GitHub pages. everything else is interim scratch.
+*.md
+!AGENTS.md
+!README.md
+!TODO.md
+!kb.md
+!modules/agent/prompts/*.md
+!docs/*.md
+!.agents/skills/**/*.md
+
+# claude code: the shared settings and project skills commit; personal settings stay local
+.claude/settings.local.json
+# the playwright browser tool's page snapshots, console logs and screenshots
+.playwright-mcp/
+
+# transient terraform / shell command logs
+*.out
+
+# terraform — provider cache, state, saved plans, per-developer tfvars (lock file IS committed)
+.terraform/
+*.tfstate
+*.tfstate.backup
+*.tfstate.*.backup
+terraform.tfstate.d/
+tfplan
+*.tfplan
+*.tfvars
+!*.tfvars.example
+
+# lambda build artifacts — produced by archive_file at apply time
+.build/
+
+# docker build staging — registries staged from modules/schemas/data/ before docker build
+modules/agent/docker/registries/
+
+# secrets / credentials — never commit
+.env
+.envrc
+creds.txt
+*.pem
+*.key
+credentials
+credentials.csv
+
+# python / editor / os noise
+__pycache__/
+*.pyc
+.DS_Store
+.idea/
+.vscode/
+
+# node deps (chat lambda + e2e) — installed by CI / locally, not committed
+node_modules/
+
+# playwright e2e artifacts
+test-results/
+playwright-report/
+
+# demo artifacts — takes (.webm) and cuts (.gif) regenerate from the recorder + each demo's
+# cut.sh; only the scripts that produce them commit (the timing.md beat maps stay local via the
+# *.md rule above). docs/demos/out/ is already covered by out/; the CDN-served copies under
+# prod/gradienterp_cloud/assets/ ship via `deploy.sh assets`, not the repo.
+docs/demos/**/*.webm
+docs/demos/**/*.gif
+docs/demos/**/*.png
+docs/demos/**/fixtures/*.csv
+prod/gradienterp_cloud/assets/*.gif
+prod/gradienterp_cloud/assets/*.png
+image.overlay.json

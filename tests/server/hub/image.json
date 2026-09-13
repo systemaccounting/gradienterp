@@ -1,0 +1,99 @@
+{
+  "api_id": null,
+  "bus": {
+    "name": "gerp-events",
+    "rules": [
+      {
+        "name": "gerp-edge-capture-tanners",
+        "pattern": {
+          "detail": {
+            "to": [
+              {
+                "prefix": "tanners"
+              }
+            ]
+          }
+        },
+        "targets": [
+          {
+            "arn": "arn:aws:sqs:us-east-1:185369506315:gerp-puppet-inbox",
+            "bus": null,
+            "function": null
+          }
+        ]
+      },
+      {
+        "name": "gerp-edge-forward-operator",
+        "pattern": {
+          "detail": {
+            "to": [
+              {
+                "exists": false
+              }
+            ]
+          }
+        },
+        "targets": [
+          {
+            "arn": "arn:aws:events:us-east-1:185369506315:event-bus/gerp-operator",
+            "bus": "gerp-operator",
+            "function": null
+          }
+        ]
+      },
+      {
+        "name": "gerp-edge-spoke-gradienterp",
+        "pattern": {
+          "detail": {
+            "to": [
+              "gradienterp"
+            ]
+          }
+        },
+        "targets": [
+          {
+            "arn": "arn:aws:events:us-east-1:867637277314:event-bus/gerp-internal-gradienterp",
+            "bus": "gerp-internal-gradienterp",
+            "function": null
+          }
+        ]
+      },
+      {
+        "name": "gerp-edge-spoke-westwood-c40fd8",
+        "pattern": {
+          "detail": {
+            "to": [
+              "westwood-c40fd8"
+            ]
+          }
+        },
+        "targets": [
+          {
+            "arn": "arn:aws:events:us-east-1:222165865776:event-bus/gerp-internal-westwood-c40fd8",
+            "bus": "gerp-internal-westwood-c40fd8",
+            "function": null
+          }
+        ]
+      }
+    ]
+  },
+  "functions": {
+    "gerp-hub-manage-edges": {
+      "env": {
+        "BUS_ARN": "arn:aws:events:us-east-1:582129522725:event-bus/gerp-events",
+        "BUS_NAME": "gerp-events",
+        "DLQ_ARN": "arn:aws:sqs:us-east-1:582129522725:gerp-edges-failed",
+        "EDGE_ROLE_ARN": "arn:aws:iam::582129522725:role/gerp-hub-edges",
+        "EDGE_SETS": "{\"capture\":0.05,\"spoke\":0.95}",
+        "HUB_ID": "us-east-1",
+        "STACK_PREFIX": "gerp"
+      },
+      "src_dir": "prod/hub/lambdas/manage_edges",
+      "timeout": 30
+    }
+  },
+  "gerp": "gradienterp",
+  "protocol": null,
+  "routes": [],
+  "stack": "hub"
+}

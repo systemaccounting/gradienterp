@@ -1,0 +1,24 @@
+name: Feature
+description: Something a business needs the platform to do.
+labels: ["feature"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Issues here are public. An account, a payment or a person's details goes through the private support form at https://gradienterp.cloud/support.
+  - type: input
+    id: module
+    attributes:
+      label: Where
+      description: The module (`modules/<name>`), or the site, the api or the dashboard.
+      placeholder: modules/inventory
+  - type: textarea
+    id: need
+    attributes:
+      label: What the business needs
+    validations:
+      required: true
+  - type: textarea
+    id: today
+    attributes:
+      label: What it does today instead

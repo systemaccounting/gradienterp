@@ -1,0 +1,30 @@
+{
+  "type": "object",
+  "description": "Flag a platform bug or missing capability. Call when a tool errors past a retry or you hit a wall no tool covers. KEEP the specifics \u2014 write each as $1/$2 and list the values in `private`.",
+  "required": [
+    "type",
+    "description"
+  ],
+  "properties": {
+    "type": {
+      "type": "string",
+      "enum": [
+        "bug",
+        "feature"
+      ],
+      "description": "bug = something built is broken; feature = the capability doesn't exist."
+    },
+    "description": {
+      "type": "string",
+      "description": "What you were doing and what broke. Keep EVERY specific \u2014 the table, the job, the customer, the amount, the id \u2014 but write it as $1/$2/$3 instead of leaving it out. Omitting the detail is the wrong fix and costs two things: the operator cannot reproduce what you will not name, and two firms hitting one defect only collapse into a single issue when their reports are the same string, which they are only if the firm-specific nouns are placeholders. Name the tool and quote the error verbatim \u2014 those are never private. This text is filed as a public issue exactly as written, placeholders and all, so it must read as a complete report with them left in."
+    },
+    "private": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "description": "the value for $1, then $2, in order"
+      },
+      "description": "The values the placeholders stand for, in order \u2014 one per $n, no gaps. Stays on the operator's private record; never published. Omit only when the report genuinely names nothing specific to this business."
+    }
+  }
+}

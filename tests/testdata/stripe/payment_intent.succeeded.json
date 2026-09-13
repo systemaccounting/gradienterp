@@ -1,0 +1,91 @@
+{
+  "id": "evt_3Tek05RBOqTW9S9W1we6VH4G",
+  "object": "event",
+  "api_version": "2026-04-22.dahlia",
+  "created": 1780613075,
+  "data": {
+    "object": {
+      "id": "pi_3Tek05RBOqTW9S9W1gCsIvUt",
+      "object": "payment_intent",
+      "amount": 2000,
+      "amount_capturable": 0,
+      "amount_details": {
+        "tip": {}
+      },
+      "amount_received": 2000,
+      "application": null,
+      "application_fee_amount": null,
+      "automatic_payment_methods": null,
+      "canceled_at": null,
+      "cancellation_reason": null,
+      "capture_method": "automatic",
+      "client_secret": "pi_3Tek05RBOqTW9S9W1gCsIvUt_secret_FakeClientSecret000000000",
+      "confirmation_method": "automatic",
+      "created": 1780613073,
+      "currency": "usd",
+      "customer": "cus_Ue24TZBgz9vijp",
+      "customer_account": null,
+      "description": "Payment for Invoice",
+      "excluded_payment_method_types": null,
+      "last_payment_error": null,
+      "latest_charge": "ch_3Tek05RBOqTW9S9W1jMOvxaj",
+      "livemode": false,
+      "managed_payments": {
+        "enabled": false
+      },
+      "metadata": {},
+      "next_action": null,
+      "on_behalf_of": null,
+      "payment_details": {
+        "customer_reference": null,
+        "order_reference": "in_1Tek04RBOqTW9S9WhVfVmWvS"
+      },
+      "payment_method": "pm_1Tek02RBOqTW9S9WaVgtRGY5",
+      "payment_method_configuration_details": null,
+      "payment_method_options": {
+        "amazon_pay": {
+          "express_checkout_element_session_id": null
+        },
+        "card": {
+          "installments": null,
+          "mandate_options": null,
+          "network": null,
+          "request_three_d_secure": "automatic"
+        },
+        "cashapp": {},
+        "klarna": {
+          "preferred_locale": null
+        },
+        "link": {
+          "persistent_token": null
+        }
+      },
+      "payment_method_types": [
+        "amazon_pay",
+        "card",
+        "cashapp",
+        "klarna",
+        "link"
+      ],
+      "processing": null,
+      "receipt_email": null,
+      "review": null,
+      "setup_future_usage": null,
+      "shared_payment_granted_token": null,
+      "shipping": null,
+      "source": null,
+      "statement_descriptor": null,
+      "statement_descriptor_suffix": null,
+      "status": "succeeded",
+      "transfer_data": null,
+      "transfer_group": null
+    }
+  },
+  "livemode": false,
+  "pending_webhooks": 0,
+  "request": {
+    "id": "req_Sr48cybQmI2BMf",
+    "idempotency_key": "00000000-0000-4000-8000-000000000001"
+  },
+  "type": "payment_intent.succeeded"
+}

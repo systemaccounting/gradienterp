@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+
+# machine-readable site guide
+# llms.txt: https://openlyoperated.biz/llms.txt

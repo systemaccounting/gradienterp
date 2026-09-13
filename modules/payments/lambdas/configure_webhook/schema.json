@@ -1,0 +1,21 @@
+{
+  "type": "object",
+  "description": "Point this firm's payment processor at their webhook endpoint, so sales, refunds and payouts post to the books. Stripe: after manage_mcp install (Write on webhooks), no key. Others: secret_name.",
+  "properties": {
+    "provider": {
+      "type": "string",
+      "description": "Which processor: 'stripe', 'paypal', or 'square'. Ask the owner."
+    },
+    "secret_name": {
+      "type": "string",
+      "description": "the name the owner's credential was stored under by collect_secret. Square and PayPal need it; Stripe only when the firm prefers a key over manage_mcp"
+    },
+    "approval_token": {
+      "type": "string",
+      "description": "Stripe only: the approval_id a 409 handed back, after the owner approved at approval_url. Same call again with it"
+    }
+  },
+  "required": [
+    "provider"
+  ]
+}

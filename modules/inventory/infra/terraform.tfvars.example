@@ -1,0 +1,10 @@
+# Example inputs for local `terraform plan` / `apply` against this module.
+# Copy to terraform.tfvars (gitignored) to iterate.
+#
+# Inventory has no tenant-metadata needs (no SSM lookup in this module).
+# `post_journal_entry_fn_*` come from modules/accounting/infra's outputs.
+
+customer_id = "sandbox_01"
+
+post_journal_entry_fn_arn  = "arn:aws:lambda:us-east-1:000000000000:function:oob-accounting-sandbox-01-post_journal_entry"
+post_journal_entry_fn_name = "oob-accounting-sandbox-01-post_journal_entry"

@@ -1,0 +1,15 @@
+{
+  "type": "object",
+  "description": "The business's locations (config). list them; add one (next ordinal allocated); update one's label/city/name or provider id. The ordinal is the identifier everywhere; #1 (main) is always the default.",
+  "required": ["op"],
+  "properties": {
+    "op": {"type": "string", "description": "list | add | update."},
+    "ordinal": {"type": "string", "description": "For update: which location (list shows ordinals). Never changes; description around it does."},
+    "city": {"type": "string", "description": "City slug, e.g. 'losangeles'."},
+    "name": {"type": "string", "description": "Short name slug, e.g. 'lax', 'downtown'."},
+    "label": {"type": "string", "description": "Human label, e.g. 'LAX Branch'."},
+    "square_location_id": {"type": "string", "description": "Square location id captured at connect time — webhook sales resolve to this location's ordinal."},
+    "stripe_account_suffix": {"type": "string", "description": "Stripe mapping hook (unused until Stripe carries a location signal)."},
+    "paypal_merchant_id": {"type": "string", "description": "PayPal mapping hook (unused until PayPal carries a location signal)."}
+  }
+}

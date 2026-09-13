@@ -1,0 +1,30 @@
+{
+  "type": "object",
+  "description": "Read a statement off the ledger, or integrate the balances checkpoint. statement picks it; write_csvs also writes the full CSV suite to S3 and returns per-statement links.",
+  "required": ["statement"],
+  "properties": {
+    "statement": {
+      "type": "string",
+      "enum": ["trial_balance", "income", "balance_sheet", "balances"],
+      "description": "trial_balance: every account's debits/credits over range. income: revenue/expenses/net income over range (start and end required). balance_sheet: assets/liabilities/equity as of a date. balances: integrate ledger activity into the balances checkpoint (closes the period; fires the CSV suite itself)."
+    },
+    "range": {
+      "type": "object",
+      "description": "trial_balance, income, balances: the time window. Both bounds optional except income, which requires start and end.",
+      "properties": {
+        "start": {"type": "string", "description": "ISO 8601 lower bound."},
+        "end": {"type": "string", "description": "ISO 8601 upper bound."}
+      }
+    },
+    "dimensions": {
+      "type": "object",
+      "description": "trial_balance, income, balance_sheet: optional slice filter — only entries stamped with ALL these key/values count (e.g. {\"location\": \"2\"}). Unstamped entries belong to no slice."
+    },
+    "asOf": {"type": "string", "description": "balance_sheet only: ISO 8601 cutoff, defaults to now."},
+    "periodStart": {"type": "string", "description": "balance_sheet only: period start for current-period retained earnings."},
+    "accounts": {"type": "array", "items": {"type": "string"}, "description": "balances only: account-name filter, empty = all."},
+    "standard": {"type": "boolean", "description": "balances only: close revenue/expense to retained earnings (defaults on)."},
+    "write_csvs": {"type": "boolean", "description": "trial_balance, income, balance_sheet: also write the five-statement CSV suite to S3 and return the links. balances writes it on its own."},
+    "periodEnd": {"type": "string", "description": "with write_csvs: the suite's end-of-period date; defaults to range.end / asOf / now."}
+  }
+}

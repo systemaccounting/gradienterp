@@ -1,0 +1,52 @@
+# api.openlyoperated.biz/v1
+
+The read api over openly-operated business: the same JSON the pages on openlyoperated.biz render,
+served to anyone. Business data — a firm's own books — is read through from the firm's own
+account and never copied; the firm gates it. Economic data — what every firm emits as it trades —
+is the platform's own store, no opt-in. The paths carry the line: /gerps/... is business data,
+/economy/... is economic data.
+
+Contract: openapi.json beside this file. /v1 is the stage; a breaking change is /v2 beside it.
+Anonymous reads share the stage throttle. A key (x-api-key) in the keyed plan lifts it and is
+metered per call.
+
+## resources
+
+- GET /gerps?q=&sector=&city=&state= — the directory: published, active gerps, each with its
+  gerp_profile_id, published name, city, state, naics_intended, its sources ({key, kind, label},
+  the gerp's own catalog) and api (/v1/gerps/<gerp_id>). Cached a minute.
+
+- GET /gerps/{gerp_id}/sources — the gerp's own catalog: {gerp_id, sources: [{key, kind, label}]}.
+  404 for a gerp that does not publish.
+- GET /gerps/{gerp_id}/sources/{source} — the read-through: the gerp's own /oob/<source>, byte for
+  byte, streamed as it arrives, the query string passed through (financials, inventory, metrics,
+  and whatever a module publishes next). The gerp's own 404 and 429 are yours. Business data —
+  a firm's own tables, read from its own account, never copied.
+
+- GET /economy/counters?signal=&from=&to= — economic data, the first store: the counters every
+  gerp's events add to (revenue, expense; margin derived), by month, in the metric shape
+  {key, label, unit, grain, headline: {period, value}, points: [{period, value}], definition,
+  source: {curl}}. No signal names the catalog. Every gerp, published or not — the terms-of-use
+  baseline — and never a gerp id.
+
+## the stream
+
+- GET /events?channel=/oob/counters — every counter delta as it lands, as server-sent events:
+  data is {key, op, magnitude, period, at}. Economic data: every gerp, no gerp id, no event.
+- GET /events?channel=/oob/<gerp_id>/<kind> — a published gerp's events of one kind as they
+  happen (journal_entry-posted, distribution-paid, ...: the detail-type with dots and underscores
+  as dashes). data is {kind, gerp_id, at, detail}, the detail projected through the event's
+  contract — a field naming a person or a secret is never on it.
+- Both need x-api-key; a held stream costs what a request throttle cannot see. Frames: `id:` a
+  millisecond timestamp, `event:` the channel, `data:` the JSON, a comment heartbeat every 15s,
+  `: reconnect` before the relay ends at ~14 minutes — reconnect and continue.
+- The same channels over WebSocket, no relay: wss://events.openlyoperated.biz/event/realtime
+  with the AppSync Events protocol and the public subscribe key (subscribe-only; the key is on
+  the page). SSE is the contract; the socket is the convenience.
+
+## how to extend it
+
+A resource is a folder under api/v1/ and a path in openapi.json naming it (x-backend) and whether
+it streams (x-stream) and whether it needs a key (x-keyed). handler.py or handler.mjs makes a
+lambda; a Dockerfile makes a service. A test fails when a path and a folder disagree, or when this
+file does not name a path.

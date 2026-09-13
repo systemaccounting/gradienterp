@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "modules/events/inventory/inventory.surplus.v1",
+  "title": "inventory.surplus",
+  "description": "SPECULATIVE. Overstock/obsolete offered out. Matches other firms' purchase requests and forecasts — someone's excess is someone's input.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "openly_operated",
+    "customer_id",
+    "item_id",
+    "catalog_key",
+    "qty",
+    "unit_cost",
+    "location"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "integer",
+      "const": 1,
+      "description": "Bumped on breaking shape change. Consumers branch on it."
+    },
+    "openly_operated": {
+      "type": "boolean",
+      "description": "Set at emit time from the gerp's settings. The publication rule's filter — a private gerp's events never leave the operator plane."
+    },
+    "customer_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Emitting tenant (gerp_id). Redundant with the envelope account id but saves consumers a join."
+    },
+    "item_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Full item id."
+    },
+    "catalog_key": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Location-free SKU."
+    },
+    "qty": {
+      "type": "number",
+      "description": "Quantity offered.",
+      "exclusiveMinimum": 0
+    },
+    "unit_cost": {
+      "type": "number",
+      "description": "Carrying cost per unit — the floor a price-down match starts from."
+    },
+    "location": {
+      "type": "string",
+      "pattern": "^[0-9]+$",
+      "description": "Location ordinal (the 1 in LOCATION#1#...). Present on placeful objects so cross-firm matches can be geo/loc-scoped; '1' = the emitter's main location."
+    }
+  }
+}

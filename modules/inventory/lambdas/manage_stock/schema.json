@@ -1,0 +1,96 @@
+{
+  "type": "object",
+  "description": "Stock items: create a catalog item, record a movement on the append-only log (SOLD/RECEIVED/ADJUSTED/PRODUCED), or read counts. Capacity items (rooms, seats, bays) are reserve's.",
+  "required": [
+    "op"
+  ],
+  "properties": {
+    "op": {
+      "type": "string",
+      "enum": [
+        "create_item",
+        "move",
+        "get"
+      ],
+      "description": "create_item | move (a stock movement; books SOLD/RECEIVED) | get (one item by item_id, or all)."
+    },
+    "item_id": {
+      "type": "string",
+      "description": "move: required. get: filter. create_item: optional slug, stored as <location>#<slug|uuid>."
+    },
+    "name": {
+      "type": "string",
+      "description": "create_item, required."
+    },
+    "unit": {
+      "type": "string",
+      "description": "create_item: each|kg|lb|oz|dozen|box|night|hour; default each."
+    },
+    "unit_cost": {
+      "type": "number",
+      "description": "create_item, required: cost per unit (COGS on SOLD, AP on RECEIVED)."
+    },
+    "unit_price": {
+      "type": "number",
+      "description": "create_item: sell price; omit for ingredients."
+    },
+    "revenue_account": {
+      "type": "string",
+      "description": "create_item: sales account; omit for the catalog rule (goods SALES_REVENUE, services SERVICE_REVENUE)."
+    },
+    "availability_rule": {
+      "type": "string",
+      "description": "create_item: RRULE making this a capacity item (FREQ=DAILY); booked with reserve."
+    },
+    "availability_duration": {
+      "type": "number",
+      "description": "create_item: seconds per occurrence (86400 a night); required with availability_rule."
+    },
+    "components": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "number"
+      },
+      "description": "create_item: recipe, component item_id -> quantity per unit; PRODUCED assembles from it."
+    },
+    "location": {
+      "type": "string",
+      "description": "create_item: location ordinal, default '1'."
+    },
+    "vendors": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "create_item: contact_ids bought from, preferred first."
+    },
+    "quantity": {
+      "type": "number",
+      "description": "move, required: positive for SOLD/RECEIVED/PRODUCED; signed for ADJUSTED (negative = short), valued at unit_cost."
+    },
+    "movement_type": {
+      "type": "string",
+      "description": "move, required: SOLD (dr COGS/cr INVENTORY) | RECEIVED (dr INVENTORY/cr AP) | ADJUSTED | PRODUCED (no entry)."
+    },
+    "memo": {
+      "type": "string",
+      "description": "move: journal memo."
+    },
+    "source": {
+      "type": "string",
+      "description": "move: '<namespace>:<id>' — job:<invoice_id>, po:<po_id>, produce:<item_id>, subject:<contact_id>. Never free text."
+    },
+    "entry_id": {
+      "type": "string",
+      "description": "move: idempotency key."
+    },
+    "job": {
+      "type": "string",
+      "description": "move: job tag (dimensions.job)."
+    },
+    "on_order": {
+      "type": "number",
+      "description": "move: units already on an open PO; the reorder read skips them."
+    }
+  }
+}

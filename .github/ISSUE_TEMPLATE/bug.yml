@@ -1,0 +1,38 @@
+name: Bug
+description: Something the platform does that it shouldn't, or doesn't do that it should.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Issues here are public. An account, a payment or a person's details goes through the private support form at https://gradienterp.cloud/support.
+  - type: input
+    id: module
+    attributes:
+      label: Where
+      description: The module (`modules/<name>`), or the site, the api or the dashboard.
+      placeholder: modules/invoicing
+    validations:
+      required: true
+  - type: textarea
+    id: happened
+    attributes:
+      label: What happened
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps
+      description: What to do, in order, to see it happen.
+  - type: input
+    id: region
+    attributes:
+      label: The gerp's region
+      placeholder: us-east-1

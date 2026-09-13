@@ -1,0 +1,98 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "manage_storage",
+  "description": "File and manage the owner's documents. Ops: file/put/read/get/describe/find/move/copy/delete. Keys under pages/ serve on the owner web portal; put returns the link. You compose paths + captions.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "op"
+  ],
+  "properties": {
+    "op": {
+      "type": "string",
+      "enum": [
+        "file",
+        "put",
+        "read",
+        "get",
+        "describe",
+        "find",
+        "move",
+        "copy",
+        "delete"
+      ],
+      "description": "file: caption an existing object at key. put: write text/markdown/json you composed (content). read: the content, windowed. get: a presigned link for the human. describe | find | move | copy | delete."
+    },
+    "content": {
+      "type": "string",
+      "description": "put: the document body; content type from the key's extension."
+    },
+    "key": {
+      "type": "string",
+      "description": "Object key, a human-meaningful path (receipts/office-supply/staples.png), never a uuid. get/describe/delete/read, and the target of file. Keys under pages/ publish to the owner portal: body-only html; the shell adds live data (await ui.data('tasks')) and auto-refresh; a <form method=post action=\"f/<kind>\"> lands in submissions/<kind>/. One page per turn (continue_later between)."
+    },
+    "from": {
+      "type": "string",
+      "description": "move/copy: source key."
+    },
+    "to": {
+      "type": "string",
+      "description": "move/copy: destination key."
+    },
+    "prefix": {
+      "type": "string",
+      "description": "find: path prefix to search under, e.g. receipts/."
+    },
+    "query": {
+      "type": "string",
+      "description": "find: text matched against the caption."
+    },
+    "tag": {
+      "type": "string",
+      "description": "find: tag filter."
+    },
+    "after": {
+      "type": "string",
+      "description": "find: occurred_at on/after this ISO date."
+    },
+    "before": {
+      "type": "string",
+      "description": "find: occurred_at on/before this ISO date."
+    },
+    "title": {
+      "type": "string",
+      "description": "Caption title, set at file time."
+    },
+    "note": {
+      "type": "string",
+      "description": "Caption note, set at file time."
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Caption tags, set at file time."
+    },
+    "occurred_at": {
+      "type": "string",
+      "description": "The date the document is from (the purchase date), ISO; set at file time."
+    },
+    "retention": {
+      "type": "string",
+      "enum": [
+        "ordinary",
+        "retained"
+      ],
+      "description": "retained = legal/PII, never auto-deleted; default ordinary."
+    },
+    "offset": {
+      "type": "integer",
+      "description": "read: byte to start from (default 0); pass the reply's next_offset for the next window."
+    },
+    "max_bytes": {
+      "type": "integer",
+      "description": "read: bytes per window (default 16384); the reply carries size and truncated."
+    }
+  }
+}

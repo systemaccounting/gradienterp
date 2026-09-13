@@ -1,0 +1,124 @@
+{
+  "type": "object",
+  "description": "The firm's task list, one tool; op picks the verb: get, put (create), update (edit / close / tag), query (open queue, children, FKs, tags), scan (filtered scan, headers only).",
+  "required": [
+    "op"
+  ],
+  "properties": {
+    "op": {
+      "type": "string",
+      "enum": [
+        "get",
+        "put",
+        "update",
+        "query",
+        "scan"
+      ],
+      "description": "get: task_id. put: content. update: task_id + updates|deliver|add_tag|delete_tag. query: open|parent|tag|an FK. scan."
+    },
+    "task_id": {
+      "type": "string",
+      "description": "get/update. put: optional id."
+    },
+    "history": {
+      "type": "boolean",
+      "description": "get: with the changelog."
+    },
+    "content": {
+      "type": "string",
+      "description": "put, required."
+    },
+    "contact_id": {
+      "type": "string",
+      "description": "put: FK. query: by it."
+    },
+    "journal_entry_id": {
+      "type": "string",
+      "description": "put: FK. query: by it."
+    },
+    "purchase_order_id": {
+      "type": "string",
+      "description": "put: FK. query: by it."
+    },
+    "invoice_id": {
+      "type": "string",
+      "description": "put: FK. query: by it."
+    },
+    "subject_key": {
+      "type": "string",
+      "description": "put: the asset or item this is about. query: its history."
+    },
+    "parents": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "description": "a parent task_id"
+      },
+      "description": "put/updates: parent task_ids (one = subtask, several = DAG); open children block delivery."
+    },
+    "category": {
+      "type": "string",
+      "description": "put: e.g. refrigeration, pos."
+    },
+    "due_date": {
+      "type": "string",
+      "description": "put: the ceiling, ISO; past = overdue."
+    },
+    "quote": {
+      "type": "string",
+      "description": "put: forecast, 'now' or ms-epoch."
+    },
+    "delivery": {
+      "type": "string",
+      "description": "put: finished-at for done work, 'now' or ms-epoch."
+    },
+    "updates": {
+      "type": "object",
+      "description": "update: content, FKs, category, parents (full list), due_date, quote; logged."
+    },
+    "deliver": {
+      "type": "string",
+      "description": "update: close, 'now' or ms-epoch."
+    },
+    "add_tag": {
+      "type": "string",
+      "description": "update: a task_tags label; a set."
+    },
+    "delete_tag": {
+      "type": "string",
+      "description": "update: remove a label; 404 if absent."
+    },
+    "applied_by": {
+      "type": "string",
+      "description": "update: who tagged."
+    },
+    "open": {
+      "type": "boolean",
+      "description": "query: the open queue."
+    },
+    "parent": {
+      "type": "string",
+      "description": "query: task_id; its open children."
+    },
+    "tag": {
+      "type": "string",
+      "description": "query: by label, newest first; only with open."
+    },
+    "limit": {
+      "type": "number",
+      "description": "query/scan: page size, default 100."
+    },
+    "filter_expression": {
+      "type": "string",
+      "description": "scan filter."
+    },
+    "expression_attribute_names": {
+      "type": "object",
+      "description": "scan names."
+    },
+    "expression_attribute_values": {
+      "type": "object",
+      "description": "scan values."
+    }
+  }
+}

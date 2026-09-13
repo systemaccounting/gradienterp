@@ -1,0 +1,198 @@
+{
+  "worker": {
+    "contact_id": {
+      "type": "string",
+      "required": true,
+      "description": "hash key; FK into modules/contacts/ \u2014 the person being paid. the rate book joins to the contact, not a duplicate person record",
+      "class": "subject",
+      "shape": "referenced"
+    },
+    "role": {
+      "type": "string",
+      "required": true,
+      "description": "range key; the role this row prices (e.g. \"barista\", \"bookkeeper\"). one row per (contact_id, role) \u2014 a lawyer who also bookkeeps is two rows",
+      "class": "operational",
+      "shape": "copied"
+    },
+    "rate": {
+      "type": "decimal",
+      "required": true,
+      "description": "pay rate for this role. hourly for W-2; the close-handler resolves it at clock-out (hours \u00d7 rate) \u2014 never copied onto the time-entry",
+      "class": "economic",
+      "shape": "copied"
+    },
+    "classification": {
+      "type": "enum",
+      "values": [
+        "W-2",
+        "1099"
+      ],
+      "required": true,
+      "description": "tax classification. W-2 comp flows through labor (accrual \u2192 withholding \u2192 W-2); 1099 never enters labor (contractor pay is AP / invoicing)",
+      "class": "economic",
+      "shape": "copied"
+    },
+    "location": {
+      "type": "string",
+      "required": false,
+      "description": "the worker's home location ordinal (settings LOCATION# rows). defaults to \"1\" (main) at put; pay-run withholding dims stamp it; a time-entry's own location wins for the shift it covers",
+      "class": "operational",
+      "shape": "copied"
+    },
+    "ytd_wages_at_cutover": {
+      "type": "decimal",
+      "required": false,
+      "description": "migration only: gross wages the OLD system paid this person Jan 1 \u2192 cutover_date. pay_run adds it to the YTD the wage-base caps (SS/FUTA/SUTA) read, for runs in the cutover's calendar year. per-person \u2014 set it on ONE role row",
+      "class": "economic",
+      "shape": "copied"
+    },
+    "cutover_date": {
+      "type": "string",
+      "required": false,
+      "description": "migration only: the cutover date (YYYY-MM-DD) scoping ytd_wages_at_cutover \u2014 the amount counts only for pay periods in this calendar year",
+      "class": "operational",
+      "shape": "copied"
+    },
+    "created_at": {
+      "type": "timestamp_ms",
+      "required": true,
+      "description": "ms-epoch set on first put",
+      "class": "operational",
+      "shape": "copied"
+    },
+    "updated_at": {
+      "type": "timestamp_ms",
+      "required": true,
+      "description": "ms-epoch; advances on every write",
+      "class": "operational",
+      "shape": "copied"
+    }
+  },
+  "time-entries": {
+    "worker_id": {
+      "type": "string",
+      "required": true,
+      "description": "hash key; the worker who clocked in (the contact_id half of the worker row)",
+      "class": "subject",
+      "shape": "referenced"
+    },
+    "entry_id": {
+      "type": "string",
+      "required": true,
+      "description": "range key; <started_at>#<location>#<id> \u2014 time-leading so a worker's entries sort chronologically, location ordinal spottable in the key. legacy bare-uuid entries read as location \"1\"",
+      "class": "operational",
+      "shape": "copied"
+    },
+    "location": {
+      "type": "string",
+      "required": false,
+      "description": "where the shift happened (location ordinal) \u2014 captured at clock-in, defaulted from the worker row. the close-handler stamps it into the wage accrual's journal dimensions",
+      "class": "operational",
+      "shape": "copied"
+    },
+    "role": {
+      "type": "string",
+      "required": true,
+      "description": "the role worked this entry; resolves to a worker row's rate at close",
+      "class": "operational",
+      "shape": "copied"
+    },
+    "started_at": {
+      "type": "timestamp_ms",
+      "required": true,
+      "description": "ms-epoch clock-in",
+      "class": "operational",
+      "shape": "copied"
+    },
+    "ended_at": {
+      "type": "timestamp_ms",
+      "required": false,
+      "description": "ms-epoch clock-out. Absent = still open (durably held until closed)",
+      "class": "operational",
+      "shape": "copied"
+    },
+    "status": {
+      "type": "enum",
+      "values": [
+        "open",
+        "closed"
+      ],
+      "required": true,
+      "description": "lifecycle. \"closed\" (ended_at set) triggers the stream \u2192 close-handler accrual",
+      "class": "operational",
+      "shape": "copied"
+    },
+    "created_at": {
+      "type": "timestamp_ms",
+      "required": true,
+      "description": "ms-epoch set on first put",
+      "class": "operational",
+      "shape": "copied"
+    },
+    "updated_at": {
+      "type": "timestamp_ms",
+      "required": true,
+      "description": "ms-epoch; advances on every write",
+      "class": "operational",
+      "shape": "copied"
+    },
+    "job": {
+      "type": "string",
+      "required": false,
+      "description": "optional job tag on a time entry; the close-handler copies it into the wage accrual's dimensions for per-job labor cost",
+      "class": "operational",
+      "shape": "copied"
+    },
+    "task_id": {
+      "type": "string",
+      "required": false,
+      "description": "optional task reference on a time entry (a modules/tasks task_id); the close-handler copies it into the wage accrual's dimensions.task \u2014 cost per task is a statement slice, and fix work logged against a class task IS the class's fix cost",
+      "class": "operational",
+      "shape": "referenced"
+    }
+  },
+  "worker-legal": {
+    "worker_id": {
+      "type": "string",
+      "required": true,
+      "description": "hash key; the worker this legal record belongs to (many-to-one with worker)",
+      "class": "subject",
+      "shape": "referenced"
+    },
+    "sk": {
+      "type": "string",
+      "required": true,
+      "description": "range key; composite role#type (e.g. \"barista#W-4\"). per-role, not aggregated \u2014 two W-2 roles are two W-2 rows",
+      "class": "operational",
+      "shape": "copied"
+    },
+    "type": {
+      "type": "string",
+      "required": true,
+      "description": "legal document / election type carried in this row \u2014 free-form (e.g. W-4, W-2, 941, 1099, I-9, DE-4, PASSPORT, DL). the agent sets it from the current requirements it looks up, not a maintained enum of every federal/state/foreign form",
+      "class": "operational",
+      "shape": "copied"
+    },
+    "value": {
+      "type": "object",
+      "required": true,
+      "description": "typed JSON for the document. agent-managed (HR over chat); the SSN is masked here (XXX-XX-1234) \u2014 the raw SSN / bank account live in the secure store, injected by the emitter only at filing / ACH",
+      "class": "secret",
+      "shape": "copied"
+    },
+    "created_at": {
+      "type": "timestamp_ms",
+      "required": true,
+      "description": "ms-epoch set on first put",
+      "class": "operational",
+      "shape": "copied"
+    },
+    "updated_at": {
+      "type": "timestamp_ms",
+      "required": true,
+      "description": "ms-epoch; advances on every write",
+      "class": "operational",
+      "shape": "copied"
+    }
+  }
+}

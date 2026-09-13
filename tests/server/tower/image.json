@@ -1,0 +1,27 @@
+{
+  "api_id": null,
+  "functions": {
+    "tower-cognito-post-confirmation": {
+      "env": {
+        "ACCOUNTS_TABLE": "gerp-accounts"
+      },
+      "src_dir": "prod/tower/lambdas/cognito_post_confirmation",
+      "timeout": 10
+    },
+    "tower-provision-customer": {
+      "env": {
+        "AF_PATH_ID": "lpv3-63cyoeboo5tey",
+        "AF_PRODUCT_ID": "prod-zgoj6xklupj4s",
+        "CODEBUILD_PROJECT": "tower-per-customer",
+        "CUSTOMERS_OU_MANAGED_NAME": "customers (ou-8290-vdmjfh4n)",
+        "TOWER_PROVISIONING_ROLE": "arn:aws:iam::335667362239:role/TowerProvisioning"
+      },
+      "src_dir": "prod/tower/lambdas/provision_customer",
+      "timeout": 900
+    }
+  },
+  "gerp": "gradienterp",
+  "protocol": null,
+  "routes": [],
+  "stack": "tower"
+}

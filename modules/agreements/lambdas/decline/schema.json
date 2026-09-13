@@ -1,0 +1,8 @@
+{
+  "type": "object",
+  "properties": {
+    "thread": {"type": "string", "description": "The proposal's thread, echoed from it."},
+    "terms_hash": {"type": "string", "description": "The exact terms being declined, echoed from the proposal."}
+  },
+  "required": ["thread", "terms_hash"]
+}

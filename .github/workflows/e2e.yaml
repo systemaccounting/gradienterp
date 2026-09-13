@@ -1,0 +1,66 @@
+# The browser suite against the local stack: scripts/e2e.sh starts scripts/local-dev.sh and runs
+# smoke:local. No AWS. The bff seeds its gerps from LOCAL_GERPS, which the runner takes from the
+# repo secret of that name — the value of the SSM copy
+# /gradienterp/customers/gradienterp/local_dev/LOCAL_GERPS. A pull request from a fork gets no
+# secrets, so the job is skipped there.
+name: e2e
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: e2e-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  e2e-local:
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: tests/requirements.txt
+
+      - run: pip install -r tests/requirements.txt
+
+      - run: bash scripts/local-dev.sh --install
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: tests/e2e/package-lock.json
+
+      - name: .env from the LOCAL_GERPS secret
+        env:
+          LOCAL_GERPS: ${{ secrets.LOCAL_GERPS }}
+        run: |
+          if [ -z "$LOCAL_GERPS" ]; then echo "the LOCAL_GERPS repo secret is not set" >&2; exit 1; fi
+          umask 077
+          printf 'LOCAL_GERPS=%s\n' "$LOCAL_GERPS" > .env
+
+      # the suite's install and chromium; LOCAL_GERPS is already in .env, so it is left alone
+      - run: bash scripts/e2e.sh --configure
+
+      - name: chromium's system libraries
+        working-directory: tests/e2e
+        run: npx playwright install-deps chromium
+
+      - run: bash scripts/e2e.sh
+
+      - if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: e2e-test-results
+          path: tests/e2e/test-results
+          retention-days: 14

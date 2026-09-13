@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "manage_saved_cards",
+  "description": "List a payer's saved payment methods, or set which one their invoices are charged to. Read and select only — removing a method is done by its owner, not by an agent or a script.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["op", "contact_id"],
+  "properties": {
+    "op": {
+      "type": "string",
+      "enum": ["list", "select"],
+      "description": "list returns every method on this payer's processor customer plus which is selected; select makes one of them the method their invoices charge."
+    },
+    "contact_id": {
+      "type": "string",
+      "description": "Whose methods. The payer — an invoice's `customer`."
+    },
+    "payment_method_id": {
+      "type": "string",
+      "description": "Required for select: which method, from a list call."
+    },
+    "from_customers": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Extra processor customers this contact may draw a method from. A method only charges against the customer it hangs off, so selecting one from elsewhere stores that customer too."
+    }
+  }
+}

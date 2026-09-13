@@ -1,0 +1,271 @@
+{
+  "common": {
+    "gerp_profile_id": {
+      "type": "string",
+      "required": true,
+      "role": "key",
+      "source": "self",
+      "description": "hash key; the public polymorphic identity. person = the account's Cognito sub; business = the gerp_id. the public identity itself — what a `subject` elsewhere resolves THROUGH",
+      "class": "operational",
+      "shape": "copied"
+    },
+    "kind": {
+      "type": "enum",
+      "values": [
+        "person",
+        "business"
+      ],
+      "required": true,
+      "role": "discriminator",
+      "source": "self",
+      "description": "which profile bucket applies; a person edges an account_id, a business edges a gerp_id",
+      "class": "operational",
+      "shape": "copied"
+    },
+    "edges": {
+      "type": "string",
+      "required": true,
+      "source": "self",
+      "description": "the underlying id this profile fronts: account_id (person) or gerp_id (business)",
+      "class": "operational",
+      "shape": "referenced"
+    },
+    "display_name": {
+      "type": "string",
+      "required": false,
+      "source": "derived",
+      "description": "shown to readers; person = first+last, business = label. Derived on write, never user-supplied",
+      "class": "operational",
+      "shape": "copied"
+    },
+    "street": {
+      "type": "string",
+      "required": false,
+      "source": "self",
+      "class": "operational",
+      "shape": "copied"
+    },
+    "unit": {
+      "type": "string",
+      "required": false,
+      "source": "self",
+      "description": "apartment, suite, unit, floor",
+      "class": "operational",
+      "shape": "copied"
+    },
+    "city": {
+      "type": "string",
+      "required": false,
+      "role": "match-key",
+      "source": "self",
+      "description": "coarse location match dimension (\"techs in this city\")",
+      "class": "operational",
+      "shape": "copied"
+    },
+    "state": {
+      "type": "string",
+      "required": false,
+      "role": "match-key",
+      "source": "self",
+      "class": "operational",
+      "shape": "copied"
+    },
+    "zip": {
+      "type": "string",
+      "required": false,
+      "source": "self",
+      "class": "operational",
+      "shape": "copied"
+    },
+    "country": {
+      "type": "string",
+      "required": false,
+      "source": "self",
+      "class": "operational",
+      "shape": "copied"
+    },
+    "lat": {
+      "type": "number",
+      "required": false,
+      "role": "constraint",
+      "source": "self",
+      "description": "geocoded latitude; the proximity/radius constraint that refines a location match",
+      "class": "operational",
+      "shape": "copied"
+    },
+    "lng": {
+      "type": "number",
+      "required": false,
+      "role": "constraint",
+      "source": "self",
+      "description": "geocoded longitude; pairs with lat",
+      "class": "operational",
+      "shape": "copied"
+    },
+    "email": {
+      "type": "string",
+      "required": false,
+      "source": "self",
+      "class": "operational",
+      "shape": "copied",
+      "description": "the reachable channel a match needs to become a conversation"
+    },
+    "phone": {
+      "type": "string",
+      "required": false,
+      "source": "self",
+      "description": "e164 preferred",
+      "class": "operational",
+      "shape": "copied"
+    },
+    "verified": {
+      "type": "boolean",
+      "required": false,
+      "role": "ranking",
+      "source": "derived",
+      "description": "identity/credential verification; owned by the future verification flow, never written on an owner save",
+      "class": "operational",
+      "shape": "copied"
+    },
+    "links": {
+      "type": "list<object>",
+      "required": false,
+      "source": "self",
+      "description": "external links (website, socials); each {type, url}",
+      "fields": {
+        "type": {
+          "type": "string",
+          "required": true,
+          "description": "link kind, e.g. website | linkedin | instagram"
+        },
+        "url": {
+          "type": "string",
+          "required": true
+        }
+      },
+      "class": "operational",
+      "shape": "copied"
+    }
+  },
+  "person": {
+    "first": {
+      "type": "string",
+      "required": true,
+      "source": "self",
+      "description": "given name",
+      "class": "operational",
+      "shape": "copied"
+    },
+    "middle": {
+      "type": "string",
+      "required": false,
+      "source": "self",
+      "class": "operational",
+      "shape": "copied"
+    },
+    "last": {
+      "type": "string",
+      "required": true,
+      "source": "self",
+      "description": "family name",
+      "class": "operational",
+      "shape": "copied"
+    },
+    "soc": {
+      "type": "list<object>",
+      "required": false,
+      "role": "match-key",
+      "source": "derived",
+      "description": "what this person has done — their HISTORY, measured from their work across openly-operated gerps: a hours-weighted distribution over O*NET-SOC occupations read off the tasks they closed. Written by the platform's count, never by the owner. Hierarchical: index/query by code prefix (\"35-3023\" finds \"35-3023.01\")",
+      "fields": {
+        "code": {
+          "type": "string",
+          "required": true,
+          "description": "O*NET-SOC code, e.g. \"35-3023.01\""
+        },
+        "share": {
+          "type": "number",
+          "required": true,
+          "description": "this occupation's share of the hours in the window, 0..1"
+        },
+        "hours": {
+          "type": "number",
+          "required": true,
+          "description": "hours logged against tasks of this occupation in the window"
+        }
+      },
+      "class": "operational",
+      "shape": "copied"
+    },
+    "soc_intended": {
+      "type": "list<string>",
+      "required": false,
+      "role": "match-key",
+      "source": "self",
+      "description": "what this person says they do — O*NET-SOC codes picked from the list, labeled as intended. The history twin is `soc`, measured from their work. Hierarchical: index/query by code prefix",
+      "class": "operational",
+      "shape": "copied"
+    },
+    "soc_window": {
+      "type": "string",
+      "required": false,
+      "source": "derived",
+      "description": "the window the measurement covers, as \"<from>..<to>\" dates; absent until a count has run",
+      "class": "operational",
+      "shape": "copied"
+    }
+  },
+  "business": {
+    "label": {
+      "type": "string",
+      "required": false,
+      "source": "self",
+      "description": "business name; display_name derives from it for business rows",
+      "class": "operational",
+      "shape": "copied"
+    },
+    "naics": {
+      "type": "list<object>",
+      "required": false,
+      "role": "match-key",
+      "source": "derived",
+      "description": "what this business has done — its HISTORY, measured from what it sells: a revenue-weighted distribution over NAICS industries read off its paid invoice lines. Written by the platform's count, never by the owner. Hierarchical: index/query by code prefix. Crosswalks to SOC for person↔business matches",
+      "fields": {
+        "code": {
+          "type": "string",
+          "required": true,
+          "description": "NAICS 2022 code, e.g. \"722515\""
+        },
+        "share": {
+          "type": "number",
+          "required": true,
+          "description": "this industry's share of the revenue in the window, 0..1"
+        },
+        "revenue": {
+          "type": "number",
+          "required": true,
+          "description": "revenue on lines of this industry in the window"
+        }
+      },
+      "class": "operational",
+      "shape": "copied"
+    },
+    "naics_intended": {
+      "type": "list<string>",
+      "required": false,
+      "role": "match-key",
+      "source": "self",
+      "description": "what this business says it does — NAICS codes picked from the list, labeled as intended; how a gerp that has not sold anything yet is found. The history twin is `naics`, measured from its sales. Hierarchical: index/query by code prefix",
+      "class": "operational",
+      "shape": "copied"
+    },
+    "naics_window": {
+      "type": "string",
+      "required": false,
+      "source": "derived",
+      "description": "the window the measurement covers, as \"<from>..<to>\" dates; absent until a count has run",
+      "class": "operational",
+      "shape": "copied"
+    }
+  }
+}

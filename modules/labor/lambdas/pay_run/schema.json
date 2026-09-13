@@ -1,0 +1,17 @@
+{
+  "type": "object",
+  "description": "Run payroll withholding for a worker for a pay period: reclassify the period's accrued WAGES_PAYABLE into employee withholdings + employer taxes, per what is attached to PAY_RUN#<worker_id>.",
+  "properties": {
+    "worker_id": {
+      "type": "string",
+      "description": "The worker (contact_id) to run payroll for."
+    },
+    "period": {
+      "type": "string",
+      "description": "Pay period as YYYY-MM. Defaults to the current month."
+    }
+  },
+  "required": [
+    "worker_id"
+  ]
+}

@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "modules/events/purchasing/po.proposed.v1",
+  "title": "po.proposed",
+  "description": "LIVE RAIL (addressed event). The buyer proposes terms to a seller; the agreements substrate holds both stamps on one row. thread/terms_hash are peer-shared agreement keys \u2014 never location-prefixed.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "openly_operated",
+    "customer_id",
+    "thread",
+    "terms_hash",
+    "total",
+    "to"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "integer",
+      "const": 1,
+      "description": "Bumped on breaking shape change. Consumers branch on it."
+    },
+    "openly_operated": {
+      "type": "boolean",
+      "description": "Set at emit time from the gerp's settings. The publication rule's filter \u2014 a private gerp's events never leave the operator plane."
+    },
+    "customer_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Emitting tenant (gerp_id). Redundant with the envelope account id but saves consumers a join."
+    },
+    "thread": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Proposer-generated exchange id \u2014 the agreement key."
+    },
+    "terms_hash": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Content fingerprint both sides compute identically."
+    },
+    "total": {
+      "type": "number",
+      "description": "Agreed total.",
+      "exclusiveMinimum": 0
+    },
+    "to": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Recipient gerp_profile_id (detail.to routing)."
+    }
+  }
+}

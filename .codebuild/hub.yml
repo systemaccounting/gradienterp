@@ -1,0 +1,53 @@
+# CodeBuild buildspec — applies prod/hub/ against a hub account.
+#
+# Driven by aws_codebuild_project.hub in prod/tower/main.tf. Env vars (set by the provisioner's
+# StartBuild override):
+#   HUB_ID          — the hub's name in the platform's HUBS map (its region, e.g. us-east-1)
+#   HUB_ACCOUNT_ID  — the vended account
+#   HUB_REGION      — where the hub's bus lives
+#   TF_ACTION       — apply (default) | destroy
+version: 0.2
+
+env:
+  variables:
+    TF_VERSION: "1.10.3"
+    TF_IN_AUTOMATION: "1"
+
+phases:
+  install:
+    commands:
+      - echo "==> installing terraform ${TF_VERSION}"
+      - curl -fsSL -o /tmp/tf.zip "https://releases.hashicorp.com/terraform/${TF_VERSION}/terraform_${TF_VERSION}_linux_amd64.zip"
+      - unzip -q /tmp/tf.zip -d /usr/local/bin/
+      - terraform version
+
+  pre_build:
+    commands:
+      - 'test -n "${HUB_ID}" || { echo "missing HUB_ID"; exit 1; }'
+      - 'test -n "${HUB_ACCOUNT_ID}" || { echo "missing HUB_ACCOUNT_ID"; exit 1; }'
+      - 'export HUB_REGION="${HUB_REGION:-us-east-1}"'
+      - 'export TF_ACTION="${TF_ACTION:-apply}"'
+      - 'case "${TF_ACTION}" in apply|destroy) ;; *) echo "TF_ACTION must be apply or destroy, got ${TF_ACTION}"; exit 1;; esac'
+      - echo "    hub_id=${HUB_ID} account=${HUB_ACCOUNT_ID} region=${HUB_REGION} action=${TF_ACTION}"
+
+  build:
+    commands:
+      - cd prod/hub
+      - echo "==> terraform init (key=hubs/${HUB_ID}/terraform.tfstate)"
+      - terraform init -backend-config="key=hubs/${HUB_ID}/terraform.tfstate" -reconfigure -input=false -no-color
+      - export TF_VAR_hub_id="${HUB_ID}" TF_VAR_aws_account_id="${HUB_ACCOUNT_ID}" TF_VAR_aws_region="${HUB_REGION}"
+      - |
+        if [ "${TF_ACTION}" = "destroy" ]; then
+          terraform destroy -auto-approve -input=false -no-color
+        else
+          terraform apply -auto-approve -input=false -no-color
+        fi
+
+  post_build:
+    commands:
+      - |
+        if [ "${TF_ACTION}" = "apply" ] && [ "${CODEBUILD_BUILD_SUCCEEDING}" = "1" ]; then
+          cd prod/hub
+          echo "==> hub ${HUB_ID} is up; put these in config.json HUBS.${HUB_ID}:"
+          terraform output -no-color -json | jq '{account: "'"${HUB_ACCOUNT_ID}"'", region: "'"${HUB_REGION}"'", bus_arn: .bus_arn.value, manage_edges_arn: .manage_edges_arn.value}'
+        fi

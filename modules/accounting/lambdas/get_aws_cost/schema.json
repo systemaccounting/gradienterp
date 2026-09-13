@@ -1,0 +1,38 @@
+{
+  "type": "object",
+  "description": "What running this gerp costs on AWS: month to date (or last month, or a range) by service, the total, and the invoice estimate at the disclosed markup. Read when the owner asks what this costs.",
+  "required": [
+    "op"
+  ],
+  "properties": {
+    "op": {
+      "type": "string",
+      "enum": [
+        "read"
+      ],
+      "description": "read."
+    },
+    "period": {
+      "type": "string",
+      "enum": [
+        "this_month",
+        "last_month"
+      ],
+      "description": "this_month (default, month to date through yesterday) or last_month. For an explicit window pass range instead."
+    },
+    "range": {
+      "type": "object",
+      "description": "An explicit window instead of period: ISO dates, end exclusive, not past today.",
+      "properties": {
+        "start": {
+          "type": "string",
+          "description": "YYYY-MM-DD"
+        },
+        "end": {
+          "type": "string",
+          "description": "YYYY-MM-DD, exclusive"
+        }
+      }
+    }
+  }
+}

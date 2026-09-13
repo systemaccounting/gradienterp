@@ -1,0 +1,46 @@
+{
+  "type": "object",
+  "description": "A hosted processor page: kind payment pays one invoice (create fresh each send); setup saves a payer's card we never see; test makes a real test-mode payment proving the webhook seam.",
+  "required": [
+    "kind"
+  ],
+  "properties": {
+    "kind": {
+      "type": "string",
+      "enum": [
+        "payment",
+        "setup",
+        "test"
+      ],
+      "description": "payment: pay one invoice. setup: save a card for later charges. test: prove the processor can reach this firm's books."
+    },
+    "invoice_id": {
+      "type": "string",
+      "description": "kind payment, required there: the invoice this link pays. Must be issued, overdue or partly paid."
+    },
+    "return_url": {
+      "type": "string",
+      "description": "payment: where the payer lands after paying (defaults to the firm's portal). setup, required there: where the browser returns; session_id is appended so the landing route can store the saved ids."
+    },
+    "contact_id": {
+      "type": "string",
+      "description": "kind setup, required there: whose card this is. Rides the session metadata so the return route knows."
+    },
+    "email": {
+      "type": "string",
+      "description": "kind setup: prefills the form and labels the processor customer."
+    },
+    "provider": {
+      "type": "string",
+      "description": "payment and test: only if the firm has several processors and this should not use their default."
+    },
+    "secret_name": {
+      "type": "string",
+      "description": "kind test, stripe and square: the name the test-mode key or sandbox token was stored under. PayPal reads paypal_client_id and paypal_secret."
+    },
+    "amount": {
+      "type": "number",
+      "description": "kind test: test amount, defaults per processor \u2014 no real money moves."
+    }
+  }
+}

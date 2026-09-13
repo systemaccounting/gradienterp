@@ -1,0 +1,27 @@
+{
+  "type": "object",
+  "description": "Accept a capital instrument an issuer offered - the investor taking the terms. Both sides stamped = agreed; the instrument is created once the issuer records your funds. Terms only, no money moves.",
+  "properties": {
+    "seller": {
+      "type": "string",
+      "description": "The issuing firm's gerp_id (who published the offer)."
+    },
+    "thread": {
+      "type": "string",
+      "description": "The negotiation thread, echoed from the offer.proposed you received."
+    },
+    "terms_hash": {
+      "type": "string",
+      "description": "The terms fingerprint, echoed from the offer.proposed — accepting the exact terms offered."
+    },
+    "buyer": {
+      "type": "string",
+      "description": "The investor's gerp_id / contact. Defaults to you (the caller); pass it to record an external investor's acceptance."
+    }
+  },
+  "required": [
+    "seller",
+    "thread",
+    "terms_hash"
+  ]
+}

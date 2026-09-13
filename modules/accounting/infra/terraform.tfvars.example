@@ -1,0 +1,17 @@
+# Example inputs for local `terraform plan` / `apply` against this module.
+# Copy to terraform.tfvars (gitignored) to iterate.
+#
+# Tenant metadata (owner_email, reporting_schedule) is NOT here — it lives
+# in SSM Parameter Store at /gradienterp/customers/<customer_id>.
+# See modules/agent/infra/terraform.tfvars.example for the seed command.
+
+customer_id = "sandbox_01"
+
+# Operator-wide (not tenant-specific). SES-verified sender identity that
+# statement-notification and pending-classification emails are sent from.
+# Must be verified in SES before `apply` or the first send will fail.
+sender_email = "notifications@example.invalid"
+
+# Operator-wide base URL for agent chat interview links embedded in emails.
+# Placeholder until phase 6 channels ship; can point anywhere for sandbox.
+chat_base_url = "https://example.invalid/chat"

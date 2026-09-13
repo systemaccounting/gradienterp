@@ -1,0 +1,14 @@
+{
+  "type": "object",
+  "description": "Grow the cmd tool's deps. Pass spec_key (a cabinet buildspecs/ yaml you authored) to start a layer build, or build_id to poll; on success the layer attaches to cmd automatically (max 5).",
+  "properties": {
+    "spec_key": {
+      "type": "string",
+      "description": "Cabinet key under buildspecs/. The spec must install into layer/ and artifact layer.zip (bin/ inside lands on PATH)."
+    },
+    "build_id": {
+      "type": "string",
+      "description": "A build id returned by a prior call. Polls status; publishes + attaches the layer when SUCCEEDED."
+    }
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "merchant_id": "MLVASSBGBB05Z",
+  "type": "payout.sent",
+  "event_id": "7f766a24-424e-418f-9670-7a3c2cdb29f5",
+  "created_at": "2026-06-08T02:15:24Z",
+  "data": {
+    "type": "payout",
+    "id": "po_41aae92e-3f82-49a0-84d0-11f38e65494d",
+    "object": {
+      "payout": {
+        "id": "po_41aae92e-3f82-49a0-84d0-11f38e65494d",
+        "status": "SENT",
+        "location_id": "LYBDR6Y0NV8S1",
+        "created_at": "2026-06-08T02:15:24Z",
+        "updated_at": "2026-06-08T02:15:24Z",
+        "amount_money": {
+          "amount": -33,
+          "currency_code": "USD"
+        },
+        "destination": {
+          "type": "BANK_ACCOUNT"
+        },
+        "version": 1,
+        "type": "BATCH",
+        "arrival_date": "2026-06-08",
+        "end_to_end_id": "c7b9ae7d-f518-43de-bbb8-ffbbcadbfea0"
+      }
+    }
+  }
+}

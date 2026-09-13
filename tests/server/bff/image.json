@@ -1,0 +1,261 @@
+{
+  "api_id": "oq5y2j1trc",
+  "functions": {
+    "gerp-cloud-bff": {
+      "env": {
+        "ACCOUNTS_TABLE": "gerp-accounts",
+        "AGENT_EMAIL_PARENT_DOMAIN": "agents.gradienterp.cloud",
+        "CARD_METHODS_FN": "arn:aws:lambda:us-east-1:867637277314:function:gerp-payments-gradienterp-manage_saved_cards",
+        "CLOSURE_BEGIN_FN": "",
+        "CUSTOMERS_TABLE": "gerp-customers",
+        "CUSTOMER_ERASE_HOOK_PARAM": "/gradienterp/cloud/hooks/customers_erase",
+        "CUSTOMER_HOOK_PARAM": "/gradienterp/cloud/hooks/customers_upsert",
+        "MEMBERS_TABLE": "gerp-members",
+        "OWNER_EMAIL_FN": "tower-update-owner-email",
+        "PRIORS_TABLE": "gerp-priors",
+        "PROFILES_TABLE": "gerp-profiles",
+        "PROVISION_QUEUE": "",
+        "SAVE_CARD_FN": "arn:aws:lambda:us-east-1:867637277314:function:gerp-payments-gradienterp-save_payment_method",
+        "SETUP_LINK_FN": "arn:aws:lambda:us-east-1:867637277314:function:gerp-payments-gradienterp-payment_links",
+        "USER_POOL_ID": "us-east-1_1803uNTZU",
+        "WEB_DIR": "/var/task/web"
+      },
+      "src_dir": "prod/gradienterp_cloud/bff",
+      "timeout": 29
+    }
+  },
+  "gerp": "gradienterp",
+  "protocol": "HTTP",
+  "routes": [
+    {
+      "authorization": "NONE",
+      "function": "gerp-cloud-bff",
+      "jwt": null,
+      "method": "ANY",
+      "path": null,
+      "route_key": "$default"
+    },
+    {
+      "authorization": "JWT",
+      "function": "gerp-cloud-bff",
+      "jwt": {
+        "Audience": [
+          "7jbo53d9kq8gvj0kglfnjuh17k"
+        ],
+        "Issuer": "https://cognito-idp.us-east-1.amazonaws.com/us-east-1_1803uNTZU"
+      },
+      "method": "DELETE",
+      "path": "/api/account",
+      "route_key": "DELETE /api/account"
+    },
+    {
+      "authorization": "JWT",
+      "function": "gerp-cloud-bff",
+      "jwt": {
+        "Audience": [
+          "7jbo53d9kq8gvj0kglfnjuh17k"
+        ],
+        "Issuer": "https://cognito-idp.us-east-1.amazonaws.com/us-east-1_1803uNTZU"
+      },
+      "method": "GET",
+      "path": "/api/account",
+      "route_key": "GET /api/account"
+    },
+    {
+      "authorization": "JWT",
+      "function": "gerp-cloud-bff",
+      "jwt": {
+        "Audience": [
+          "7jbo53d9kq8gvj0kglfnjuh17k"
+        ],
+        "Issuer": "https://cognito-idp.us-east-1.amazonaws.com/us-east-1_1803uNTZU"
+      },
+      "method": "GET",
+      "path": "/api/gerp-config",
+      "route_key": "GET /api/gerp-config"
+    },
+    {
+      "authorization": "JWT",
+      "function": "gerp-cloud-bff",
+      "jwt": {
+        "Audience": [
+          "7jbo53d9kq8gvj0kglfnjuh17k"
+        ],
+        "Issuer": "https://cognito-idp.us-east-1.amazonaws.com/us-east-1_1803uNTZU"
+      },
+      "method": "GET",
+      "path": "/api/gerps",
+      "route_key": "GET /api/gerps"
+    },
+    {
+      "authorization": "JWT",
+      "function": "gerp-cloud-bff",
+      "jwt": {
+        "Audience": [
+          "7jbo53d9kq8gvj0kglfnjuh17k"
+        ],
+        "Issuer": "https://cognito-idp.us-east-1.amazonaws.com/us-east-1_1803uNTZU"
+      },
+      "method": "GET",
+      "path": "/api/places/autocomplete",
+      "route_key": "GET /api/places/autocomplete"
+    },
+    {
+      "authorization": "JWT",
+      "function": "gerp-cloud-bff",
+      "jwt": {
+        "Audience": [
+          "7jbo53d9kq8gvj0kglfnjuh17k"
+        ],
+        "Issuer": "https://cognito-idp.us-east-1.amazonaws.com/us-east-1_1803uNTZU"
+      },
+      "method": "GET",
+      "path": "/api/places/place",
+      "route_key": "GET /api/places/place"
+    },
+    {
+      "authorization": "JWT",
+      "function": "gerp-cloud-bff",
+      "jwt": {
+        "Audience": [
+          "7jbo53d9kq8gvj0kglfnjuh17k"
+        ],
+        "Issuer": "https://cognito-idp.us-east-1.amazonaws.com/us-east-1_1803uNTZU"
+      },
+      "method": "GET",
+      "path": "/api/public-user",
+      "route_key": "GET /api/public-user"
+    },
+    {
+      "authorization": "JWT",
+      "function": "gerp-cloud-bff",
+      "jwt": {
+        "Audience": [
+          "7jbo53d9kq8gvj0kglfnjuh17k"
+        ],
+        "Issuer": "https://cognito-idp.us-east-1.amazonaws.com/us-east-1_1803uNTZU"
+      },
+      "method": "POST",
+      "path": "/api/account",
+      "route_key": "POST /api/account"
+    },
+    {
+      "authorization": "JWT",
+      "function": "gerp-cloud-bff",
+      "jwt": {
+        "Audience": [
+          "7jbo53d9kq8gvj0kglfnjuh17k"
+        ],
+        "Issuer": "https://cognito-idp.us-east-1.amazonaws.com/us-east-1_1803uNTZU"
+      },
+      "method": "POST",
+      "path": "/api/automate/{proxy+}",
+      "route_key": "POST /api/automate/{proxy+}"
+    },
+    {
+      "authorization": "JWT",
+      "function": "gerp-cloud-bff",
+      "jwt": {
+        "Audience": [
+          "7jbo53d9kq8gvj0kglfnjuh17k"
+        ],
+        "Issuer": "https://cognito-idp.us-east-1.amazonaws.com/us-east-1_1803uNTZU"
+      },
+      "method": "POST",
+      "path": "/api/billing/methods",
+      "route_key": "POST /api/billing/methods"
+    },
+    {
+      "authorization": "JWT",
+      "function": "gerp-cloud-bff",
+      "jwt": {
+        "Audience": [
+          "7jbo53d9kq8gvj0kglfnjuh17k"
+        ],
+        "Issuer": "https://cognito-idp.us-east-1.amazonaws.com/us-east-1_1803uNTZU"
+      },
+      "method": "POST",
+      "path": "/api/billing/save-card",
+      "route_key": "POST /api/billing/save-card"
+    },
+    {
+      "authorization": "JWT",
+      "function": "gerp-cloud-bff",
+      "jwt": {
+        "Audience": [
+          "7jbo53d9kq8gvj0kglfnjuh17k"
+        ],
+        "Issuer": "https://cognito-idp.us-east-1.amazonaws.com/us-east-1_1803uNTZU"
+      },
+      "method": "POST",
+      "path": "/api/billing/setup-link",
+      "route_key": "POST /api/billing/setup-link"
+    },
+    {
+      "authorization": "JWT",
+      "function": "gerp-cloud-bff",
+      "jwt": {
+        "Audience": [
+          "7jbo53d9kq8gvj0kglfnjuh17k"
+        ],
+        "Issuer": "https://cognito-idp.us-east-1.amazonaws.com/us-east-1_1803uNTZU"
+      },
+      "method": "POST",
+      "path": "/api/export",
+      "route_key": "POST /api/export"
+    },
+    {
+      "authorization": "JWT",
+      "function": "gerp-cloud-bff",
+      "jwt": {
+        "Audience": [
+          "7jbo53d9kq8gvj0kglfnjuh17k"
+        ],
+        "Issuer": "https://cognito-idp.us-east-1.amazonaws.com/us-east-1_1803uNTZU"
+      },
+      "method": "POST",
+      "path": "/api/gerp-settings",
+      "route_key": "POST /api/gerp-settings"
+    },
+    {
+      "authorization": "JWT",
+      "function": "gerp-cloud-bff",
+      "jwt": {
+        "Audience": [
+          "7jbo53d9kq8gvj0kglfnjuh17k"
+        ],
+        "Issuer": "https://cognito-idp.us-east-1.amazonaws.com/us-east-1_1803uNTZU"
+      },
+      "method": "POST",
+      "path": "/api/gerps",
+      "route_key": "POST /api/gerps"
+    },
+    {
+      "authorization": "JWT",
+      "function": "gerp-cloud-bff",
+      "jwt": {
+        "Audience": [
+          "7jbo53d9kq8gvj0kglfnjuh17k"
+        ],
+        "Issuer": "https://cognito-idp.us-east-1.amazonaws.com/us-east-1_1803uNTZU"
+      },
+      "method": "POST",
+      "path": "/api/gerps/close",
+      "route_key": "POST /api/gerps/close"
+    },
+    {
+      "authorization": "JWT",
+      "function": "gerp-cloud-bff",
+      "jwt": {
+        "Audience": [
+          "7jbo53d9kq8gvj0kglfnjuh17k"
+        ],
+        "Issuer": "https://cognito-idp.us-east-1.amazonaws.com/us-east-1_1803uNTZU"
+      },
+      "method": "POST",
+      "path": "/api/public-user",
+      "route_key": "POST /api/public-user"
+    }
+  ],
+  "stack": "bff"
+}

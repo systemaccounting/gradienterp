@@ -1,0 +1,25 @@
+name: Metric
+description: A change to what a published metric means. openlyoperated.biz fills this from the metric's card.
+title: "metric: "
+labels: ["metric"]
+body:
+  - type: input
+    id: key
+    attributes:
+      label: The metric's key
+      placeholder: margin
+    validations:
+      required: true
+  - type: textarea
+    id: definition
+    attributes:
+      label: The definition today
+      description: The sentence under the number on openlyoperated.biz.
+    validations:
+      required: true
+  - type: textarea
+    id: proposed
+    attributes:
+      label: The proposed definition
+    validations:
+      required: true

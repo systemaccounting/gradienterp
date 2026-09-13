@@ -1,0 +1,342 @@
+<!doctype html>
+<!--
+  gradientERP owner web app. Gerp-first nesting, single page, client-side view toggle:
+  login -> home (your gerps + account actions) -> gerp hub (gerp-scoped actions).
+  All API calls same-origin to the BFF (/api/*); the page never sees a gerp's raw gateway URL.
+  Hosted UI (PKCE) login. Dark UI matched to the agent chat client it links into.
+  Local dev: `python3 bff/serve.py` at http://localhost:3000 (no AWS — inject a fake id_token).
+
+  IA: account-level actions (create a gerp, public profile) live on home; gerp-level actions
+  (chat, settings) live under a gerp you've entered. (Secrets are added in-chat via the agent's
+  collect_secret form — no add-secret screen.)
+-->
+<html lang="en">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>gradientERP</title>
+  <meta name="description" content="ai first, cloud native ERP — the agentic cross-firm optimization protocol, supplying the gradient r&d and capital need through business transparency" />
+  <link rel="alternate" type="text/markdown" href="/llms.txt" title="llms.txt" />
+  <style>
+    :root{
+      --bg:#0f1115; --panel:#181b22; --card:#1a1f29; --card2:#1f2531;
+      --ink:#e7e9ee; --mut:#8b93a7; --line:#262b36; --line2:#39414f;
+      --acc:#5b8cff; --acc2:#9d6bff;
+      --ok-bg:#10241a; --ok-ink:#7ee2a8; --err-bg:#2a1517; --err-ink:#f3a6a6;
+      --r:12px;
+    }
+    *{box-sizing:border-box;}
+    html{background:var(--bg); color-scheme:dark; -webkit-text-size-adjust:100%; text-size-adjust:100%;}  /* paint the canvas too — no body→canvas propagation seam; pin text to CSS sizes so Android font-boosting can't inflate the wordmark out of its ∇/g lockup */
+    /* dither the near-black field: #0f1115 banded on 8-bit panels; faint noise breaks the flat steps */
+    body::before{content:""; position:absolute; inset:0; z-index:-1; pointer-events:none; opacity:.035;
+      background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");}
+    body{margin:0; position:relative; min-height:100vh; background:var(--bg); color:var(--ink);
+      font:15px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;}
+    .wrap{max-width:42rem; margin:0 auto; padding:0 1.25rem 4rem;}
+    a{color:var(--acc); cursor:pointer; text-decoration:none;} a:hover{text-decoration:underline;}
+    .brand{font-weight:700; letter-spacing:-.015em;}
+    /* the gradient is the signature — ∇ is the del/gradient operator; "transparency is the
+       gradient pulling r&d + capital toward each business". reusable gradient-text + the mark. */
+    .g{background:linear-gradient(95deg,var(--acc),var(--acc2));
+      -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent;}
+    .nabla{font-family:Georgia,"Times New Roman",serif; line-height:.9;
+      background:linear-gradient(158deg,var(--acc),var(--acc2));
+      -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent;}
+    .logo{display:inline-flex; align-items:center; gap:0;}
+    .logo.to-home{cursor:pointer; transition:opacity .12s;}
+    .logo.to-home:hover{opacity:.82;}
+    /* logo lockup — matches artifacts/gradientERP-logo (live text, not an image): the ∇ ~2.58× the
+       wordmark, the word overlapping its right edge on z-index:1. ratios scaled to the bar size. */
+    .appbar .nabla{font-size:3.36rem; line-height:.78; transform:translateY(-.04em); margin-right:-.28em;}
+    .appbar .brand{position:relative; z-index:1; transform:translateY(-.1em) translateX(.04em);}
+    .appbar{display:flex; align-items:center; gap:.75rem; padding:1.4rem 0 1.2rem;
+      border-bottom:1px solid var(--line); margin-bottom:1.5rem;}
+    .appbar .brand{font-size:1.3rem;}
+    .sp{flex:1;}
+    .chip{color:var(--mut); font-size:.85rem;}
+    .back{color:var(--mut); font-size:.9rem;} .back:hover{color:var(--ink); text-decoration:none;}
+    .panel.gate{margin:.4rem 0 1.1rem; padding:.8rem 1rem; color:var(--ink);
+      background:color-mix(in srgb, var(--acc) 10%, var(--card)); border-color:color-mix(in srgb, var(--acc) 30%, var(--line));}
+    .panel.gate a{color:var(--acc); cursor:pointer; text-decoration:underline dotted; text-underline-offset:3px;}
+    .crumb{font-size:.84rem; color:var(--mut); margin:.2rem 0 0;}
+    .crumb a{color:inherit; cursor:pointer; text-decoration:underline dotted; text-underline-offset:3px;}
+    .crumb a:hover{color:var(--ink);}
+    .crumb .sep{margin:0 .45rem;}
+    h2.title{font-size:1.45rem; margin:.4rem 0 .3rem; letter-spacing:-.01em;}
+    .sub{color:var(--mut); margin:0 0 1.4rem;}
+    .sec{font-size:.78rem; text-transform:uppercase; letter-spacing:.07em; color:var(--mut); margin:1.8rem 0 .7rem;}
+    /* a disclosure block: heading + note on the summary line, a chevron that turns when open, the form
+       below. Each is its own tinted block open or closed — the private one neutral, the published one
+       on the accent */
+    .disc{padding:.35rem 1.05rem 1.2rem; border:1px solid var(--line); border-radius:var(--r);}
+    .disc.legal{background:var(--card2);}
+    .disc.public{background:color-mix(in srgb, var(--acc) 10%, var(--card)); border-color:color-mix(in srgb, var(--acc) 30%, var(--line));}
+    /* the public heading is the yellow pages entry: yellow, heavy, wide */
+    .disc.public > .sec:first-child{color:#f5c542; font-weight:800; letter-spacing:.12em; font-size:.84rem; margin-top:.8rem;}
+    .disc + .disc{margin-top:.6rem;}
+    .disc.public.off{opacity:.45; pointer-events:none; filter:grayscale(1);}
+    .disc-note{color:var(--mut); font-size:.84rem; margin:0 0 .6rem;}
+    .pub-grid{display:grid; grid-template-columns:repeat(4, 1fr); gap:.35rem .8rem;}
+    .pub-field{display:flex; align-items:center; gap:.45rem; margin:0; font-weight:500; cursor:pointer;}
+    .pub-field input{width:auto; margin:0;}
+    @media (max-width:520px){ .pub-grid{grid-template-columns:repeat(2, 1fr);} }
+    .disc-body .sec{margin:1.4rem 0 .5rem;}
+    /* cards */
+    .cards{display:flex; flex-direction:column; gap:.6rem;}
+    .card{display:flex; align-items:center; gap:.9rem; padding:.95rem 1.05rem; background:var(--card);
+      border:1px solid var(--line); border-radius:var(--r); cursor:pointer;
+      transition:border-color .12s, background .12s, transform .12s;}
+    .card:hover{border-color:var(--line2); background:var(--card2); transform:translateY(-1px);}
+    .card .ic{width:2.2rem; height:2.2rem; flex:none; border-radius:9px; background:#222a36;
+      display:flex; align-items:center; justify-content:center; font-size:1rem; font-weight:600; color:var(--mut);}
+    .card .ic.init{color:#cdd6ea; background:linear-gradient(140deg,#26304a,#2c2540);}
+    .card .body{flex:1; min-width:0;}
+    .card .name{font-weight:600;}
+    .card .meta{color:var(--mut); font-size:.85rem; margin-top:.05rem;}
+    .card .chev{color:var(--mut); font-size:1.15rem;}
+    .card.soon{opacity:.5; cursor:default;}
+    .card.soon:hover{border-color:var(--line); background:var(--card); transform:none;}
+    /* stalled on a card — full opacity and clickable, because the point is that it is waiting on
+       the person looking at it. The dimmed states below are waiting on us. */
+    .card.pay{border-color:var(--acc);}
+    .card.pay .meta{color:var(--acc);}
+    /* provisioning placeholder — greyed, spinner in the icon slot, not clickable */
+    .card.prov{opacity:.6; cursor:default;}
+    .card.prov:hover{border-color:var(--line); background:var(--card); transform:none;}
+    .card.prov .spin, .setting .spin{width:16px; height:16px; flex:none; margin-top:.15rem; border:2px solid var(--line2); border-top-color:var(--acc); border-radius:50%; animation:spin .7s linear infinite;}
+    button .spin{display:inline-block; width:14px; height:14px; border:2px solid rgba(255,255,255,.35); border-top-color:#fff; border-radius:50%; animation:spin .7s linear infinite; vertical-align:-2px;}
+    /* inline setting row (gerp hub) — checkbox + name/desc, card-styled */
+    .setting{display:flex; align-items:flex-start; gap:.85rem; padding:.95rem 1.05rem; margin:0;
+      background:var(--card); border:1px solid var(--line); border-radius:var(--r); cursor:pointer; transition:border-color .12s;}
+    .setting + .setting{margin-top:.5rem;}
+    .setting:hover{border-color:var(--line2);}
+    .setting input{width:auto; margin:.2rem 0 0;}
+    .setting .s-body{display:flex; flex-direction:column;}
+    .setting .s-name{font-weight:600;}
+    .setting .s-desc{color:var(--mut); font-size:.85rem; margin-top:.12rem;}
+    /* loading: hide the checkbox (a disabled-unchecked box reads as "off"), show a spinner */
+    .setting .s-spin{display:none; width:14px; height:14px; margin-top:.18rem; flex:none; border:2px solid var(--line2); border-top-color:var(--acc); border-radius:50%; animation:spin .7s linear infinite;}
+    .setting.loading{cursor:default;}
+    .setting.loading input{display:none;}
+    .setting.loading .s-spin{display:inline-block;}
+    /* standing instructions — a directive per row with an X, then the add field. Reads as a list,
+       not a form: each row is the sentence itself, so the weight comes off .s-name. */
+    .setting .s-body{flex:1; min-width:0;}
+    .setting input[type=text]{width:100%; margin:0;}
+    .setting.instr{cursor:default; align-items:center;}
+    .setting.instr .s-name{font-weight:400; overflow-wrap:anywhere;}
+    .setting .x{flex:none; background:none; border:0; color:var(--mut); font-size:1.2rem; line-height:1;
+      padding:.1rem .4rem; border-radius:8px; cursor:pointer; transition:color .12s, background .12s;}
+    .setting .x:hover:not(:disabled){color:var(--ink); background:var(--line);}
+    .more{display:block; background:none; border:0; color:var(--acc); font:inherit; font-size:.88rem;
+      padding:.5rem .1rem; cursor:pointer;}
+    .more:hover{text-decoration:underline;}
+    @keyframes spin{to{transform:rotate(360deg);}}
+    /* auth interstitial — shown during the OAuth exchange + first gerps load */
+    .loading{min-height:calc(100vh - 4rem); display:flex; flex-direction:column; justify-content:center; align-items:center; gap:1.4rem; text-align:center;}
+    .loading .wm-big{width:12rem; max-width:60%; opacity:.85; margin-bottom:.3rem;}
+    .loadspin{width:30px; height:30px; border:3px solid var(--line2); border-top-color:var(--acc); border-radius:50%; animation:spin .8s linear infinite;}
+    .loadmsg{color:var(--mut); font-size:.95rem; margin:0;}
+    /* read-only field rows (Info & Billing) */
+    .panel{background:var(--card); border:1px solid var(--line); border-radius:var(--r); overflow:hidden;}
+    .field{display:flex; align-items:center; justify-content:space-between; gap:1rem; padding:.85rem 1.05rem;}
+    .field + .field{border-top:1px solid var(--line);}
+    .field .k{color:var(--mut); font-size:.9rem;}
+    .field .v{font-weight:500; text-align:right;}
+    .field .v.muted{color:var(--mut); font-weight:400;}
+    /* forms */
+    label{display:block; margin:1.1rem 0 .35rem; font-weight:600; font-size:.92rem;}
+    input[type=text],input[type=password],input[type=email],input[type=tel],input[type=url],input:not([type]){width:100%; padding:.65rem .75rem;
+      background:var(--panel); color:var(--ink); border:1px solid var(--line); border-radius:10px; font:inherit; outline:none;}
+    input:focus{border-color:var(--acc);}
+    select{width:100%; padding:.65rem .75rem; background:var(--panel); color:var(--ink); border:1px solid var(--line);
+      border-radius:10px; font:inherit; outline:none; appearance:none; -webkit-appearance:none;
+      background-image:linear-gradient(45deg,transparent 50%,var(--mut) 50%),linear-gradient(135deg,var(--mut) 50%,transparent 50%);
+      background-position:calc(100% - 1.2rem) 55%,calc(100% - .85rem) 55%; background-size:.35rem .35rem; background-repeat:no-repeat;}
+    select:focus{border-color:var(--acc);}
+    select option:disabled{color:var(--mut);}
+    label.chk{display:flex; align-items:center; gap:.5rem; font-weight:400; color:var(--mut); margin-top:.9rem;}
+    label.chk input{width:auto;}
+    button{margin-top:1.4rem; padding:.7rem 1.2rem; color:#fff; border:0; border-radius:10px; font:inherit;
+      font-weight:600; cursor:pointer; background:linear-gradient(95deg,var(--acc),var(--acc2));}
+    button:hover{filter:brightness(1.08);}
+    /* the purchase disclosure: readable, not fine print — it is the only place the buyer is told
+       what the card is for, so it gets body-text contrast rather than muted */
+    .terms{margin:0 0 .9rem; padding:.9rem 1rem; border:1px solid var(--line); border-radius:10px;
+      background:var(--card); line-height:1.55;}
+    button:disabled{cursor:not-allowed; filter:grayscale(.7) brightness(.75);}
+    button:disabled:hover{filter:grayscale(.7) brightness(.75);}
+    /* secondary action — sits under a panel it acts on, so it must not read as the screen's
+       primary the way the gradient does (Info & Billing already has Save above it) */
+    button.ghost{margin-top:.85rem; background:none; border:1px solid var(--line2); color:var(--ink);
+      font-weight:500;}
+    button.ghost:hover{border-color:var(--acc); color:#fff; filter:none;}
+    /* status */
+    #status{margin-top:1.25rem; padding:.8rem .95rem; border-radius:10px; white-space:pre-wrap;
+      font-size:.9rem; word-break:break-word;}
+    #status:empty{display:none;}
+    .ok{background:var(--ok-bg); color:var(--ok-ink);} .err{background:var(--err-bg); color:var(--err-ink);}
+    .muted, .setting .s-name.muted{color:var(--mut);}
+    .hidden{display:none;}
+    /* login */
+    .login{min-height:calc(100vh - 4rem); display:flex; flex-direction:column; justify-content:flex-start; align-items:center; text-align:center; padding-top:4rem;
+      --bw:clamp(2rem, 12.5vw, 4.14rem);}  /* banner tracks viewport so it fills the column on phones (~90%) and keeps the ∇/g lockup tucked; caps at desktop 4.14rem (≥530px), floor never overflows */
+    /* demo-gif column: one row per ERP module, headed by the exec role the agent now fills */
+    .demos{display:flex; flex-direction:column; gap:.55rem; width:25rem; max-width:100%; margin:1.7rem auto 0;}
+    .demo-row{display:flex; align-items:center; gap:.85rem; padding:.7rem .85rem; text-align:left;
+      background:var(--panel); border:1px dashed var(--line2); border-radius:12px;}
+    .demo-row .meta{flex:1; min-width:0;}
+    .demo-row .kicker{font-size:.64rem; text-transform:uppercase; letter-spacing:.07em; color:var(--mut); margin-bottom:.2rem;}
+    .demo-row .kicker .role{color:var(--acc2);}
+    .demo-row .prompt{font-size:.83rem; color:var(--ink); line-height:1.3;}
+    .demo-row{cursor:pointer;}
+    .demo-row:hover{border-color:var(--line);}
+    .demo-row .thumb{flex:0 0 4.6rem; aspect-ratio:16/10; border-radius:8px; background:var(--card2);
+      border:1px solid var(--line); display:flex; align-items:center; justify-content:center; color:var(--mut); font-size:.62rem; overflow:hidden;}
+    .demo-row .thumb img{width:100%; height:100%; object-fit:cover; display:block;}
+    /* click-to-open lightbox — a demo gif full-size over a dimmed page */
+    .lightbox{position:fixed; inset:0; z-index:100; background:rgba(4,6,10,.78); backdrop-filter:blur(2px);
+      display:flex; align-items:center; justify-content:center; padding:2rem; animation:lbin .14s ease;}
+    @keyframes lbin{from{opacity:0;} to{opacity:1;}}
+    .lightbox-inner{position:relative; display:flex; flex-direction:column; gap:.7rem; --lb-w:min(94vw, 1000px, calc(80vh * 880 / 720));}
+    .lightbox-inner img, .lightbox-inner video{width:var(--lb-w); aspect-ratio:880/720; height:auto; border-radius:12px; border:1px solid var(--line2);
+      box-shadow:0 24px 70px rgba(0,0,0,.6);}
+    /* invisible, but EXACTLY the img's computed box (same --lb-w formula), so nothing shifts when the gif lands */
+    .lightbox-wait{width:var(--lb-w);aspect-ratio:880/720;display:flex;align-items:center;justify-content:center;}
+    .lightbox-spin{width:34px;height:34px;border:3px solid var(--line2);border-top-color:var(--acc);border-radius:50%;animation:spin .7s linear infinite;}
+    .lightbox-cap{color:var(--mut); font-size:.82rem; text-transform:uppercase; letter-spacing:.06em;}
+    .lightbox-cap .role{color:var(--acc2);} .lightbox-cap .p{text-transform:none; letter-spacing:0; color:var(--ink);}
+    .lightbox-close{position:absolute; top:-2.4rem; right:0; background:transparent; border:0; color:var(--mut);
+      font-size:1.8rem; line-height:1; cursor:pointer; padding:0 .3rem;}
+    .lightbox-close:hover{color:var(--ink);}
+    /* confirmation modal — the close-a-gerp gate. Same overlay treatment as the lightbox, sized
+       for prose rather than an image. */
+    .modal{position:fixed; inset:0; z-index:120; background:rgba(4,6,10,.78); backdrop-filter:blur(2px);
+      display:flex; align-items:center; justify-content:center; padding:1.5rem; animation:lbin .14s ease;}
+    .modal-inner{background:var(--panel); border:1px solid var(--line2); border-radius:14px;
+      padding:1.4rem 1.5rem 1.5rem; width:min(94vw, 520px); box-shadow:0 24px 70px rgba(0,0,0,.6);}
+    .modal-inner h3{margin:0 0 .7rem; font-size:1.15rem;}
+    .modal-inner p{margin:0 0 .7rem; font-size:.92rem; line-height:1.5;}
+    .modal-inner label{display:block; margin:.9rem 0 .35rem; font-size:.9rem;}
+    .modal-inner input{width:100%;}
+    .modal-actions{display:flex; justify-content:flex-end; gap:.7rem; margin-top:1.2rem;}
+    .modal-actions button{margin-top:0;}
+    /* destructive: red only once it can actually fire, so a disabled button does not shout */
+    button.danger{background:var(--err-bg); border:1px solid #7a2b2f; color:var(--err-ink);}
+    button.danger:hover{background:#3a1c1f; filter:none;}
+    button.danger:disabled{background:none; border-color:var(--line); color:var(--mut);}
+    button.ghost.danger-text{color:var(--err-ink); border-color:var(--line2);}
+    button.ghost.danger-text:hover{border-color:#7a2b2f; color:var(--err-ink);}
+    .login-icons{display:flex; align-items:center; justify-content:center; gap:1.75rem; margin-top:1.9rem;}
+    .login-icons a{color:var(--mut); display:inline-flex; cursor:pointer; text-decoration:none;}
+    .login-icons a:hover{color:var(--ink);}
+    .login-icons .ico{width:28px; height:28px; fill:currentColor; display:block;}
+    .login-icons .discord:hover{color:#5865F2;}  /* discord blurple */
+    .help-link{margin:2rem 0 0; font-size:.92rem;}
+    .help-link a{display:inline-flex; align-items:center; gap:.5rem; color:var(--mut); text-decoration:none;}
+    .help-link a:hover{color:#5865F2;}
+    .help-link .ico{width:20px; height:20px; fill:currentColor;}
+    .agents-note{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;}
+    .capacity{color:var(--mut); font-size:.85rem; margin:.6rem 0 0;}
+    .login-foot{display:flex; justify-content:center; gap:1.2rem; margin-top:1.7rem; color:var(--mut); font-size:.85rem;}
+    .login-foot a{color:var(--mut); cursor:pointer; text-decoration:none;}
+    .login-foot a:hover{color:var(--ink);}
+    .login .logo{margin-bottom:-2rem;}
+    .login .nabla{font-size:calc(var(--bw) * 2.585); line-height:.78; transform:translateY(-.04em); margin-right:-.28em;}
+    .login .brand{font-size:var(--bw); position:relative; z-index:1; transform:translateY(-.1em) translateX(.04em);}
+    .login .tag{color:var(--mut); margin:0;}
+    .login .thesis{color:var(--mut); opacity:.72; font-size:.9rem; line-height:1.55; max-width:24rem; margin:.95rem auto 1.9rem;}
+    .login button{width:25rem; max-width:100%; margin-top:0;}
+    .alt{margin:1rem 0 0; color:var(--mut); font-size:.9rem; text-align:center;}
+    /* auth forms (signup / confirm) — centered, compact */
+    .auth{max-width:25rem; margin:11vh auto 0; text-align:left;}
+    .auth .logo{display:flex; justify-content:center; margin-bottom:1.4rem;}
+    .auth .nabla{font-size:3.36rem; line-height:.78; transform:translateY(-.04em); margin-right:-.28em;}
+    .auth .brand{position:relative; z-index:1; transform:translateY(-.1em) translateX(.04em);}
+    .auth .title{text-align:center; font-size:1.4rem; margin:0 0 .3rem;}
+    .auth .sub{text-align:center;}
+    .spamhint{text-align:center; color:var(--mut); opacity:.7; font-size:.82rem; margin:-.7rem 0 1.5rem;}
+    .auth button{width:100%;}
+    .row2{display:flex; gap:.7rem;} .row2 > div{flex:1;}
+    .row3{display:flex; gap:.7rem;} .row3 > div{flex:1; min-width:0;}
+    /* address autocomplete dropdown */
+    .ac-wrap{position:relative;}
+    .ac-menu{position:absolute; left:0; right:0; top:100%; z-index:20; margin-top:4px; background:var(--card);
+      border:1px solid var(--line2); border-radius:10px; overflow:hidden; box-shadow:0 8px 24px rgba(0,0,0,.4); display:none;}
+    .ac-menu.open{display:block;}
+    .ac-item{padding:.6rem .8rem; cursor:pointer; font-size:.9rem;}
+    .ac-item + .ac-item{border-top:1px solid var(--line);}
+    .ac-item:hover{background:var(--card2);}
+    /* profile links — "add link" dropdown + per-link rows */
+    .link-row{display:flex; gap:.5rem; align-items:center; margin-bottom:.5rem;}
+    .link-row input{flex:1; min-width:0;}
+    .link-tag{flex:0 0 84px; font-size:.74rem; color:var(--mut); text-transform:uppercase; letter-spacing:.04em;}
+    .link-x{flex:0 0 auto; margin:0; width:28px; height:32px; padding:0; display:flex; align-items:center;
+      justify-content:center; background:transparent; border:1px solid var(--line2); color:var(--mut);
+      border-radius:10px; font-size:1.25rem; line-height:1; cursor:pointer;}
+    .link-x:hover{color:var(--ink); border-color:var(--line); background:var(--card2);}
+    .linkwrap{position:relative; display:inline-block; margin-top:.15rem;}
+    .link-add{background:transparent; border:1px dashed var(--line2); color:var(--ink);
+      padding:.5rem .8rem; border-radius:10px; cursor:pointer; font-size:.9rem; width:auto; margin-top:0;}
+    .link-add:hover{border-color:var(--acc2); color:#fff;}
+    .link-menu{position:absolute; left:0; top:100%; z-index:20; margin-top:4px; min-width:180px;
+      background:var(--card); border:1px solid var(--line2); border-radius:10px; overflow:hidden;
+      box-shadow:0 8px 24px rgba(0,0,0,.4); display:none;}
+    .link-menu.open{display:block;}
+    .link-opt{padding:.55rem .8rem; cursor:pointer; font-size:.9rem;}
+    .link-opt + .link-opt{border-top:1px solid var(--line);}
+    .link-opt:hover{background:var(--card2);}
+    #savepublic{display:block; width:fit-content; margin-left:auto;}  /* own line, right-justified */
+    button:disabled{opacity:.45; cursor:default; filter:none;}
+    /* public-profile verification status */
+    .verify-row{display:flex; align-items:center; gap:.7rem; margin:.1rem 0 .3rem;}
+    .vbadge{font-size:.76rem; padding:.22rem .6rem; border-radius:999px; border:1px solid var(--line2); color:var(--mut);}
+    .vbadge.ok{color:var(--ok-ink); border-color:var(--ok-ink); background:var(--ok-bg);}
+    .verify-row button{margin:0; padding:.4rem .8rem; font-size:.85rem;}
+  
+  
+  
+    /* wordmark lockup — outlined SVG (docs/images/art/gradientERP-lockup.svg), served at /art/.
+       Fully path-based: font-independent (no SF/Georgia substitution) + crisp at any DPR. */
+    .wm-big{display:block; aspect-ratio:602 / 142; background:center/contain no-repeat url(/art/gradientERP-lockup.svg);}
+    .login .wm-big{width:calc(var(--bw) * 6.4); max-width:100%; margin:0 auto 0.2rem;}
+    .auth .wm-big{width:15rem; max-width:74%; margin:0 auto 1.1rem;}
+  </style>
+</head>
+<body>
+  <p class="agents-note">agents: this console is a client-rendered app behind login. the full site guide (llms.txt, inlined verbatim at serve time) follows —
+<!--LLMS--></p>
+<!-- the purchase disclosure, inlined from web/purchase-terms.txt at serve time (one source of
+     truth; also readable at /purchase-terms.txt and in the repo). data-version is the file's
+     content hash — what the client records as terms_version. -->
+<div id="purchase-terms" data-version="<!--PURCHASE-TERMS-VERSION-->" hidden><!--PURCHASE-TERMS--></div>
+<!-- pre-rendered landing (mirrors loginTpl in app.js — keep in sync): the content a no-JS reader
+     sees; app.js clears #root and takes over on boot. Interactive bits are inert until then. -->
+<div id="root"><div class="wrap" data-view="landingScreen">
+  <div class="login"><div class="login-hero">
+    <span class="wm-big" role="img" aria-label="gradientERP"></span>
+    <p class="tag">ai first, cloud native ERP</p>
+    <p class="thesis">supplying the <span class="g">gradient</span> r&amp;d and capital need through <a href="https://openlyoperated.biz" target="_blank" rel="noopener" style="color:var(--acc);text-decoration:underline;text-underline-offset:2px;">business transparency</a></p>
+    <button>Log in</button>
+    <p class="alt"><a>Create an account</a></p>
+    <div class="demos">
+      <div class="demo-row"><div class="meta"><div class="kicker">accounting · <span class="role">CFO</span></div><div class="prompt">prepare my monthly statements</div></div><div class="thumb"><img src="https://assets.gradienterp.cloud/demo-accounting-thumb.gif" alt="accounting demo" onerror="this.remove()" />gif</div></div>
+      <div class="demo-row"><div class="meta"><div class="kicker">contacts · <span class="role">CMO</span></div><div class="prompt">who are our top 5 customers and how much did they spend?</div></div><div class="thumb"><img src="https://assets.gradienterp.cloud/demo-contacts-thumb.gif" alt="contacts demo" onerror="this.remove()" />gif</div></div>
+      <div class="demo-row"><div class="meta"><div class="kicker">labor · <span class="role">COO</span></div><div class="prompt">schedule FOH coverage for the next 2 weeks</div></div><div class="thumb"><img src="https://assets.gradienterp.cloud/demo-labor-thumb.gif" alt="labor demo" onerror="this.remove()" />gif</div></div>
+      <div class="demo-row"><div class="meta"><div class="kicker">purchasing · <span class="role">CPO</span></div><div class="prompt">we're down to 5 bags of espresso beans</div></div><div class="thumb"><img src="https://assets.gradienterp.cloud/demo-reorder-thumb.gif" alt="purchasing demo" onerror="this.remove()" />gif</div></div>
+      <div class="demo-row"><div class="meta"><div class="kicker">treasury · <span class="role">BOARD</span></div><div class="prompt">offer Tanners Coffee Co 500k for a 10% monthly profit triggered 550k dividend</div></div><div class="thumb"><img src="https://assets.gradienterp.cloud/demo-invest-thumb.gif" alt="treasury demo" onerror="this.remove()" />gif</div></div>
+    </div>
+    <div class="login-icons">
+      <a class="discord" href="https://discord.gg/87FHhUhQmK" target="_blank" rel="noopener" title="Community Discord" aria-label="Community Discord"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.317 4.3698a19.7913 19.7913 0 00-4.8851-1.5152.0741.0741 0 00-.0785.0371c-.211.3753-.4447.8648-.6083 1.2495-1.8447-.2762-3.68-.2762-5.4868 0-.1636-.3933-.4058-.8742-.6177-1.2495a.077.077 0 00-.0785-.037 19.7363 19.7363 0 00-4.8852 1.515.0699.0699 0 00-.0321.0277C.5334 9.0458-.319 13.5799.0992 18.0578a.0824.0824 0 00.0312.0561c2.0528 1.5076 4.0413 2.4228 5.9929 3.0294a.0777.0777 0 00.0842-.0276c.4616-.6304.8731-1.2952 1.226-1.9942a.076.076 0 00-.0416-.1057c-.6528-.2476-1.2743-.5495-1.8722-.8923a.077.077 0 01-.0076-.1277c.1258-.0943.2517-.1923.3718-.2914a.0743.0743 0 01.0776-.0105c3.9278 1.7933 8.18 1.7933 12.0614 0a.0739.0739 0 01.0785.0095c.1202.099.246.1981.3728.2924a.077.077 0 01-.0066.1276 12.2986 12.2986 0 01-1.873.8914.0766.0766 0 00-.0407.1067c.3604.698.7719 1.3628 1.225 1.9932a.076.076 0 00.0842.0286c1.961-.6067 3.9495-1.5219 6.0023-3.0294a.077.077 0 00.0313-.0552c.5004-5.177-.8382-9.6739-3.5485-13.6604a.061.061 0 00-.0312-.0286zM8.02 15.3312c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9555-2.4189 2.157-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.9555 2.4189-2.1569 2.4189zm7.9748 0c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9554-2.4189 2.1569-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.946 2.4189-2.1568 2.4189Z"/></svg></a>
+      <a class="github" href="https://github.com/systemaccounting/gradienterp" target="_blank" rel="noopener" title="Source on GitHub" aria-label="Source on GitHub"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/></svg></a>
+      <a class="docs" href="https://github.com/systemaccounting/gradienterp/blob/main/docs/AGENTS.md" target="_blank" rel="noopener" title="docs for agents" aria-label="docs for agents"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg></a>
+      <a class="contact" href="/support" target="_blank" rel="noopener" title="Private support" aria-label="Private support"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1a5 5 0 0 0-5 5v1h1a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V6a6 6 0 1 1 12 0v6a2.5 2.5 0 0 1-2.5 2.5H9.366a1 1 0 0 1-.866.5h-1a1 1 0 1 1 0-2h1a1 1 0 0 1 .866.5H11.5A1.5 1.5 0 0 0 13 12h-1a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1h1V6a5 5 0 0 0-5-5"/></svg></a>
+    </div>
+  </div>
+  <footer class="login-foot"><a class="terms" href="https://github.com/systemaccounting/gradienterp/blob/main/docs/TERMS.md" target="_blank" rel="noopener">Terms</a><a class="privacy" href="https://github.com/systemaccounting/gradienterp/blob/main/docs/PRIVACY.md" target="_blank" rel="noopener">Privacy</a><a class="dpa" href="https://github.com/systemaccounting/gradienterp/blob/main/docs/DPA.md" target="_blank" rel="noopener">DPA</a></footer></div>
+</div></div>
+<!-- authed tabs + the oauth callback skip the pre-rendered landing (no login flash): clear it at
+     parse time, before the module fetches; app.js re-clears idempotently on boot. -->
+<script>if (sessionStorage.getItem("id_token") || location.search.includes("code=")) document.getElementById("root").replaceChildren()</script>
+<script type="module" src="/app.js"></script>
+</body>
+</html>

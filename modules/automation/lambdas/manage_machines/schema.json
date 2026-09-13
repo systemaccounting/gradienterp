@@ -1,0 +1,28 @@
+{
+  "type": "object",
+  "description": "Deploy and drive this firm's approved state machines: create one from its reviewed definition, start it, read it and its runs, retry a failed run, or delete it.",
+  "properties": {
+    "op": {
+      "type": "string",
+      "enum": ["create", "start", "get", "list", "delete", "retry"],
+      "description": "create: deploy the approved definition. start: run it. get: it and its recent runs. list: what is deployed. delete: stop what is running, then remove. retry: resume a failed run."
+    },
+    "name": {
+      "type": "string",
+      "description": "The definition's key under the approved machines prefix, e.g. 'collections/dunning.asl.json'. Required for every op but list and retry."
+    },
+    "input": {
+      "type": "object",
+      "description": "start: the execution's input. Carry cabinet KEYS and ids, never values — execution state is capped and a step reads what it needs fresh."
+    },
+    "execution": {
+      "type": "string",
+      "description": "retry: the execution arn to resume, from get."
+    },
+    "reason": {
+      "type": "string",
+      "description": "delete: why, recorded on each execution this stops so the owner can see what was cut short."
+    }
+  },
+  "required": ["op"]
+}
