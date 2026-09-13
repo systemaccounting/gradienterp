@@ -6,7 +6,7 @@ router → apply_inbound; 10–30 s). Every read of the other side polls to a ce
 judgment path invokes a gerp's runtime directly with the prompt `poke_agent` would send, with a
 fixed session per case; the chat door is not used (it needs each owner's login).
 
-Profiles: `customer-gradienterp-via-org`, `customer-westwood-via-org`, `operator-org` (the
+Profiles: `gerp-gradienterp`, `gerp-westwood-c40fd8`, `operator-org` (the
 customers row, for the runtime arn). Run: `bash scripts/test.sh --env integ --module crossfirm`,
 both gerps up. Skips without the profiles.
 """
@@ -18,7 +18,7 @@ import uuid
 
 GRADIENTERP = os.environ.get("CROSSFIRM_A", "gradienterp")
 WESTWOOD = os.environ.get("CROSSFIRM_B", "westwood-c40fd8")
-PROFILE = {GRADIENTERP: "customer-gradienterp-via-org", WESTWOOD: "customer-westwood-via-org"}
+PROFILE = {GRADIENTERP: "gerp-gradienterp", WESTWOOD: "gerp-westwood-c40fd8"}
 OPERATOR = "operator-org"
 HOP = 90          # seconds a cross-firm hop may take before a case gives up
 SHELF_ITEM = "1#oat-milk-case"

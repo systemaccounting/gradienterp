@@ -10,7 +10,7 @@ import { resolveEnv } from "./env.mjs";
 
 const REGION = process.env.AWS_REGION || "us-east-1";
 const OPERATOR_PROFILE = process.env.E2E_OPERATOR_PROFILE || "operator-org";
-const CUSTOMER_PROFILE = process.env.E2E_CUSTOMER_PROFILE || "customer-gradienterp-via-org";
+const CUSTOMER_PROFILE = process.env.E2E_CUSTOMER_PROFILE || "gerp-gradienterp";
 
 // Against `local` the two profiles collapse: one emulator, one account, and the table names are the
 // deployed ones — `gerp-settings-gradienterp` either way — so every assertion below is unchanged.

@@ -66,14 +66,14 @@ The two keys coexist, so there is no gap — create, switch, then delete.
     # the password (SecureString), read by send_email at send time
     aws ssm put-parameter --name /gradienterp/customers/gradienterp/secrets/ses_smtp \
       --value "<derived>" --type SecureString --overwrite \
-      --profile customer-gradienterp-via-org --region us-east-1
+      --profile gerp-gradienterp --region us-east-1
 
     # the username is the ACCESS KEY ID and is not secret — it lives on the SENDER# row
     aws lambda invoke --function-name gerp-mail-gradienterp-configure_smtp \
       --cli-binary-format raw-in-base64-out --payload '{"address":"billing@gradienterp.cloud",
       "host":"email-smtp.us-east-1.amazonaws.com","port":587,"username":"<AccessKeyId>",
       "secret_name":"ses_smtp","test_to":"<your address>"}' \
-      --profile customer-gradienterp-via-org --region us-east-1 /dev/stdout
+      --profile gerp-gradienterp --region us-east-1 /dev/stdout
 
     aws iam delete-access-key --user-name gradienterp-ses-smtp --access-key-id <old> \
       --profile operator-org

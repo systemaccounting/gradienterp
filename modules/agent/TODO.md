@@ -56,8 +56,8 @@ migration this avoids.
       `docker run --rm -v "$PWD":/src:ro -e SETUPTOOLS_SCM_PRETEND_VERSION=1.0.0 python:3.13-slim bash -c 'cp -r /src`
       `/repo && cd /repo && pip install -q -e ".[a2a,dev]" && python -m pytest`
       `tests/strands/multiagent/a2a/test_executor.py -o addopts="" -p no:xdist -q'` — append `ruff check <files>` and
-      `mypy src/strands/multiagent/a2a/executor.py` for the lint + type gate. (Clone lives at `tmp/harness-sdk`;
-      re-clone the fork if gone.)
+      `mypy src/strands/multiagent/a2a/executor.py` for the lint + type gate. (Run from a clone of the fork,
+      `git@github.com:mxfactorial/harness-sdk.git`, branch `agent-tasks/3203`.)
 - [ ] **callers → A2A clients** — email lambda + calendar/inbox pokers send buffered `message/send` (easy). The
       **web chat lambda (`index.mjs`) is the real work**: parse A2A `message/stream` SSE (unwrap the
       `{status/text/frame}` chunks it re-emits as NDJSON today) and resume `render_frame` via an A2A follow-up

@@ -140,7 +140,7 @@ one **coffee roaster/cafe**. layers (order matters; each cascades):
   `--profile` (sector → account mix, item catalog, margin/trend target) · `--rng-seed` · `--teardown`.
 - `tests/seed/` — a python `run.py` + `profiles/roaster.py`; reuses `helpers/seed.py`'s transforms + chart
   working set, and `helpers/replay.py` + `testdata/` for realistic card sales. (distinct from `seed.py`.)
-- creds: `customer-gradienterp-via-org` invokes the gerp's lambdas; the counters populate in the operator
+- creds: `gerp-gradienterp` invokes the gerp's lambdas; the counters populate in the operator
   account via the bus (no direct write). see [[reference_operator_profile]] (CLI vs terraform profile),
   [[reference_per_customer_apply]] (gradienterp = 867637277314).
 

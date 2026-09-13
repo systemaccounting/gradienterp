@@ -21,7 +21,7 @@ import urllib.request
 from pathlib import Path
 
 GERP = os.environ.get("EXPORT_INTEG_GERP", "gradienterp")
-PROFILE = os.environ.get("EXPORT_INTEG_PROFILE", f"customer-{GERP}-via-org")
+PROFILE = os.environ.get("EXPORT_INTEG_PROFILE", f"gerp-{GERP}")
 FN = f"gerp-export-{GERP.replace('_', '-')}-export_gerp"
 
 # manifest path -> the table it came from (the export names paths; the tables are named by module)

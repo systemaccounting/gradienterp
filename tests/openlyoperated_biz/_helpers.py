@@ -16,7 +16,7 @@ _CONFIG = json.loads((REPO_ROOT / "config.json").read_text())
 STACK_PREFIX = _CONFIG.get("STACK_PREFIX", "gerp")
 REGION = os.environ.get("AWS_REGION", "us-east-1")
 OPERATOR_PROFILE = os.environ.get("OOB_OPERATOR_PROFILE", "operator-org")
-CUSTOMER_PROFILE = os.environ.get("OOB_CUSTOMER_PROFILE", "customer-gradienterp-via-org")
+CUSTOMER_PROFILE = os.environ.get("OOB_CUSTOMER_PROFILE", "gerp-gradienterp")
 
 COUNTERS_TABLE = f"{STACK_PREFIX}-counters"
 OP_EVENT_BUS = f"{STACK_PREFIX}-events"

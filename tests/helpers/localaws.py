@@ -367,7 +367,7 @@ def drain(queue_url: str, expected: int = 1, tries: int = 10) -> list[dict]:
     return out
 
 
-def snapshot_schemas(profile: str = "customer-gradienterp-via-org") -> int:
+def snapshot_schemas(profile: str = "gerp-gradienterp") -> int:
     """Re-take `tests/testdata/table-schemas.json` from the live fleet.
 
     Discovery is the `gerp:layer` tag, the same query `scripts/reset_dev.py` uses — so a table added

@@ -58,7 +58,7 @@ A spec can carry both (e.g. the OO toggle is a quick core check **and** mutates 
   `getTenantBlob(gerpId)` (the assertion target), `getParam()`; local-only row seeding —
   `fixtureGerp` (a ready gerp with its own cleanup), `seedGerpRow` (any status, through `/dev`)
   and `deleteGerpRow` for what it leaves. Profiles: `operator-org` +
-  `customer-gradienterp-via-org` (override via `E2E_OPERATOR_PROFILE` / `E2E_CUSTOMER_PROFILE`).
+  `gerp-gradienterp` (override via `E2E_OPERATOR_PROFILE` / `E2E_CUSTOMER_PROFILE`).
 - `helpers/account.mjs` — **throwaway accounts**: `fixtureAccount()` hands back
   `{email, sub, password, cleanup}`. Against `prod` it is a real signup — `SignUp`, the code read
   off the live SES catch-all, `ConfirmSignUp` — in ~7s. Against `local` it writes the

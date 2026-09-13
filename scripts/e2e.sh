@@ -60,7 +60,7 @@ MAILBOX_DIR="$REPO_ROOT/tests/mailbox"
 ENV_FILE="$REPO_ROOT/.env"
 
 LOCAL_GERPS_PARAM="/gradienterp/customers/gradienterp/local_dev/LOCAL_GERPS"
-LOCAL_GERPS_PROFILE="customer-gradienterp-via-org"
+LOCAL_GERPS_PROFILE="gerp-gradienterp"
 PROD_PROFILE="operator-org"
 OWNER_PASSWORD_PARAM="/gradienterp/test/e2e/owner_password"
 

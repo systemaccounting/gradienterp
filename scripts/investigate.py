@@ -11,7 +11,7 @@ finds the module's `AGENTS.md` by the function's name, and prints all of it as o
 finding goes back through the same door (`manage_tasks update`) with `investigated_by: local`.
 
 Profiles: the operator's (`operator-org`, may assume `gerp-ops-read` anywhere) and the operator
-gerp's (`customer-<gerp>-via-org`, for the tasks door). Both are named in config.json terms:
+gerp's (`gerp-<gerp_id>`, for the tasks door). Both are named in config.json terms:
 SELLER_GERP is the operator gerp.
 """
 
@@ -30,7 +30,7 @@ CONFIG = json.loads((REPO / "config.json").read_text())
 PREFIX = CONFIG["STACK_PREFIX"]
 OPERATOR_GERP = CONFIG["SELLER_GERP"]
 OPERATOR_PROFILE = os.environ.get("OPERATOR_PROFILE", "operator-org")
-GERP_PROFILE = os.environ.get("OPERATOR_GERP_PROFILE", f"customer-{OPERATOR_GERP}-via-org")
+GERP_PROFILE = os.environ.get("OPERATOR_GERP_PROFILE", f"gerp-{OPERATOR_GERP}")
 REGION = os.environ.get("AWS_REGION", "us-east-1")
 FIELDS = ("alarm", "function", "gerp", "account", "region", "window", "log group", "queue", "query", "category", "count in window")
 

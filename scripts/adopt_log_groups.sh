@@ -4,8 +4,8 @@
 # function's first invoke, owned by nobody — and a create on the same name fails; an import
 # hands them to the module, and the apply sets the retention.
 #
-#   bash scripts/adopt_log_groups.sh prod/per_customer customer-westwood-via-org operator-org westwood-c40fd8 222165865776
-#   bash scripts/adopt_log_groups.sh prod/init_customer customer-westwood-via-org operator-org westwood-c40fd8 222165865776
+#   bash scripts/adopt_log_groups.sh prod/per_customer gerp-westwood-c40fd8 operator-org westwood-c40fd8 222165865776
+#   bash scripts/adopt_log_groups.sh prod/init_customer gerp-westwood-c40fd8 operator-org westwood-c40fd8 222165865776
 #   bash scripts/adopt_log_groups.sh prod/tower operator-org default
 #
 # Args: <stack dir> <profile the log groups are read with> [<terraform profile> <gerp_id> <aws_account_id>]

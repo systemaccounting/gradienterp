@@ -15,13 +15,13 @@
 #   gerp_id          tenant id (e.g. gradienterp) — also derives the default profile
 #   kb_id            the customer KB id          (terraform output: playbook_kb_id)
 #   data_source_id   the CUSTOM data source id   (terraform output: playbook_data_source_id)
-#   profile          AWS named profile; default = customer-<gerp_id>-via-org; `env` = the ambient
+#   profile          AWS named profile; default = gerp-<gerp_id>; `env` = the ambient
 #                    credentials (CodeBuild, after assuming OperatorOrchestration in the account)
 #   region           default = us-east-1
 #   --dry-run        print what would be ingested and pruned; call nothing that writes
 #
 # Profile / creds:
-#   The default profile customer-<gerp_id>-via-org chains
+#   The default profile gerp-<gerp_id> chains
 #     default (management) -> OrganizationAccountAccessRole@operator
 #                          -> OperatorOrchestration@customer
 #   i.e. it lands IN the customer's sub-account — the SAME assume chain the
@@ -29,7 +29,7 @@
 #   customer's own KB. (operator-org would stop in the operator account; it is
 #   only used as AWS_PROFILE for terraform, whose provider does its own
 #   OperatorOrchestration assume. A raw CLI call has no such hop, so it needs
-#   the -via-org profile.)
+#   the gerp-<gerp_id> profile.)
 #
 # Notes:
 #   - CUSTOM data source + IN_LINE content: ingest-knowledge-base-documents
@@ -67,7 +67,7 @@ if [ "${#ARGS[@]}" -gt 0 ]; then set -- "${ARGS[@]}"; else set --; fi
 GERP_ID="${1:-}"; [ -n "$GERP_ID" ] || usage
 KB_ID="${2:-}";   [ -n "$KB_ID" ]   || usage
 DS_ID="${3:-}";   [ -n "$DS_ID" ]   || usage
-PROFILE="${4:-customer-${GERP_ID}-via-org}"
+PROFILE="${4:-gerp-${GERP_ID}}"
 # `env` = the ambient credentials (CodeBuild after an assume-role into the customer account); any
 # other value is a named profile
 if [ "$PROFILE" = "env" ]; then PROFILE_ARGS=(); else PROFILE_ARGS=(--profile "$PROFILE"); fi

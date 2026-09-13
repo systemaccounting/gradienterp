@@ -8,12 +8,12 @@ never recorded anywhere — it's read live from CodeSha256.
 
 verbs (run via `bash scripts/deploy.sh …`):
 
-  status <gerp_id> [--profile P]
+  status [--gerp G] [--profile P]
       tag query × get-function CodeSha256 × artifact latest-version checksum.
       states: in-sync / artifact-ahead (pushed, not deployed) / repo-ahead
       (local zip differs from artifact — push needed) / no-artifact.
 
-  push <gerp_id> [--dirs modules/x/lambdas/y ...] [--notes "..."] [--profile P]
+  push [--gerp G] [--dirs modules/x/lambdas/y ...] [--notes "..."] [--profile P]
       refresh .build zips (terraform plan -refresh=false), then for each fleet
       function whose zip sha differs from the artifact's latest version:
       put-object (new version, sha256 checksum) + provenance annotation
@@ -28,9 +28,11 @@ verbs (run via `bash scripts/deploy.sh …`):
       stay; the closure is not this (see the section above cmd_stop).
 
 Cross-account: the artifact bucket is operator-side org-read; functions live in
-the tenant account, so --profile is the tenant profile (default
-customer-gradienterp-via-org) and the bucket is reached with the same creds
-(org-scoped bucket policy).
+the gerp's account. `--gerp` names the gerp (default gradienterp) and `--profile`
+the profile that reaches it (default `gerp-<gerp>`, written by
+`bash scripts/awsacct.sh --all`). Before anything is built or uploaded, the
+profile's account has to be the one on the gerp's row: a profile pointing
+elsewhere — `current` switched by another session — is refused with both ids.
 """
 
 import argparse
@@ -344,8 +346,34 @@ def sync_state(deployed, artifact, local):
     return "repo-ahead"
 
 
-def cmd_status(args):
+def target_refusal(gerp_id, row, caller_account):
+    """Why a push or status for `gerp_id` must not run through a profile answering from
+    `caller_account`, or "" when it may."""
+    if not row:
+        return f"no row in gerp-customers for {gerp_id}"
+    account = row.get("aws_account_id")
+    if not account or account == "None":
+        return f"{gerp_id}'s row has no aws_account_id"
+    if caller_account != account:
+        return (f"the profile answers from {caller_account}, and {gerp_id} is in {account} — "
+                f"`bash scripts/awsacct.sh --all` writes gerp-{gerp_id}")
+    return ""
+
+
+def _target_session(args):
+    """The session for `--gerp`, through `--profile` (default `gerp-<gerp>`), once its account is the
+    one on the gerp's row."""
+    args.profile = args.profile or f"gerp-{args.gerp}"
     session = _boto(args.profile)
+    caller = session.client("sts").get_caller_identity()["Account"]
+    why = target_refusal(args.gerp, _customer_row(_boto(args.operator_profile), args.gerp), caller)
+    if why:
+        sys.exit(f"refused: {why}")
+    return session
+
+
+def cmd_status(args):
+    session = _target_session(args)
     # the gerp's region is the profile's: its functions take their packages from the region's
     # bucket, which S3 replication fills from the us-east-1 one every push writes (prod/tower
     # regions.tf); the deploy step waits for the replica to carry what was pushed
@@ -445,6 +473,9 @@ def _push_webapp(args):
 
 def cmd_push(args):
     dirs = list(args.dirs) if args.dirs else None
+    # the gerp is checked before anything builds or uploads, the BFF included; a push of the BFF
+    # alone reaches only the operator account and names no gerp
+    session = None if dirs is not None and set(dirs) <= {WEBAPP_DIR} else _target_session(args)
     # The owner web app is outside the fleet enumeration below — `fleet()` is a tag query scoped to
     # the session's account and the BFF lives in the operator's, and its bundle needs the web/ files
     # `build_py` knows nothing about. So a bare push has to reach it EXPLICITLY: without this it
@@ -455,7 +486,6 @@ def cmd_push(args):
             dirs = [d for d in dirs if d != WEBAPP_DIR]
             if not dirs:
                 return
-    session = _boto(args.profile)
     # the gerp's region is the profile's: its functions take their packages from the region's
     # bucket, which S3 replication fills from the us-east-1 one every push writes (prod/tower
     # regions.tf); the deploy step waits for the replica to carry what was pushed
@@ -854,7 +884,8 @@ def main():
     ap = argparse.ArgumentParser()
     sub = ap.add_subparsers(dest="verb", required=True)
     st = sub.add_parser("status")
-    st.add_argument("--profile", default="customer-gradienterp-via-org")
+    st.add_argument("--gerp", default="gradienterp", help="the gerp whose fleet is compared (default: the operator's own)")
+    st.add_argument("--profile", default=None, help="the profile reaching it (default: gerp-<gerp>)")
     st.add_argument("--operator-profile", default="operator-org",
                     help="account holding the BFF + artifact bucket")
     st.add_argument("--all", action="store_true", help="print in-sync rows too")
@@ -866,7 +897,8 @@ def main():
                     help="phase: build + upload the artifact to the bucket only (seeds a new lambda; no function update)")
     ps.add_argument("--deploy", action="store_true",
                     help="phase: point the live function at the bucket's current artifact only (no rebuild). Default (neither flag) does both.")
-    ps.add_argument("--profile", default="customer-gradienterp-via-org")
+    ps.add_argument("--gerp", default="gradienterp", help="the gerp whose functions take the push (default: the operator's own)")
+    ps.add_argument("--profile", default=None, help="the profile reaching it (default: gerp-<gerp>)")
     ps.add_argument("--operator-profile", default="operator-org")
     ps.set_defaults(fn=cmd_push)
     im = sub.add_parser("image")

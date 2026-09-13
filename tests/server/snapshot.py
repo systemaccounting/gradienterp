@@ -30,7 +30,7 @@ _SRC_DIRS: dict = {}
 STACKS = {
     # the gerp's own bus rides along: its consume rules are how an event the hub puts there
     # reaches the gerp's functions
-    "per_customer":      {"profile": "customer-gradienterp-via-org", "api": "gerp-server-", "bus": "gerp-internal-gradienterp", "gerp": "gradienterp"},
+    "per_customer":      {"profile": "gerp-gradienterp", "api": "gerp-server-", "bus": "gerp-internal-gradienterp", "gerp": "gradienterp"},
     "bff":               {"profile": "operator-org",                 "api": "gerp-cloud",   "gerp": "gradienterp"},
     # the read api is a REST api (api.tf) with no local image; the stack's own functions (the
     # counter, the publisher, the published stamp) are what the snapshot carries
@@ -42,7 +42,7 @@ STACKS = {
     "platform":          {"profile": "operator-org",  "api": None, "bus": "gerp-operator", "gerp": "gradienterp"},
     # the hub (prod/hub, its own account): the bus every gerp puts to, and the edges — a rule per
     # spoke whose target is that gerp's bus, and the forward to the operator's
-    "hub":               {"profile": "hub-us-east-1-via-org", "api": None, "bus": "gerp-events", "gerp": "gradienterp"},
+    "hub":               {"profile": "hub-us-east-1", "api": None, "bus": "gerp-events", "gerp": "gradienterp"},
     "tower":             {"profile": "operator-org",                 "api": None,           "gerp": "gradienterp"},
 }
 

@@ -143,7 +143,7 @@ for the http API surface, `tests/server/per_customer/` IS the per_customer stack
 ## commands
 
 - `bash scripts/test.sh` — run every module's local-mode suite; `--module <name>`, `--name <substring>`, `--env integ`, `--logs` available. see `tests/AGENTS.md` for authoring conventions
-- `bash scripts/deploy.sh status|push` — artifact deploys (TF owns shape, S3 owns bytes), **no terraform anywhere in the push path**: the builder is `if package.json → zip the dir; elif .py → zip the dir + its transitively-resolved local imports; else exit 1` — **the import graph IS the bundle manifest** (shared `_helpers`/`*_rules`/vendored trees resolve off the code itself; no recipe files, no `archive_file` — those blocks are deleted). Bespoke needs are `match src_dir:` cases in `build_artifact` (scripts/deploy.py) that *do things first* — prune, stage — then call `build_node`/`build_py`; it's a build script, explicit cases at any count are fine. `status` = the `gerp:src-dir` tag query × live `CodeSha256` × artifact checksums (~12s, direction-aware); `push [--dirs …] [--notes …]` = deterministic zips → versioned artifacts + `provenance`/`release` annotations (operator-profile writes; org read) → `update-function-code` at the pinned version (tenant profile). deployed state is never recorded — it's one `get-function` away. **functions SOURCE code from the bucket** (`data "aws_s3_object"` pins latest per function), so ANY applier — codebuild's bundled snapshot, a stale checkout — deploys bucket truth, never its local tree; a NEW function is push-then-apply (the data source fails the plan until its artifact exists). post-push, a plan shows function updates until the next apply — that's the state's `s3_object_version` pointer re-syncing FORWARD to the version the push already deployed (AWS doesn't expose code source, so state can't refresh it); the apply is a same-bytes no-op
+- `bash scripts/deploy.sh status|push [--gerp <gerp_id>]` — artifact deploys (TF owns shape, S3 owns bytes), **no terraform anywhere in the push path**: the builder is `if package.json → zip the dir; elif .py → zip the dir + its transitively-resolved local imports; else exit 1` — **the import graph IS the bundle manifest** (shared `_helpers`/`*_rules`/vendored trees resolve off the code itself; no recipe files, no `archive_file` — those blocks are deleted). Bespoke needs are `match src_dir:` cases in `build_artifact` (scripts/deploy.py) that *do things first* — prune, stage — then call `build_node`/`build_py`; it's a build script, explicit cases at any count are fine. `status` = the `gerp:src-dir` tag query × live `CodeSha256` × artifact checksums (~12s, direction-aware); `push [--dirs …] [--notes …]` = deterministic zips → versioned artifacts + `provenance`/`release` annotations (operator-profile writes; org read) → `update-function-code` at the pinned version (tenant profile). deployed state is never recorded — it's one `get-function` away. **functions SOURCE code from the bucket** (`data "aws_s3_object"` pins latest per function), so ANY applier — codebuild's bundled snapshot, a stale checkout — deploys bucket truth, never its local tree; a NEW function is push-then-apply (the data source fails the plan until its artifact exists). post-push, a plan shows function updates until the next apply — that's the state's `s3_object_version` pointer re-syncing FORWARD to the version the push already deployed (AWS doesn't expose code source, so state can't refresh it); the apply is a same-bytes no-op
 - `bash scripts/deploy.sh image` — the agent-container deploy: build → push (auto-incremented immutable `vNN` tag) → CLI-update a gerp's runtime to the new digest (FULL config carried — UpdateAgentRuntime replaces wholesale) → wait READY → re-pin the named endpoint (DEFAULT auto-tracks). The gerp is gradienterp by default (the dogfood takes an image first), `--gerp <id>` for another, `--all` for every active gerp — a fleet push is said, never implied; `--no-build` moves the named gerps onto the image already at the top of ECR. No terraform: the runtime tf reads `data.aws_ecr_image` `most_recent`, so a post-deploy plan is ALREADY clean (AgentCore exposes its config, unlike lambda code). No `agent_image_tag` var exists anymore; no fake gateway-target churn — routine image deploys change zero tf
 - `bash scripts/docker.sh --build|--run|--stop|--push <ecr-uri>` — the underlying agent-container build/run primitives (`deploy.sh image` drives build/push; use directly for local container smoke)
 - `bash scripts/local-dev.sh --start|--status|--stop` — the local dev stack as plain processes: moto :5000, the owner-app BFF :3000, the per_customer stack :8080
@@ -163,6 +163,12 @@ for the http API surface, `tests/server/per_customer/` IS the per_customer stack
   `dublin-test-roasters-d542eb` (`832348493159`, eu-west-1) — the first outside us-east-1. No
   real customer bookkeeping yet (the books carry the demo cafe); destroy / re-apply is reversible
   churn.
+- **reaching an account:** `bash scripts/awsacct.sh <target>` points `[profile current]` at
+  `management`, `operator`, `hub:<region>` or a gerp id and prints the caller identity; `--list`
+  shows the targets, `--all` writes a named profile per target (`operator-org`, `hub-<region>`,
+  `gerp-<gerp_id>`). A machine needs only `[default]`, the management account's credentials: every
+  other profile is a role chain written from `config.json` and the gerp's row. `current` is for
+  reads — a command that changes AWS names its gerp (`deploy.sh push --gerp <gerp_id>`).
 - `prod/per_customer/` is the canonical bring-up. Adding a module = a `module` block + outputs +
   (if it has a `<module>_fields` registry) a canonical-S3 upload + a reseed.
 - The four-id model: `account_id` (login) / `gerp_id` (instance) / `gerp_profile_id` (public) /
@@ -203,6 +209,11 @@ runs the stop/start loop between sessions.
 
 ## decisions (locked — don't re-litigate)
 
+- **the repo is public, and these identifiers stay in it:** AWS account ids, the organization id,
+  ECR repository urls, Cognito pool and client ids, the Stripe publishable key, the events subscribe
+  key in the openlyoperated.biz page, and the controller's name and mailing address in
+  `docs/PRIVACY.md`. None of them grants access. Secret values, credentials and people's personal
+  details stay out of the repo, with test fixtures masked.
 - **account vending: Control Tower Account Factory**, not DIY create-account. `OperatorOrchestration`
   lands via a customers-OU stackset. AFT rejected (its per-account `.tf` leaks the customer roster).
 - **one shared event bus**, flag-on-event, rule-as-gate — not per-customer buses (300-rule/bus cap).

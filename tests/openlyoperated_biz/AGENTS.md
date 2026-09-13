@@ -15,7 +15,7 @@ integration tests for the openlyoperated.biz backend (operator account):
 ## creds
 
 `_helpers.py` uses `operator-org` (operator account — counters, bus, read lambdas), overridable via
-`OOB_OPERATOR_PROFILE`; cross-account reads use `OOB_CUSTOMER_PROFILE` (default `customer-gradienterp-via-org`).
+`OOB_OPERATOR_PROFILE`; cross-account reads use `OOB_CUSTOMER_PROFILE` (default `gerp-gradienterp`).
 integ tests **skip** when creds don't resolve. profile split: see `reference_operator_profile` in the memory
 store — `operator-org` for operator-account CLI/SDK, not the self-assuming terraform stacks.
 

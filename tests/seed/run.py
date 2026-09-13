@@ -21,7 +21,7 @@ from datetime import datetime, timedelta, timezone
 import boto3
 
 REGION = "us-east-1"
-CUSTOMER_PROFILE = "customer-gradienterp-via-org"  # the gerp's own account (post_journal_entry + ledger)
+CUSTOMER_PROFILE = "gerp-gradienterp"  # the gerp's own account (post_journal_entry + ledger)
 OPERATOR_PROFILE = "operator-org"                   # operator account (the economic counters)
 SEED_SOURCE = "seed"                                # the teardown tag, on the ledger row's `source`
 

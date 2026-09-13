@@ -67,7 +67,7 @@ await mkdir(OUT, { recursive: true });
 // The cafe's create_po stamps a (thread, terms_hash) agreement row and awaits the seller. Between
 // the order turn and the "did they accept?" turn, read that fresh row and send `po.accepted` as
 // Blue Ridge — the same cross-firm handshake the manual proof ran, driven from inside the take.
-const CUST_PROFILE = "customer-gradienterp-via-org";      // the cafe (gradienterp) sub-account
+const CUST_PROFILE = "gerp-gradienterp";      // the cafe (gradienterp) sub-account
 const OP_ACCT = "185369506315";                           // the operator account that owns the bus
 // The SHARED negotiation store (modules/agreements) — every kind's rows live here; the
 // AGREEMENT#<kind> config rows carry no stamps, so the fresh-row filter skips them by name.

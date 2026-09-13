@@ -24,7 +24,7 @@ repo is deleted from the KB.
 - `aws_bedrockagent_data_source` — `type = "CUSTOM"` (inline ingest, `RETAIN`); terraform creates it but never ingests.
 - `aws_iam_role.kb_service` — assumed by `bedrock.amazonaws.com`; `InvokeModel` on the Titan ARN + s3vectors read/write on the index.
 - outputs: `knowledge_base_id` (feeds the agent's `PLAYBOOK_KB_ID`), `data_source_id`, `kb_service_role_arn`.
-- ingestion is the provisioning build's: `.codebuild/per-customer.yml` post_build runs `scripts/sync_playbooks.sh <gerp_id> <kb_id> <data_source_id> env` in the gerp's account before the row is marked active, on every apply — so a vended gerp is never ready with an empty shelf and an edited guide reaches a gerp on its next build. By hand the same script with the `-via-org` profile; `--dry-run` previews (see below).
+- ingestion is the provisioning build's: `.codebuild/per-customer.yml` post_build runs `scripts/sync_playbooks.sh <gerp_id> <kb_id> <data_source_id> env` in the gerp's account before the row is marked active, on every apply — so a vended gerp is never ready with an empty shelf and an edited guide reaches a gerp on its next build. By hand the same script with the `gerp-<gerp_id>` profile; `--dry-run` previews (see below).
 
 ## why per-customer, in the customer account
 
@@ -58,7 +58,7 @@ Terraform never ingests content; the build does, after the apply. By hand:
 
 ```
 bash scripts/sync_playbooks.sh [--dry-run] <gerp_id> <kb_id> <data_source_id>
-# profile defaults to customer-<gerp_id>-via-org, region to us-east-1
+# profile defaults to gerp-<gerp_id>, region to us-east-1
 ```
 
 It globs `modules/**/kb.md`, pushes each as an inline `TEXT` document keyed by its
