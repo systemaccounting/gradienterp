@@ -39,6 +39,23 @@ RUNTIME_ENV = {
 }
 
 
+def local_gerps() -> dict:
+    """LOCAL_GERPS, the dogfood login's sub → the gerps it owns: from the environment, else the repo-root
+    .env (gitignored). The value is JSON or a path to a JSON file; unset is {}."""
+    raw = (os.environ.get("LOCAL_GERPS") or "").strip()
+    env = REPO / ".env"
+    if not raw and env.exists():
+        for line in env.read_text().splitlines():
+            k, _, v = line.strip().partition("=")
+            if k.strip() == "LOCAL_GERPS":
+                raw = v.strip()
+    if not raw:
+        return {}
+    if raw.startswith("{"):
+        return json.loads(raw)
+    return json.loads(pathlib.Path(raw).read_text()) if pathlib.Path(raw).exists() else {}
+
+
 def base_env(image: dict) -> tuple[dict, dict]:
     """Every function's config at once — the union across the stack.
 

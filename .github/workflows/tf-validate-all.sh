@@ -32,9 +32,10 @@ for tf_dir in "${tf_dirs[@]}"; do
   echo "=== ${rel} ==="
   cd "$tf_dir"
   # one retry: a provider download that drops is not a broken directory
-  if ! terraform init -backend=false -input=false -no-color >/dev/null 2>&1 &&
-     ! terraform init -backend=false -input=false -no-color >/dev/null 2>&1; then
+  if ! init_out="$(terraform init -backend=false -input=false -no-color 2>&1)" &&
+     ! init_out="$(terraform init -backend=false -input=false -no-color 2>&1)"; then
     echo "    init failed"
+    printf '%s\n' "$init_out" | grep -A8 '^Error' | sed 's/^/    /'
     failures=$((failures+1))
     failed_dirs+=("$rel (init)")
     continue

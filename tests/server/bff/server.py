@@ -15,7 +15,7 @@ import sys
 
 HERE = pathlib.Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parent))
-from _image import OPERATOR_TABLES, REPO, build  # noqa: E402
+from _image import OPERATOR_TABLES, REPO, build, local_gerps  # noqa: E402
 
 
 def _load_dotenv():
@@ -84,16 +84,10 @@ def _seed_gerps(image):
     """The gerps an account holds, as provisioning leaves them: an instance row on gerp-customers
     (owner_sub is who created it) and the membership row, which is what the ownership check reads. Seeded
     from LOCAL_GERPS so the dogfood login lands on its own gerps."""
-    import json
     import os
-    raw = (os.environ.get("LOCAL_GERPS") or "").strip()
-    if not raw:
-        return
-    data = json.loads(raw) if raw.startswith("{") else (
-        json.loads(pathlib.Path(raw).read_text()) if pathlib.Path(raw).exists() else {})
     from aws import client
     ddb = client("dynamodb")
-    for sub, gerps in data.items():
+    for sub, gerps in local_gerps().items():
         for g in gerps:
             gid = g.get("gerp_id") or g.get("customer_id")   # `customer_id` predates the id rename
             if not gid:

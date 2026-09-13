@@ -152,6 +152,13 @@ the next section. To run the real test-mode flow instead, start with `LOCAL_STRI
 a Stripe TEST key there; the live key would create real customers against real cards and does not
 belong here.
 
+### the gerp's owner
+
+The per_customer web doors (settings, invoices, automate) answer only the sub in the parameter
+`OWNER_SUB_PARAM` names. Its seed writes that parameter the way provisioning does: the sub in
+`LOCAL_GERPS` holding the image's gerp. With no such sub every signed-in request is a 403 "this
+gerp's owner only", as in Lambda with the parameter missing.
+
 ### putting the stack in a state
 
 `curl localhost:3000/dev` lists what the local stack can be put into — an account, its record,

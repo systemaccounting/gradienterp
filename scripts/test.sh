@@ -157,9 +157,6 @@ PY
     fi
 }
 
-NEEDS_AWS=0
-rg -q --glob "*.py" "^from aws import" "$REPO_ROOT/modules" 2>/dev/null && NEEDS_AWS=1
-
 # Two schema surfaces, both cheap and global, both catching things that otherwise surface late:
 #   - gateway schema.json descriptions cap at 200 chars (over it fails `terraform apply` deep with
 #     "Invalid Attribute Value Length")
@@ -202,7 +199,7 @@ if [[ $files -eq 0 ]]; then
 fi
 
 (( JOBS > files )) && JOBS=$files
-[[ $NEEDS_AWS -eq 1 ]] && start_motos "$JOBS"
+start_motos "$JOBS"
 
 # ── run one job ──────────────────────────────────────────────────────────────
 # $1 job index, $2 worker index. Streams when serial; when parallel, stdout goes to a per-job file

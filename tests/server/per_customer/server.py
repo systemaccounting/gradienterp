@@ -12,7 +12,7 @@ import sys
 
 HERE = pathlib.Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parent))
-from _image import OPERATOR_TABLES, REPO, build  # noqa: E402
+from _image import OPERATOR_TABLES, REPO, build, local_gerps  # noqa: E402
 
 
 def _seed(image):
@@ -30,6 +30,20 @@ def _seed(image):
     import _hooks_local
     _hooks_local.point_image_at_local(image)
     _stripe_local.seed_secrets(image)
+    _seed_owner(image)
+
+
+def _seed_owner(image):
+    """The owner the web doors answer (`aws.refuse_non_owner`), written where provisioning writes it: the
+    sub in LOCAL_GERPS that holds this stack's gerp. With none, the doors refuse every signed-in caller,
+    as they do in Lambda."""
+    import os
+    from aws import client
+    param = os.environ.get("OWNER_SUB_PARAM")
+    subs = [sub for sub, gerps in local_gerps().items()
+            if any((g.get("gerp_id") or g.get("customer_id")) == image["gerp"] for g in gerps)]
+    if param and subs:
+        client("ssm").put_parameter(Name=param, Value=subs[0], Type="String", Overwrite=True)
 
 
 # the operator singletons belong to `platform`, not here — see scripts/tags.json
