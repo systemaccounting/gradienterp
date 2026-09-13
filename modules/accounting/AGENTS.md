@@ -40,7 +40,7 @@ accounts are classified as the owner answers (`modules/agent/prompts/bookkeeper.
 
 ## storage
 
-**dynamodb** for the ledger (immutable timestamped pair rows — see "pair-row storage" below). hash key `pk` is a year-month bucket (`"2026-04"`); range key `sk` is `"<timestamp_ms_padded>#<entry_id>#<pair_index>"` — sortable within the month and lexically bounded for range queries. append-only via `ConditionExpression = attribute_not_exists(pk)` on the first pair of every entry, so a duplicate entry_id submission is rejected.
+**dynamodb** for the ledger (immutable timestamped pair rows — see "pair-row storage" below). hash key `pk` is a year-month bucket (`"2026-04"`); range key `sk` is `"<timestamp_ms, zero-padded to 20 digits>#<entry_id>#<pair_index>"` — sortable within the month and lexically bounded for range queries. append-only via `ConditionExpression = attribute_not_exists(pk)` on the first pair of every entry, so a duplicate entry_id submission is rejected.
 
 entries that arrive without classification are queued in a dynamodb pending table until the owner classifies them, then written to the ledger table with their original timestamps.
 

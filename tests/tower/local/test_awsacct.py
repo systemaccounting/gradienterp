@@ -1,7 +1,8 @@
 """scripts/awsacct.py writes the profiles that reach each account from the records that name them,
 and owns only its own blocks of the AWS config file: every other line stays as it was, a run that
 changes nothing leaves the bytes alone, and `--all` removes a gerp that no longer has an account.
-`deploy.py`'s guard refuses a push or status through a profile answering from another account."""
+`deploy.py`'s guard refuses a push or status through a profile answering from another account, and
+it never zips a Node lambda whose node_modules isn't installed."""
 
 import json
 import sys
@@ -97,6 +98,21 @@ def test_the_deploy_guard_refuses_another_accounts_profile():
     assert deploy.target_refusal("westwood-c40fd8", row, "222165865776") == ""
     assert deploy.target_refusal("nope", None, "222165865776")
     assert deploy.target_refusal("stub", {"aws_account_id": "None"}, "222165865776")
+
+
+def test_a_node_lambda_without_node_modules_is_not_zipped(tmp_path=None):
+    import tempfile
+    root = Path(tmp_path or tempfile.mkdtemp())
+    (root / "package.json").write_text("{}")
+    (root / "package-lock.json").write_text("{}")
+    (root / "index.mjs").write_text("export const handler = async () => ({})")
+    try:
+        deploy.build_node(str(root))
+        raise AssertionError("a lock file with no node_modules built a zip")
+    except deploy.NodeModulesMissing as e:
+        assert "npm ci" in str(e)
+    (root / "node_modules").mkdir()
+    assert deploy.build_node(str(root))
 
 
 if __name__ == "__main__":

@@ -155,7 +155,7 @@ Canonical bring-up is `prod/per_customer/` (see `prod/per_customer/AGENTS.md`) �
 Two prerequisites `prod/per_customer/` can't satisfy on a fresh sub-account:
 
 - **Bedrock model agreement is per-account.** Every new sub-account needs the Marketplace agreement before any invoke succeeds: a one-time Anthropic use-case form (account-level, async approval) then `create-foundation-model-agreement` with the offer token. See "AgentCore gotchas → Bedrock model gating".
-- **The container image is operator-shared, built once.** `prod/tower/agent_image.tf` owns the `agentcore` ECR repo (immutable tags, keep-last-10, org-scoped pull). Build + push operator-side: `bash scripts/docker.sh --build` then `--push <account>.dkr.ecr.<region>.amazonaws.com/agentcore:<tag>`. Per-customer terraform pins `var.agent_image_tag` and the runtime pulls cross-account — it never builds.
+- **The container image is operator-shared, built once.** `prod/tower/agent_image.tf` owns the `agentcore` ECR repo (immutable tags, keep-last-10, org-scoped pull). Build + push operator-side: `bash scripts/docker.sh --build` then `--push <account>.dkr.ecr.<region>.amazonaws.com/agentcore:<tag>`. Per-customer terraform reads the most recent image in ECR (`data.aws_ecr_image`, `most_recent`), `deploy.sh image` moves each gerp's runtime onto a new one, and the runtime pulls cross-account — it never builds.
 
 Tenant metadata at `/gradienterp/customers/<customer_id>` is seeded by tower's `provision_customer` ahead of the apply; the runtime reads it (business name, policies, reporting schedule) at invoke time. State is s3 + DDB lock, one tfstate per customer (see `prod/AGENTS.md`).
 

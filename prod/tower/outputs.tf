@@ -9,7 +9,7 @@ output "codebuild_role_arn" {
 }
 
 output "codebuild_source_bucket" {
-  description = "S3 bucket holding per-customer-source.zip (the bundled repo). Uploaded by aws_s3_object.per_customer_source on apply; codebuild reads it as source. The lambda only triggers the build."
+  description = "S3 bucket holding per-customer-source.zip (the bundled repo). Uploaded by `bash scripts/deploy.sh source`; codebuild reads it as source. The lambda only triggers the build."
   value       = aws_s3_bucket.codebuild_source.id
 }
 

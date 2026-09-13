@@ -58,14 +58,14 @@ def index(request: Request):
     lines = ["the local stack, put into a state by url. every verb answers with what it did.", ""]
     for method, path, what in VERBS:
         lines.append(f"{method:6} {base}/dev{path:32} {what}")
-    lines += ["", "signing in: open the login url in a browser. the rest are curls:",
+    lines += ["", f"signing in: open {base}/dev/login?sub=local-dev in a browser. the rest are curls:",
               f"  curl -X POST {base}/dev/account/local-dev/complete",
               f"  curl -X POST {base}/dev/account/local-dev/card -d '{{\"number\": \"4242\"}}'",
               "", "the stack is moto: --restart wipes everything, which is the way to start clean."]
     return Response("\n".join(lines) + "\n", media_type="text/plain")
 
 
-@verb("GET", "/login", "a page that signs the browser in as {sub} and goes to /")
+@verb("GET", "/login?sub=<sub>", "a page that signs the browser in as <sub> and goes to /")
 def login(sub: str, email: str = ""):  # every verb is sync on purpose: the self-calls need the loop free
     tok = _token(sub, email or f"{sub}@localhost")
     return HTMLResponse(f"<script>sessionStorage.setItem('id_token', {json.dumps(tok)}); location.replace('/');</script>")

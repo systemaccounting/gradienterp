@@ -152,6 +152,40 @@ the org id). Metrics and log groups from every gerp read here without assuming a
 - **EMF (CloudWatch embedded metrics) is CloudWatch-only** and is not used; a metric a function
   wants to publish goes through a metric filter on its lines, which any backend can also do.
 
+## reading the fleet
+
+Four reads a session starts from. The profiles are `bash scripts/awsacct.sh --all`'s.
+
+- **open alarm tasks** — on the operator gerp's tasks table (its task door is `scripts/investigate.sh <task_id>`):
+
+      aws dynamodb query --profile gerp-gradienterp --table-name gerp-tasks-gradienterp \
+        --index-name open-tasks-index --key-condition-expression 'open_flag = :o' \
+        --filter-expression 'category IN (:a, :t)' \
+        --expression-attribute-values '{":o":{"S":"1"},":a":{"S":"alarm"},":t":{"S":"threshold"}}' \
+        --projection-expression 'task_id, subject_key, category, created_at'
+
+- **a day's errors, every gerp** — Logs Insights in the operator account, which reads each gerp's
+  log groups through the observability link. A caught failure is a line with `level: "ERROR"`; a
+  raise is Lambda's own line, with `errorType` and no `level`, so the filter takes both:
+
+      aws logs start-query --profile operator-org --start-time $(( $(date +%s) - 86400 )) --end-time $(date +%s) \
+        --query-language CWLI --query-string 'SOURCE logGroups(namePrefix: ["/aws/lambda/gerp-"], class: "STANDARD") START=-1d END=0s
+          | fields @timestamp, @log, level, errorType, message
+          | filter level = "ERROR" or ispresent(errorType) | sort @timestamp desc | limit 100'
+      aws logs get-query-results --profile operator-org --query-id <queryId>
+
+  `@log` names the account and the function; add `and @log like /-<gerp_id>-/` for one gerp.
+- **the agent's tokens** — namespace `gerp/agent`, dimension `gerp_id`, in the gerp's account
+  (`modules/agent/AGENTS.md`): `aws cloudwatch get-metric-statistics --profile gerp-<gerp_id>
+  --namespace gerp/agent --metric-name InputTokens --dimensions Name=gerp_id,Value=<gerp_id>
+  --statistics Sum --period 86400 --start-time … --end-time …`
+- **this month's AWS cost per gerp** — Cost Explorer in the management account, by linked
+  account, matched to gerps with `bash scripts/awsacct.sh --list`:
+
+      aws ce get-cost-and-usage --profile default --granularity MONTHLY --metrics UnblendedCost \
+        --time-period Start=$(date -u +%Y-%m-01),End=$(date -u +%Y-%m-%d) \
+        --group-by Type=DIMENSION,Key=LINKED_ACCOUNT
+
 ## what's deferred
 
 These accrue in separate apply passes as consumers come online:

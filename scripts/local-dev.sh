@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # The local dev stack — every surface, as plain processes.
 #
-#   bash scripts/local-dev.sh --install     # one-time: python deps into .venv
+#   bash scripts/local-dev.sh --install     # one-time: .venv (python3.12), the python deps, each Node lambda's npm ci
 #   bash scripts/local-dev.sh --start       # ends any running copy of each surface, then starts it
 #   bash scripts/local-dev.sh --restart
 #   bash scripts/local-dev.sh --status      # what's up, on which port, and any duplicate processes
@@ -14,6 +14,8 @@
 #   :8080  customer gw    tests/server/per_customer/server.py — the accounting route catalog
 #   :4242  stripe        tests/server/stripe/server.py — cards, a hosted page, the webhook; no Stripe
 #   :4243  cognito       tests/server/cognito/server.py — signup, the login-email change, refresh; no Cognito
+#   :3001  oob.biz       prod/openlyoperated_biz/web — the public dashboard, reading the live api
+#   pump                 tests/server/pump.py — the streams and queues moto doesn't deliver; no port
 #
 # Plain processes, not containers: all three are Python, so on macOS a container would put a VM and
 # a filesystem layer inside the edit→see-it loop, and mounting /repo to get live edits back only
@@ -174,9 +176,27 @@ fi
 
 case "${1:---status}" in
 --install)
-    echo "installing local dev deps into $(dirname "$PY")"
-    "$PY" -m pip install --quiet --upgrade 'moto[server]>=5.0' fastapi uvicorn jsonschema
-    echo "done — bash scripts/local-dev.sh --start"
+    # .venv on the version the lambdas run (python3.12), or python3 where that isn't installed
+    if [[ ! -x "$REPO_ROOT/.venv/bin/python" ]]; then
+        base="$(command -v python3.12 || command -v python3)"
+        echo "creating .venv with $base"
+        "$base" -m venv "$REPO_ROOT/.venv"
+    fi
+    PY="$REPO_ROOT/.venv/bin/python"
+    echo "installing the python deps into .venv: the tests', the agent container's, the local servers'"
+    "$PY" -m pip install --quiet --upgrade pip
+    "$PY" -m pip install --quiet -r "$REPO_ROOT/tests/requirements.txt" \
+        -r "$REPO_ROOT/modules/agent/docker/requirements.txt" uvicorn
+    # each Node lambda's own dependencies: its tests import them, and deploy.sh zips its node_modules
+    if command -v npm >/dev/null; then
+        while IFS= read -r lock; do
+            echo "npm ci  ${lock%/package-lock.json}"
+            (cd "$(dirname "$lock")" && npm ci --no-audit --no-fund --silent)
+        done < <(cd "$REPO_ROOT" && find modules prod -name package-lock.json -not -path '*/node_modules/*' | sort)
+    else
+        echo "!! npm not found: the Node lambdas' tests and deploys need Node 22 and npm" >&2
+    fi
+    echo "done — bash scripts/test.sh, then bash scripts/local-dev.sh --start"
     ;;
 
 --start)

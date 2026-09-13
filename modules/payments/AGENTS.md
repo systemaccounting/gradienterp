@@ -157,6 +157,10 @@ depends on accounting. the webhook ingestion layer — translates payment proces
   5xx, a failed invoice read, or missing wiring all raise.
 - routes: `POST /webhooks/stripe`, `POST /webhooks/square`, `POST /webhooks/paypal` on the customer API gateway.
 - storage: `-webhook-log` table (idempotency — one row per `<provider>#<event_id>`), and the dead letter as TWO tables keyed alike — `-dlq` holds the FACT (`provider`, `event_type`, `reason`, `received_at`) and `-dlq-bodies` holds the provider payload. "How many provider events failed to map, and why" is real operational information and belongs in the open; the body that failed to map is a whole webhook — names, addresses, emails, card last4 — arriving on exactly the path a human then goes and inspects. One table made the first unservable to protect the second; split, the servable half is safe by construction with no projection to get right, and debugging joins them on `pk`.
+- tracing one delivery: every ingest logs the event id on each way out — `<provider> event posted`
+  (`event`, `event_id`, `entry_id`), `collected invoice <id> from <event_id>`, `no transform …;
+  dead-lettered <event_id>`, or the dead-letter exception line — so an event id finds its log
+  line, its `-webhook-log` row, and the entry it posted.
 - outputs: `webhook_log_table`, `dlq_table`, `dlq_bodies_table`, `lambda_functions`, `lambda_arns`.
 
 

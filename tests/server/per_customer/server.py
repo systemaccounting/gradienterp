@@ -1,8 +1,11 @@
 """The per_customer stack, locally. Everything general is in `tests/server/_image.py`.
 
     bash scripts/local-dev.sh --start
-    curl -sX POST localhost:8080/webhooks/stripe -d @tests/testdata/stripe/charge.succeeded.json
-    curl -s  localhost:8080/oob/financials
+    curl -s localhost:8080/healthz
+
+A webhook here is verified the way it is in Lambda, so an unsigned curl gets 400. Signed deliveries
+come from the Stripe stand-in (:4242) when a card is charged; `curl localhost:3000/dev` lists the
+verbs that put the stack into that state. `/oob/*` answers 404 until the gerp is published.
 
     python3 tests/server/snapshot.py per_customer      # re-take the manifest
 """

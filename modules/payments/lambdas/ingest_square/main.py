@@ -117,4 +117,5 @@ def handler(event, context):
         h.dead_letter(PROVIDER, event_type, event_id, evt, f"transform/post failed: {type(e).__name__}: {e}"[:200])
         alog.exception("square event transform or post failed; dead-lettered", event=event_type, event_id=event_id)
         return h.ok({"status": "dead_lettered", "event_type": event_type, "event_id": event_id})
+    alog.info("%s event posted" % PROVIDER, event=event_type, event_id=event_id, entry_id=entry_id)
     return h.ok({"status": "posted", "event_id": event_id, "entry_id": entry_id})

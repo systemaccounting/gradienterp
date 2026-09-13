@@ -14,8 +14,8 @@ verbs (run via `bash scripts/deploy.sh …`):
       (local zip differs from artifact — push needed) / no-artifact.
 
   push [--gerp G] [--dirs modules/x/lambdas/y ...] [--notes "..."] [--profile P]
-      refresh .build zips (terraform plan -refresh=false), then for each fleet
-      function whose zip sha differs from the artifact's latest version:
+      build each function's zip from its src dir (no terraform), then for each
+      fleet function whose zip sha differs from the artifact's latest version:
       put-object (new version, sha256 checksum) + provenance annotation
       {src_dir, src_sha256, built_at} + release annotation (--notes; the
       agent-readable "what's in this version") + update-function-code from
@@ -194,8 +194,15 @@ def botocore_models(*services):
     return out
 
 
+class NodeModulesMissing(Exception):
+    """A Node lambda with a lock file and no node_modules: its zip would ship without its
+    dependencies, and every invoke of the function it replaces would fail on import."""
+
+
 def build_node(root):
     """Node lambda: zip the whole dir (node_modules included), hygiene-excluded."""
+    if os.path.exists(os.path.join(root, "package-lock.json")) and not os.path.isdir(os.path.join(root, "node_modules")):
+        raise NodeModulesMissing(f"(cd {os.path.relpath(root, REPO)} && npm ci)")
     entries = {}
     for dirpath, dirnames, filenames in os.walk(root):
         dirnames[:] = sorted(d for d in dirnames if d not in EXCLUDE_DIRS)
@@ -389,7 +396,11 @@ def cmd_status(args):
         # whose limits are orders of magnitude above Lambda's, and a local zip build, which is CPU.
         name, src = item
         _, art = artifact_head(s3, src + ".zip")
-        return name, src, sync_state(shas.get(name), art, sha256_b64_bytes(build_artifact(src)))
+        try:
+            local = sha256_b64_bytes(build_artifact(src))
+        except NodeModulesMissing:
+            return name, src, "no-node_modules"
+        return name, src, sync_state(shas.get(name), art, local)
 
     def webapp_row():
         """The BFF answers to no tag query here: it lives in the OPERATOR account while the fleet
@@ -502,6 +513,12 @@ def cmd_push(args):
 
     src_to_name = {s: n for n, s in fns.items()}
     targets = sorted(set(dirs)) if dirs is not None else sorted(fns.values())
+    if do_push:
+        missing = [t for t in targets if os.path.exists(os.path.join(REPO, t, "package-lock.json"))
+                   and not os.path.isdir(os.path.join(REPO, t, "node_modules"))]
+        if missing:
+            sys.exit("refused: these Node lambdas have no node_modules, so their zips would ship without "
+                     "their dependencies:\n" + "\n".join(f"  (cd {t} && npm ci)" for t in missing))
 
     lam = session.client("lambda")
     # One listing beats one call per target once there is more than a handful of them, and a fleet

@@ -472,7 +472,7 @@ The BFF forwards the caller's `Authorization: Bearer <id_token>` to the gerp's g
 
 ## local dev
 
-`bash scripts/local-dev.sh --start` runs this stack at `http://localhost:3000` (a registered Cognito callback origin) — `tests/server/bff`, which binds the gateway's OWN routes (taken by `tests/server/snapshot.py bff`) to the REAL handler, in-process, against the four operator tables on moto. The only prod difference is auth *validation*: APIGW validates the token there, here the bearer's claims are decoded without a signature check. Real Hosted UI login still happens, and `LOCAL_GERPS` seeds a sub → gerps map (incl. each gerp's real gateway URL) so a local round-trip hits the real deployed gerp gateway. A dogfood user (`ops+dogfood@gradienterp.cloud`) lives in the operator pool for these runs — log in as it to exercise the full Hosted-UI-PKCE → `/api/gerps` → ownership-check → gerp-gateway path.
+`bash scripts/local-dev.sh --start` runs this stack at `http://localhost:3000` (a registered Cognito callback origin) — `tests/server/bff`, which binds the gateway's OWN routes (taken by `tests/server/snapshot.py bff`) to the REAL handler, in-process, against the four operator tables on moto. The only prod difference is auth *validation*: APIGW validates the token there, here the bearer's claims are decoded without a signature check. Sign-in is the Cognito stand-in (`:4243`) or `/dev/login?sub=<sub>`, and `LOCAL_GERPS` seeds a sub → gerps map that points each gerp at the local per_customer stack (`tests/server/AGENTS.md`).
 
 ## deploy
 
@@ -480,7 +480,7 @@ The web client (`web/`) is bundled INTO the BFF lambda (`gerp-cloud-bff` serves 
 `/var/task/web`), so a web change is a lambda code change — deploy it like any module lambda, no
 terraform:
 
-    bash scripts/deploy.sh push --dirs prod/gradienterp_cloud
+    bash scripts/deploy.sh push --dirs prod/gradienterp_cloud/bff
 
 `deploy.sh` special-cases this src-dir (`_push_webapp`): it builds `bff/main.py` + the `web/`
 files, versions them to the operator artifact bucket, and update-function-codes the BFF at that
