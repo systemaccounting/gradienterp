@@ -15,7 +15,7 @@ tmp/
 !README.md
 !TODO.md
 !kb.md
-!modules/agent/prompts/*.md
+!modules/agent/prompts/**/*.md
 !docs/*.md
 !.agents/skills/**/*.md
 

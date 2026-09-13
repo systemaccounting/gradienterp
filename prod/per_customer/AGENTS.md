@@ -81,3 +81,11 @@ replaced). The replace's delete is eventually consistent: a `ConflictException` 
 cleared by one plain apply after it. Changing the top-level `description` in the same edit also
 triggers a diff (that IS compared), which is why a description-and-properties change appears to
 work and a properties-only one does not.
+
+**Renaming a module's tools cycles one apply.** Changing the `for_each` keys of a module's
+`aws_lambda_function.fn`, `aws_bedrockagentcore_gateway_target.tool` and
+`aws_lambda_permission.gateway_invoke` together is a cycle in a single apply (`gateway_invoke` is
+create-before-destroy, and that carries across the swap). Converge it in two: a targeted apply of
+those three whole resources in each module that changed (`-target='module.<m>.aws_lambda_function.fn'`
+and the other two — whole resources, never instances), then a full apply, then a plan that says
+`No changes`.

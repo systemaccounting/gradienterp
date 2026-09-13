@@ -47,6 +47,24 @@ This is the canonical config layer. Updates flow agent-mediated, not via terrafo
 
 `modules/schemas/infra` is instantiated in `prod/per_customer/main.tf`. Creates the DDB + 6 lambdas + IAM. `aws_lambda_invocation` resource fires `seed_schema` once per customer (input = gerp_id; lifecycle never re-fires unless the id changes). The lambda reads canonical JSON from operator's S3 bucket, bulk-writes registry entries with `origin='canonical'`, and seeds `rule_params.json` GENERAL rows into the rules-params table. It's idempotent, so a weekly `rule_params_seed` scheduler re-runs it to keep platform reference data current.
 
+**Reseeding a live gerp.** `seed_schema` skips a gerp holding any canonical row, so an edited
+registry doesn't reach a gerp that is already provisioned by invoking it again. After the tower apply
+publishes the file, write the registry's rows with `write_schema`'s merge, which writes each entry as
+`origin: canonical`:
+
+    python3 - <<'PY' > /tmp/merge.json
+    import json; reg = "contact_fields"   # any registry but chart_of_accounts
+    data = json.load(open(f"modules/schemas/data/{reg}.json"))
+    print(json.dumps({"op": "merge", "registry": reg, "entries": [
+        {"bucket": b, "name": n, "schema": s} for b, fields in data.items() for n, s in fields.items()]}))
+    PY
+    aws lambda invoke --profile gerp-<gerp_id> --function-name gerp-schemas-<gerp_id>-write_schema \
+      --cli-binary-format raw-in-base64-out --payload file:///tmp/merge.json /dev/stdout
+
+`chart_of_accounts` is `{bucket: [name, …]}`, so its entries are `{"bucket": b, "name": n, "schema": true}`.
+The validators read the registry once per cold start: an env change on a reading function (or its
+next deploy) makes it read the new rows.
+
 ### extension (customer-driven, immediate)
 
 Customer agent calls `write_schema {op: extend, registry, bucket, name, schema, reason}`. Backing lambda:

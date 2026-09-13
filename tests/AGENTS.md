@@ -286,7 +286,7 @@ aws ssm put-parameter --profile operator-org --type SecureString --overwrite \
   --name /gradienterp/test/e2e/owner_password --value '<password>' --no-cli-pager
 ```
 
-Profiles from `~/.aws/config`: `operator-org` (creds) and `gerp-gradienterp` (the
+Profiles from `~/.aws/config`, written by `bash scripts/awsacct.sh --all`: `operator-org` (creds) and `gerp-gradienterp` (the
 gerp's tenant blob); override with `E2E_OPERATOR_PROFILE` / `E2E_CUSTOMER_PROFILE`. The test
 account must OWN the gerp under test. Tests restore any live state they flip.
 

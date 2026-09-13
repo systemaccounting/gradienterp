@@ -13,7 +13,7 @@ Two independent axes, composed into npm scripts. **Depth** = how much / does it 
 | script | UI (env) | runs | state changes | use it for |
 |---|---|---|---|---|
 | `smoke:local` | `localhost:3000` (the bff image) | `@smoke` | **local only** | quick "everything's in its place and behaving" while developing |
-| `smoke:prod`  | `gradienterp.cloud` | `@smoke` − `@mutating` | **none** | same quick check against prod — safe to run anytime (read-only) |
+| `smoke:prod`  | `gradienterp.cloud` | `@smoke` − `@mutating` | a throwaway sign-up per account spec (a Cognito user, one SES mail, a `gerp-accounts` row), deleted by the spec | same quick check against prod — safe to run anytime; nothing of the seeded gerp changes |
 | `full:local`  | `localhost:3000` | everything | **local only** | comprehensive pass while developing |
 | `full:prod`   | `gradienterp.cloud` | everything | yes ⚠️ | comprehensive against prod — **needs designated test users** (see TODO.md) |
 

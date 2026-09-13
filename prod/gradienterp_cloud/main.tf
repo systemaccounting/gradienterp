@@ -44,7 +44,7 @@ data "aws_caller_identity" "current" {}
 # ─── BFF lambda (serves SPA + /api/*) ───
 #
 # The web bundle (main.py + web/*) is pushed to the operator artifact bucket by
-# `bash scripts/deploy.sh push --dirs prod/gradienterp_cloud`; the lambda sources it from there —
+# `bash scripts/deploy.sh push --dirs prod/gradienterp_cloud/bff`; the lambda sources it from there —
 # same convention as every module lambda — so a `terraform apply` is a pointer-sync no-op, never a
 # re-bundle. First deploy is push-then-apply (this data source fails the plan until the object exists).
 

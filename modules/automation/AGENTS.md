@@ -121,6 +121,13 @@ real AWS (see the end of this list).
   `manage_storage` carries an explicit Deny there.
 - **the reviewer creates, the approver spends** — separate roles, and separate DynamoDB actions
   (`PutItem` vs `UpdateItem`) on the same table. An agent can carry a ticket and can never write one.
+- **an operator's review** — a person or an operator session reviews the staged bytes and writes the
+  row `review_automation` would: `{script, review_id: <uuid>, kind, version_id: <the staged
+  object's current VersionId>, verdict: "approve", findings: <what was checked>, created_at,
+  spendable_until: <now + 1800>, reviewed_by: <who>}`, then calls `approve_automation` with
+  `review_id` as the ticket. The binding holds whoever reviewed: the ticket approves only those
+  bytes, once, inside the window. `reviewed_by` and real findings keep the record honest about who
+  passed it.
 - `modules/storage`'s Deny on `automations/approved/*` — the approval gate, as one statement. And
   `.py` through `manage_storage op=put`, so scripts can be authored into `staged/`.
 - `kb.md` — the review playbook, in the KB and retrievable by `search_guides`, which is how the cold
