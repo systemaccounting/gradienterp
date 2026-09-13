@@ -1,8 +1,8 @@
 # CodeBuild buildspec — runs prod/per_customer/ terraform against a customer sub-account.
 #
 # Driven by aws_codebuild_project.per_customer in prod/tower/main.tf.
-# Triggered by tower's provision_customer lambda (pass 5) after the lambda
-# uploads a fresh repo zip to s3://gerp-codebuild-source-<account>/per-customer-source.zip.
+# Triggered by tower's provision_customer lambda (pass 5), from the repo zip at
+# s3://gerp-codebuild-source-<account>/per-customer-source.zip that `bash scripts/deploy.sh source` uploads.
 #
 # Per-build env vars (overridden via StartBuild --environment-variables-override):
 #   CUSTOMER_ID            — logical tenant identifier

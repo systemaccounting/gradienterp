@@ -131,5 +131,7 @@ Against `local` it needs neither: `getOwnerCreds()` reads the owner sub off the 
 `gerp-customers` row — the one the bff seeded from `LOCAL_GERPS`, found by its `chat_url` or
 `gateway_url` after rows a spec left behind (closed, `awaiting_payment`) are set aside — so there
 is no password to hold. `LOCAL_GERPS` lives in the repo-root `.env` (gitignored); `--configure`
-writes it there from the SSM copy `/gradienterp/customers/gradienterp/local_dev/LOCAL_GERPS` in the
-gradienterp gerp's account when `.env` has none.
+writes a local owner of gradienterp there when `.env` has none, so the local suite needs no AWS. The
+dogfood's own seed — for the live gateway with a real login, or an e2e run in a cloud environment —
+is the SSM copy `/gradienterp/customers/gradienterp/local_dev/LOCAL_GERPS` in the gradienterp gerp's
+account and the `LOCAL_GERPS` repo secret.

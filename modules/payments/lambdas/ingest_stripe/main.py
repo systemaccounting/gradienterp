@@ -91,7 +91,8 @@ def handler(event, context):
                 else:
                     alog.exception("collection failed", invoice_id=invoice_id)
                 return h.ok({"status": "dead_lettered", "invoice_id": invoice_id})
-            log.info("collected invoice %s from %s", invoice_id, event_id)
+            alog.info("stripe event collected an invoice", event=event_type, event_id=event_id,
+                      invoice_id=invoice_id, journal_entry_id=out.get("journal_entry_id"))
             return h.ok({"status": "collected", "invoice_id": invoice_id,
                          "journal_entry_id": out.get("journal_entry_id")})
 

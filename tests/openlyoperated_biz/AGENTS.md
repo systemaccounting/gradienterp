@@ -16,8 +16,8 @@ integration tests for the openlyoperated.biz backend (operator account):
 
 `_helpers.py` uses `operator-org` (operator account — counters, bus, read lambdas), overridable via
 `OOB_OPERATOR_PROFILE`; cross-account reads use `OOB_CUSTOMER_PROFILE` (default `gerp-gradienterp`).
-integ tests **skip** when creds don't resolve. profile split: see `reference_operator_profile` in the memory
-store — `operator-org` for operator-account CLI/SDK, not the self-assuming terraform stacks.
+integ tests **skip** when creds don't resolve. `bash scripts/awsacct.sh --all` writes both profiles; `operator-org`
+is for operator-account CLI/SDK, not the self-assuming terraform stacks (root `AGENTS.md` § the accounts).
 
 ## here / pending
 

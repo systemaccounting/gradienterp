@@ -24,9 +24,11 @@
 #
 # Env:
 #   LOCAL_AWS_ENDPOINT   default http://localhost:5000
-#   LOCAL_GERPS          the bff image's sub → gerps seed (see tests/server/bff/server.py)
-#                        set in the repo-root .env; a copy is the SecureString
-#                        /gradienterp/customers/gradienterp/local_dev/LOCAL_GERPS in the gradienterp gerp's account
+#   LOCAL_GERPS          the bff image's sub → gerps seed (see tests/server/bff/server.py), in the
+#                        repo-root .env; `bash scripts/e2e.sh --configure` writes a local owner of gradienterp.
+#                        Against a gerp's live gateway with a real login (LOCAL_GATEWAY_URL unset), the seed
+#                        is the dogfood's: the SecureString /gradienterp/customers/gradienterp/local_dev/LOCAL_GERPS
+#                        in the gradienterp gerp's account, also the LOCAL_GERPS repo secret for a cloud run
 #   MOTO_PORT / BFF_PORT / GW_PORT   to move a surface off a busy port
 
 set -euo pipefail

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Run the browser suite (tests/e2e, Playwright + AWS SDK). Defaults: local target, smoke suite.
 #
-#   bash scripts/e2e.sh --configure              # once — the suite's and tests/mailbox's install + LOCAL_GERPS
+#   bash scripts/e2e.sh --configure              # once — the suite's and tests/mailbox's install + the local seed
 #   bash scripts/e2e.sh                          # smoke against the local stack
 #   bash scripts/e2e.sh --suite full
 #   bash scripts/e2e.sh --env prod               # smoke against gradienterp.cloud, read-only
@@ -19,9 +19,10 @@
 #                                         prod lifecycle → npm run lifecycle (headed)
 #
 # A local run needs the local stack (scripts/local-dev.sh) and LOCAL_GERPS, the bff's sub → gerps
-# seed, in the repo-root .env. --configure copies LOCAL_GERPS into .env from the SSM copy in the
-# gradienterp gerp's account when .env has none. A run starts the stack only when a surface is
-# down: --start replaces every running surface, which drops the emulator's state.
+# seed, in the repo-root .env. --configure writes one when .env has none: a local owner of the
+# gradienterp gerp, whose gateway the local stack points at itself. No AWS. A LOCAL_GERPS already in
+# .env is left as it is. A run starts the stack only when a surface is down: --start replaces every
+# running surface, which drops the emulator's state.
 
 set -euo pipefail
 
@@ -59,8 +60,9 @@ E2E_DIR="$REPO_ROOT/tests/e2e"
 MAILBOX_DIR="$REPO_ROOT/tests/mailbox"
 ENV_FILE="$REPO_ROOT/.env"
 
-LOCAL_GERPS_PARAM="/gradienterp/customers/gradienterp/local_dev/LOCAL_GERPS"
-LOCAL_GERPS_PROFILE="gerp-gradienterp"
+# the local seed: one owner of the gerp the local per_customer stack is built as
+# (tests/server/per_customer/image.json); the bff points its gateway at the local stack
+LOCAL_SEED='{"local-owner": [{"gerp_id": "gradienterp", "label": "gradientERP"}]}'
 PROD_PROFILE="operator-org"
 OWNER_PASSWORD_PARAM="/gradienterp/test/e2e/owner_password"
 
@@ -108,17 +110,10 @@ if [[ "$CONFIGURE" == 1 ]]; then
         if env_has_local_gerps; then
             echo "  LOCAL_GERPS already in .env — left as it is"
         else
-            if ! value="$(aws ssm get-parameter --no-cli-pager --profile "$LOCAL_GERPS_PROFILE" \
-                    --name "$LOCAL_GERPS_PARAM" --with-decryption \
-                    --query Parameter.Value --output text 2>/dev/null)" || [[ -z "$value" ]]; then
-                echo "  !! could not read $LOCAL_GERPS_PARAM with profile $LOCAL_GERPS_PROFILE" >&2
-                exit 1
-            fi
-            # a new .env holds a login's gerps; keep it the owner's
             [[ -f "$ENV_FILE" ]] || (umask 077 && : >"$ENV_FILE")
             [[ -s "$ENV_FILE" && -n "$(tail -c 1 "$ENV_FILE")" ]] && echo >>"$ENV_FILE"
-            printf 'LOCAL_GERPS=%s\n' "$value" >>"$ENV_FILE"
-            echo "  LOCAL_GERPS written to .env from $LOCAL_GERPS_PARAM"
+            printf 'LOCAL_GERPS=%s\n' "$LOCAL_SEED" >>"$ENV_FILE"
+            echo "  LOCAL_GERPS written to .env: a local owner of gradienterp"
         fi
     else
         if ! profile_resolves "$PROD_PROFILE"; then

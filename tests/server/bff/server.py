@@ -83,7 +83,7 @@ def _seed(image):
 def _seed_gerps(image):
     """The gerps an account holds, as provisioning leaves them: an instance row on gerp-customers
     (owner_sub is who created it) and the membership row, which is what the ownership check reads. Seeded
-    from LOCAL_GERPS so the dogfood login lands on its own gerps."""
+    from LOCAL_GERPS so the local login lands on its own gerps."""
     import os
     from aws import client
     ddb = client("dynamodb")

@@ -148,7 +148,7 @@ for the http API surface, `tests/server/per_customer/` IS the per_customer stack
 - `bash scripts/docker.sh --build|--run|--stop|--push <ecr-uri>` — the underlying agent-container build/run primitives (`deploy.sh image` drives build/push; use directly for local container smoke)
 - `bash scripts/local-dev.sh --install` — once per clone: creates `.venv` (python3.12), installs the tests', the agent container's and the local servers' python deps, and runs `npm ci` in each Node lambda. Every script that runs `.venv/bin/python` (`test.sh`, `deploy.sh`, `investigate.sh`) needs it
 - `bash scripts/local-dev.sh --start|--status|--stop` — the local dev stack as plain processes: moto :5000, the owner-app BFF :3000 (sign in at `/dev/login?sub=local-dev`; `/dev` lists the rest), the per_customer stack :8080, the Stripe stand-in :4242, the Cognito stand-in :4243, openlyoperated.biz :3001, and the pump (no port)
-- `bash scripts/e2e.sh [--env local|prod] [--suite smoke|full|lifecycle] [--configure]` — the browser suite (`tests/e2e`); local by default, starting the local stack when a surface is down; `--configure` installs the suite and writes `LOCAL_GERPS` into `.env` from SSM
+- `bash scripts/e2e.sh [--env local|prod] [--suite smoke|full|lifecycle] [--configure]` — the browser suite (`tests/e2e`); local by default, starting the local stack when a surface is down; `--configure` installs the suite and writes the local seed (`LOCAL_GERPS`, a local owner of gradienterp) into `.env`
 - reading the fleet — open alarm tasks, a day's errors across every gerp, the agent's tokens, this month's cost per gerp: the commands are in `prod/platform/operator/AGENTS.md` § reading the fleet
 - `python3 tests/server/per_customer/snapshot.py` — re-take the per_customer manifest (routes + every function's env) from the running stack
 - `bash scripts/deploy.sh source` — builds `per-customer-source.zip` (`scripts/build-codebuild-source.sh`) and uploads it for `tower-per-customer` codebuild
@@ -158,7 +158,8 @@ for the http API surface, `tests/server/per_customer/` IS the per_customer stack
 
 ## the accounts
 
-- AWS Org under Control Tower. Management `335667362239`; operator `185369506315` (tfstate,
+- AWS Org under Control Tower. Management `335667362239`; Control Tower's `audit` `002904791175` and
+  `log_archive` `238599091185`; operator `185369506315` (tfstate,
   `gerp-customers`, the owner app, the collector); a hub per region (`config.json` `HUBS`; the
   first, `582129522725`, in us-east-1 — the bus its region's gerps put to, its edges); gradienterp
   customer `867637277314` — the dogfood, fully provisioned via `prod/per_customer/`; the Irish gerp

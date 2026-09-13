@@ -40,7 +40,7 @@ RUNTIME_ENV = {
 
 
 def local_gerps() -> dict:
-    """LOCAL_GERPS, the dogfood login's sub → the gerps it owns: from the environment, else the repo-root
+    """LOCAL_GERPS, the local login's sub → the gerps it owns: from the environment, else the repo-root
     .env (gitignored). The value is JSON or a path to a JSON file; unset is {}."""
     raw = (os.environ.get("LOCAL_GERPS") or "").strip()
     env = REPO / ".env"

@@ -1,8 +1,6 @@
 # The browser suite against the local stack: scripts/e2e.sh starts scripts/local-dev.sh and runs
-# smoke:local. No AWS. The bff seeds its gerps from LOCAL_GERPS, which the runner takes from the
-# repo secret of that name — the value of the SSM copy
-# /gradienterp/customers/gradienterp/local_dev/LOCAL_GERPS. A pull request from a fork gets no
-# secrets, so the job is skipped there.
+# smoke:local. No AWS and no secret: `e2e.sh --configure` writes the local seed into .env, so a pull
+# request from a fork runs it too.
 name: e2e
 
 on:
@@ -19,7 +17,6 @@ concurrency:
 
 jobs:
   e2e-local:
-    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -41,15 +38,7 @@ jobs:
           cache: npm
           cache-dependency-path: tests/e2e/package-lock.json
 
-      - name: .env from the LOCAL_GERPS secret
-        env:
-          LOCAL_GERPS: ${{ secrets.LOCAL_GERPS }}
-        run: |
-          if [ -z "$LOCAL_GERPS" ]; then echo "the LOCAL_GERPS repo secret is not set" >&2; exit 1; fi
-          umask 077
-          printf 'LOCAL_GERPS=%s\n' "$LOCAL_GERPS" > .env
-
-      # the suite's install and chromium; LOCAL_GERPS is already in .env, so it is left alone
+      # the suite's install, chromium, and the local seed in .env
       - run: bash scripts/e2e.sh --configure
 
       - name: chromium's system libraries

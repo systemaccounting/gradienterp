@@ -8,7 +8,7 @@ Most of `prod/` is still scaffolding. This file lists what's open.
 
 - [ ] `prod/platform/management/iam_identity_center.tf` — `OperatorReadOnly` + `EngineerConsultant` permission sets. OperatorAdmin already in place.
 
-## per_customer/ — one apply per customer (canonical; customer_apply.sh obsolete)
+## per_customer/ — one apply per customer
 
 The wired module set + the state/assume/orchestrator shape are in [`AGENTS.md`](AGENTS.md) (§`per_customer/`).
 

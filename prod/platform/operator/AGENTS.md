@@ -74,7 +74,8 @@ Operator subscriptions beyond publication (telemetry, billing, support) are boun
 
 `issue_collector` has two doors into the operator gerp's tasks. The first is an agent's
 escalation (a rule on the shared bus). The second is `gerp-ops-alerts`: every alarm state
-change is delivered here, and an alarm becomes work rather than mail.
+change is delivered here, and an alarm becomes a task (the us-east-1 topic also emails
+`ops+alerts@`, `prod/tower/alerts.tf`).
 
 An ALARM opens **one task per failure kind**, not one per alarm — the alarm names the account
 and the signal (`gerp-<gerp>-errors` a raise anywhere in that account, `gerp-<gerp>-error-lines`
@@ -165,20 +166,23 @@ Four reads a session starts from. The profiles are `bash scripts/awsacct.sh --al
         --projection-expression 'task_id, subject_key, category, created_at'
 
 - **a day's errors, every gerp** — Logs Insights in the operator account, which reads each gerp's
-  log groups through the observability link. A caught failure is a line with `level: "ERROR"`; a
-  raise is Lambda's own line, with `errorType` and no `level`, so the filter takes both:
+  log groups through the observability link. A gerp links to its own region's sink
+  (`config.json` `OAM_SINKS`), so the query runs once per region — `--region eu-west-1` for Dublin.
+  A caught failure is a line with `level: "ERROR"`; a raise is Lambda's own line, with `errorType`
+  and no `level`, so the filter takes both. Lines before 2026-09-13 are plain text, not JSON:
 
-      aws logs start-query --profile operator-org --start-time $(( $(date +%s) - 86400 )) --end-time $(date +%s) \
+      aws logs start-query --profile operator-org --region <region> --start-time $(( $(date +%s) - 86400 )) --end-time $(date +%s) \
         --query-language CWLI --query-string 'SOURCE logGroups(namePrefix: ["/aws/lambda/gerp-"], class: "STANDARD") START=-1d END=0s
           | fields @timestamp, @log, level, errorType, message
           | filter level = "ERROR" or ispresent(errorType) | sort @timestamp desc | limit 100'
-      aws logs get-query-results --profile operator-org --query-id <queryId>
+      aws logs get-query-results --profile operator-org --region <region> --query-id <queryId>
 
   `@log` names the account and the function; add `and @log like /-<gerp_id>-/` for one gerp.
 - **the agent's tokens** — namespace `gerp/agent`, dimension `gerp_id`, in the gerp's account
   (`modules/agent/AGENTS.md`): `aws cloudwatch get-metric-statistics --profile gerp-<gerp_id>
   --namespace gerp/agent --metric-name InputTokens --dimensions Name=gerp_id,Value=<gerp_id>
-  --statistics Sum --period 86400 --start-time … --end-time …`
+  --statistics Sum --period 86400 --start-time $(date -u -v-7d +%Y-%m-%dT00:00:00Z) --end-time $(date -u +%Y-%m-%dT%H:%M:%SZ)`
+  (`date -d '7 days ago'` on linux)
 - **this month's AWS cost per gerp** — Cost Explorer in the management account, by linked
   account, matched to gerps with `bash scripts/awsacct.sh --list`:
 

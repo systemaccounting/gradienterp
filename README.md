@@ -2,7 +2,7 @@
   <br>
   <img src="docs/images/art/gradientERP-nabla.svg" alt="∇" width="176">
   <br><br>
-  ERP as the agentic cross-firm optimization protocol in the cloud
+  ERP as the agentic cloud native cross-firm optimization protocol
   <br><br>
   <i>one firm's <code>purchase_request</code> is another's <code>sale</code></i>:
   <br>

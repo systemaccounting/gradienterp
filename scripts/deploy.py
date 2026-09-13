@@ -1,15 +1,15 @@
 """Artifact deploys — TF owns shape, S3 owns bytes.
 
-The build recipe stays terraform's: each module's archive_file writes
-modules/<m>/infra/.build/<fn>.zip during a refreshless plan, and this script
-pushes THOSE zips. The fleet self-describes via the `gerp:src-dir` lambda tag
+The build is this script's (`build_artifact`: a Node dir with its node_modules,
+or a Python dir with its resolved local imports), deterministic, so the same
+source gives the same checksum. The fleet self-describes via the `gerp:src-dir` lambda tag
 (one query = membership + which dir builds each function). Deployed state is
 never recorded anywhere — it's read live from CodeSha256.
 
 verbs (run via `bash scripts/deploy.sh …`):
 
   status [--gerp G] [--profile P]
-      tag query × get-function CodeSha256 × artifact latest-version checksum.
+      tag query × one list-functions walk for CodeSha256 × artifact latest-version checksum.
       states: in-sync / artifact-ahead (pushed, not deployed) / repo-ahead
       (local zip differs from artifact — push needed) / no-artifact.
 

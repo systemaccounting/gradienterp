@@ -141,8 +141,8 @@ one **coffee roaster/cafe**. layers (order matters; each cascades):
 - `tests/seed/` — a python `run.py` + `profiles/roaster.py`; reuses `helpers/seed.py`'s transforms + chart
   working set, and `helpers/replay.py` + `testdata/` for realistic card sales. (distinct from `seed.py`.)
 - creds: `gerp-gradienterp` invokes the gerp's lambdas; the counters populate in the operator
-  account via the bus (no direct write). see [[reference_operator_profile]] (CLI vs terraform profile),
-  [[reference_per_customer_apply]] (gradienterp = 867637277314).
+  account via the bus (no direct write). see root `AGENTS.md` § the accounts (CLI vs terraform profile),
+  `prod/per_customer/AGENTS.md` § state (gradienterp = 867637277314).
 
 ## open decisions
 

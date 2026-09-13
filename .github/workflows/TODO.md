@@ -1,8 +1,8 @@
 # .github/workflows — open work
 
 Three workflows run on every pull request and every push to `main`: `unit.yaml`
-(`bash scripts/test.sh`), `e2e.yaml` (`bash scripts/e2e.sh` against the local stack, `.env` from
-the `LOCAL_GERPS` repo secret) and `terraform.yaml` (`tf-validate-all.sh`). None needs AWS. The
+(`bash scripts/test.sh`), `e2e.yaml` (`bash scripts/e2e.sh` against the local stack, the seed written by
+`--configure`) and `terraform.yaml` (`tf-validate-all.sh`). None needs AWS. The
 other `.sh` files here are operator-run helpers; Actions ignores `.sh`. Current docs for everything below: fetch
 `code.claude.com/docs/llms.txt` and pull pages as raw markdown with an `.md` suffix.
 
