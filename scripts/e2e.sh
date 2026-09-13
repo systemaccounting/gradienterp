@@ -114,6 +114,8 @@ if [[ "$CONFIGURE" == 1 ]]; then
             [[ -s "$ENV_FILE" && -n "$(tail -c 1 "$ENV_FILE")" ]] && echo >>"$ENV_FILE"
             printf 'LOCAL_GERPS=%s\n' "$LOCAL_SEED" >>"$ENV_FILE"
             echo "  LOCAL_GERPS written to .env: a local owner of gradienterp"
+            # the bff reads .env when it starts, so a stack already up doesn't have the seed
+            surface_up 3000 && echo "  the local stack is up without it — run: bash scripts/local-dev.sh --restart"
         fi
     else
         if ! profile_resolves "$PROD_PROFILE"; then

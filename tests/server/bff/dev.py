@@ -65,7 +65,7 @@ def index(request: Request):
     return Response("\n".join(lines) + "\n", media_type="text/plain")
 
 
-@verb("GET", "/login?sub=<sub>", "a page that signs the browser in as <sub> and goes to /")
+@verb("GET", "/login", "?sub=<sub> — a page that signs the browser in as <sub> and goes to /")
 def login(sub: str, email: str = ""):  # every verb is sync on purpose: the self-calls need the loop free
     tok = _token(sub, email or f"{sub}@localhost")
     return HTMLResponse(f"<script>sessionStorage.setItem('id_token', {json.dumps(tok)}); location.replace('/');</script>")
