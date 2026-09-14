@@ -411,6 +411,35 @@ def test_invoicing_refusing_the_amount_dead_letters_the_charge():
         assert len(dlq()) == 1 and entries() == []
 
 
+def _log_lines(run):
+    """The JSON lines `aws.log` prints off Lambda while `run` runs."""
+    import contextlib
+    import io
+    buf = io.StringIO()
+    with contextlib.redirect_stdout(buf):
+        run()
+    return [json.loads(l) for l in buf.getvalue().splitlines() if l.startswith("{")]
+
+
+def test_each_way_out_logs_the_event_id():
+    """An event id finds its log line: a posted sale names its entry, a collection names the invoice
+    and the journal entry the invoice row keeps as payment_entry_id."""
+    with scratch_env():
+        ing = load_lambda("ingest_stripe")
+        lines = _log_lines(lambda: ing.handler(_event(_fixture("charge.succeeded.json")), None))
+        posted = [l for l in lines if l.get("message") == "stripe event posted"]
+        assert len(posted) == 1, lines
+        assert posted[0]["event_id"] == "evt_3Tek05RBOqTW9S9W1QDIzyBO" and posted[0]["entry_id"]
+    with scratch_env():
+        ing = load_lambda("ingest_stripe")
+        ing.h.record_invoice_paid = lambda invoice_id, cash_account, tax=0, amount=None: {"journal_entry_id": "inv-1#abc-payment"}
+        lines = _log_lines(lambda: ing.handler(_event(_charge_naming("1#abc")), None))
+        collected = [l for l in lines if l.get("message") == "stripe event collected an invoice"]
+        assert len(collected) == 1, lines
+        assert collected[0]["event_id"] == "evt_3Tek05RBOqTW9S9W1QDIzyBO"
+        assert (collected[0]["invoice_id"], collected[0]["journal_entry_id"]) == ("1#abc", "inv-1#abc-payment")
+
+
 if __name__ == "__main__":
     for _name, _fn in sorted(globals().items()):
         if _name.startswith("test_") and callable(_fn):
