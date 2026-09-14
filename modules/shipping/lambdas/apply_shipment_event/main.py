@@ -38,7 +38,7 @@ def handler(event, context):
 
     # the PO thread is the shared key both firms already agreed on — it is our po_id
     po_id = detail.get("thread") or detail.get("po_id")
-    sender = row.get("from_gerp") or detail.get("from")
+    sender = row.get("from_gerp")   # verified at the inbox door; detail.from is the sender's word
     if not (po_id and sender):
         log.info("shipment.sent missing thread/sender; skipping", thread=po_id, sender=sender)
         return {"skipped": "incomplete"}

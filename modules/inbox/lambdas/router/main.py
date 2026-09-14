@@ -63,6 +63,9 @@ def _one(rec):
         return
     row = _row(rec["dynamodb"].get("NewImage"))
     dt = row.get("detail_type") or ""
+    if row.get("status") == "refused":   # receive_inbound couldn't verify the sender: nobody acts on it
+        log.info("refused inbound not routed", detail_type=dt, inbound_id=row.get("inbound_id"))
+        return
     handler = ROUTES.get(dt)
     decided = None
     if handler and dt.endswith(".proposed"):   # the stamp, then the firm's rules; wait for the answer

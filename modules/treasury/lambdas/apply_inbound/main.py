@@ -38,7 +38,7 @@ def _book_distribution(event, detail):
     Deterministic entryId per (thread, period), so a redelivered event neither double-books the
     income nor double-counts against the cap."""
     thread = detail.get("instrument_id") or detail.get("thread")
-    issuer = event.get("from_gerp") or detail.get("from")
+    issuer = event.get("from_gerp")   # verified at the inbox door; detail.from is the sender's word
     amount = detail.get("amount")
     period = detail.get("period_end") or detail.get("periodEnd") or ""
     if not (thread and amount and float(amount) > 0):

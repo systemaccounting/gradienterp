@@ -43,6 +43,15 @@ def test_every_addressed_emitter_carries_the_directory_in_prod():
     assert not missing, f"addressed emitters with no DIRECTORY_TABLE_ARN in their env: {missing}"
 
 
+
+def test_the_inbound_door_carries_the_directory_in_prod():
+    """receive_inbound checks an addressed event's sender against the directory; in Lambda with no
+    directory it refuses every event, so a stack missing the wiring receives nothing."""
+    functions = json.loads(IMAGE.read_text())["functions"]
+    [f] = [f for f in functions.values() if f.get("src_dir") == "modules/inbox/lambdas/receive_inbound"]
+    assert (f.get("env") or {}).get("DIRECTORY_TABLE_ARN")
+
+
 if __name__ == "__main__":
     for _name, _fn in sorted(globals().items()):
         if _name.startswith("test_") and callable(_fn):

@@ -59,6 +59,12 @@ resource "aws_iam_role_policy" "lambda" {
         Resource = aws_dynamodb_table.inbound.arn
       },
       {
+        # the sender's directory row names its account, which an inbound event has to come from
+        Effect   = "Allow"
+        Action   = "dynamodb:GetItem"
+        Resource = var.directory_table_arn
+      },
+      {
         Effect = "Allow"
         Action = [
           "logs:CreateLogGroup",
@@ -84,7 +90,8 @@ module "receive_inbound" {
   gerp_id         = var.gerp_id
   timeout         = 30
   env_vars = {
-    INBOUND_TABLE = aws_dynamodb_table.inbound.name
+    INBOUND_TABLE       = aws_dynamodb_table.inbound.name
+    DIRECTORY_TABLE_ARN = var.directory_table_arn
   }
   log_retention_days = var.log_retention_days
 }

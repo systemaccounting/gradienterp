@@ -84,6 +84,16 @@ def test_the_other_stamps_keep_the_async_shape():
         ("apply_inbound", "Event"), ("poke_agent", "Event"), ("apply_shipment", "Event"), ("poke_agent", "Event")]
 
 
+
+def test_a_refused_inbound_reaches_no_handler_and_wakes_nobody():
+    """receive_inbound couldn't verify who sent it, so nothing acts on it."""
+    lam = FakeLambda(decided="accept")
+    rec = _record("po.proposed")
+    rec["Records"][0]["dynamodb"]["NewImage"]["status"] = {"S": "refused"}
+    _router(lam).handler(rec, None)
+    assert lam.calls == []
+
+
 if __name__ == "__main__":
     for _n in [k for k in dir() if k.startswith("test_")]:
         globals()[_n]()

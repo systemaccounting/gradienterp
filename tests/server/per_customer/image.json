@@ -801,6 +801,7 @@
       "env": {
         "CUSTOMER_ID": "gradienterp",
         "GERP_ID": "gradienterp",
+        "DIRECTORY_TABLE_ARN": "arn:aws:dynamodb:us-east-1:185369506315:table/gerp-directory",
         "INBOUND_TABLE": "gerp-inbox-gradienterp-inbound"
       },
       "src_dir": "modules/inbox/lambdas/receive_inbound",

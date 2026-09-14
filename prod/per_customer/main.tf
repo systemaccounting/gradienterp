@@ -625,6 +625,7 @@ module "inbox" {
 
   log_retention_days         = local.log_retention_days
   internal_bus_name          = module.events.internal_bus_name # the consume edge
+  directory_table_arn        = local.directory_table_arn       # the sender check at the door
   ops_alerts_topic_arn       = local.ops_alerts_topic_arn
   gerp_id                    = var.gerp_id
   stack_prefix               = local.stack_prefix

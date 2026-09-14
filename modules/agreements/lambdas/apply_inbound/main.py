@@ -63,7 +63,7 @@ def _parties(detail, sender, kind):
 
 def _stamp_proposed(event, detail, kind):
     thread = detail.get("thread")
-    sender = event.get("from_gerp") or detail.get("from")
+    sender = event.get("from_gerp")   # verified at the inbox door; detail.from is the sender's word
     if not (thread and sender):
         log.info("missing thread/sender; skipping", kind=kind, thread=thread, sender=sender)
         return {"skipped": "incomplete"}
@@ -154,7 +154,7 @@ def _log_decided(how, agreement_kind, thread, terms_hash, sender, rule_key):
 def _stamp_accepted(event, detail, kind):
     thread = detail.get("thread")
     terms_hash = detail.get("terms_hash")
-    sender = event.get("from_gerp") or detail.get("from")
+    sender = event.get("from_gerp")   # verified at the inbox door; detail.from is the sender's word
     if not (thread and terms_hash and sender):
         log.info("missing thread/terms_hash/sender; skipping", kind=kind, thread=thread,
                  terms_hash=terms_hash, sender=sender)
@@ -183,7 +183,7 @@ def _stamp_declined(event, detail, kind):
     sender is the row's other party, like an accept."""
     thread = detail.get("thread")
     terms_hash = detail.get("terms_hash")
-    sender = event.get("from_gerp") or detail.get("from")
+    sender = event.get("from_gerp")   # verified at the inbox door; detail.from is the sender's word
     if not (thread and terms_hash and sender):
         log.info("missing thread/terms_hash/sender; skipping", kind=kind, thread=thread,
                  terms_hash=terms_hash, sender=sender)

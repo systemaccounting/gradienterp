@@ -55,3 +55,8 @@ variable "internal_bus_name" {
   type        = string
   default     = ""
 }
+
+variable "directory_table_arn" {
+  description = "The platform directory (prod/platform/operator gerp-directory) in this region: receive_inbound checks an inbound event's account against the sender's row."
+  type        = string
+}
