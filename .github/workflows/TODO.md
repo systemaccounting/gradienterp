@@ -2,7 +2,9 @@
 
 Three workflows run on every pull request and every push to `main`: `unit.yaml`
 (`bash scripts/test.sh`), `e2e.yaml` (`bash scripts/e2e.sh` against the local stack, the seed written by
-`--configure`) and `terraform.yaml` (`tf-validate-all.sh`). None needs AWS. The
+`--configure`) and `terraform.yaml` (`terraform fmt -check`, then `tf-validate-all.sh`). None needs AWS.
+GitHub itself runs secret scanning with push protection, Dependabot alerts and Dependabot security
+updates, set in the repo settings. The
 other `.sh` files here are operator-run helpers; Actions ignores `.sh`. Current docs for everything below: fetch
 `code.claude.com/docs/llms.txt` and pull pages as raw markdown with an `.md` suffix.
 

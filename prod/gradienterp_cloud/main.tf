@@ -27,7 +27,7 @@ locals {
   prefix         = "${local.stack_prefix}-cloud"
   # where the operator stored the seller gerp's published customers/upsert answer ({url, token}),
   # and the customers/erase one beside it (the same caller, so the same token)
-  customer_hook_param       = "/gradienterp/cloud/hooks/customers_upsert"
+  customer_hook_param = "/gradienterp/cloud/hooks/customers_upsert"
   # the read-only role in management the BFF counts the org's accounts through, for the create
   # screen's "accounts currently available" line (prod/platform/management capacity_read_role.tf)
   capacity_read_role        = "arn:aws:iam::${data.aws_organizations_organization.this.master_account_id}:role/GerpCapacityRead"
@@ -270,16 +270,16 @@ module "bff" {
     # the card-saving pair, in the seller's account (cross-account invoke)
     # Full ARNs, not names: boto3 resolves an unqualified function name against the CALLER's
     # account, so a bare name looks for these in operator and fails on an arn that never existed.
-    SETUP_LINK_FN             = "arn:aws:lambda:${data.aws_region.current.id}:${var.seller_account_id}:function:${local.stack_prefix}-payments-${var.seller_gerp}-payment_links"
-    SAVE_CARD_FN              = "arn:aws:lambda:${data.aws_region.current.id}:${var.seller_account_id}:function:${local.stack_prefix}-payments-${var.seller_gerp}-save_payment_method"
-    CARD_METHODS_FN           = "arn:aws:lambda:${data.aws_region.current.id}:${var.seller_account_id}:function:${local.stack_prefix}-payments-${var.seller_gerp}-manage_saved_cards"
-    CHARGE_FN                 = "arn:aws:lambda:${data.aws_region.current.id}:${var.seller_account_id}:function:${local.stack_prefix}-payments-${var.seller_gerp}-charge_saved_method"
-    PROFILES_TABLE            = "${local.stack_prefix}-profiles"
-    REGIONS                   = jsonencode(local.config.REGIONS) # the create screen's regions (config.json)
-    CUSTOMER_HOOK_PARAM       = local.customer_hook_param
-    CAPACITY_READ_ROLE        = local.capacity_read_role
+    SETUP_LINK_FN       = "arn:aws:lambda:${data.aws_region.current.id}:${var.seller_account_id}:function:${local.stack_prefix}-payments-${var.seller_gerp}-payment_links"
+    SAVE_CARD_FN        = "arn:aws:lambda:${data.aws_region.current.id}:${var.seller_account_id}:function:${local.stack_prefix}-payments-${var.seller_gerp}-save_payment_method"
+    CARD_METHODS_FN     = "arn:aws:lambda:${data.aws_region.current.id}:${var.seller_account_id}:function:${local.stack_prefix}-payments-${var.seller_gerp}-manage_saved_cards"
+    CHARGE_FN           = "arn:aws:lambda:${data.aws_region.current.id}:${var.seller_account_id}:function:${local.stack_prefix}-payments-${var.seller_gerp}-charge_saved_method"
+    PROFILES_TABLE      = "${local.stack_prefix}-profiles"
+    REGIONS             = jsonencode(local.config.REGIONS) # the create screen's regions (config.json)
+    CUSTOMER_HOOK_PARAM = local.customer_hook_param
+    CAPACITY_READ_ROLE  = local.capacity_read_role
     # the card page's Stripe.js key — the account's publishable key, public by design
-    STRIPE_PUBLISHABLE_KEY    = "pk_live_51Ta6U5RBOqTW9S9WmFw1hMXSPxX5YflH7dimUqgvThzHJXlzQ9WPEQzSVhEWIIFPRP8vOxqv5ZJeUt8geVHRvKqg004OHK5Q7E"
+    STRIPE_PUBLISHABLE_KEY = "pk_live_51Ta6U5RBOqTW9S9WmFw1hMXSPxX5YflH7dimUqgvThzHJXlzQ9WPEQzSVhEWIIFPRP8vOxqv5ZJeUt8geVHRvKqg004OHK5Q7E"
     # the /support page: from the operator's sender to the support mailbox (the SES catch-all
     # forwards it); the address lives here and in no page
     SENDER_EMAIL              = "ops+sender@gradienterp.cloud"

@@ -164,6 +164,16 @@ PY
 #     entry with a typo'd type or a missing description propagates before anyone notices
 ( cd "$REPO_ROOT" && "$PY" "$SCRIPT_DIR/lint_schemas.py" )
 
+# every shell script parses: a syntax error surfaces here, naming the file and the line, rather than
+# half way through a deploy or a codebuild run
+sh_files=0
+while IFS= read -r -d '' f; do
+    bash -n "$f" || { echo "!! ${f#$REPO_ROOT/} does not parse" >&2; exit 1; }
+    sh_files=$((sh_files + 1))
+done < <(find "$REPO_ROOT" \( -name node_modules -o -name .venv -o -name .terraform -o -name tmp -o -name .git \) -prune \
+         -o -name '*.sh' -type f -print0)
+echo "shell syntax: $sh_files scripts parse ✓"
+
 if [[ $LOGS -eq 0 ]]; then
     rm -rf "$REPO_ROOT/out" "$REPO_ROOT/logs"
 fi

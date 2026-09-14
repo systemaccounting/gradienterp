@@ -227,9 +227,9 @@ locals {
 
 data "aws_iam_policy_document" "scp_region_pin" {
   statement {
-    effect = "Deny"
+    effect      = "Deny"
     not_actions = local.region_pin_exceptions
-    resources = ["*"]
+    resources   = ["*"]
     condition {
       test     = "StringNotEquals"
       variable = "aws:RequestedRegion"
@@ -252,9 +252,9 @@ resource "aws_organizations_policy" "region_pin" {
 # that list, denied everywhere else
 data "aws_iam_policy_document" "scp_region_pin_platform" {
   statement {
-    effect = "Deny"
+    effect      = "Deny"
     not_actions = local.region_pin_exceptions
-    resources = ["*"]
+    resources   = ["*"]
     condition {
       test     = "StringNotEquals"
       variable = "aws:RequestedRegion"

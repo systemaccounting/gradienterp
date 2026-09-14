@@ -195,7 +195,7 @@ module "forwarder" {
     # `tests/mailbox` reads the S3 copy; this only suppresses the personal-inbox hop.
     NO_FORWARD_PREFIX = local.no_forward_prefix
   }
-  log_retention_days   = local.config.LOG_RETENTION_DAYS
+  log_retention_days = local.config.LOG_RETENTION_DAYS
 }
 
 moved {

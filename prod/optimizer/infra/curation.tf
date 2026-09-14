@@ -57,7 +57,7 @@ module "curate_invoke" {
   env_vars = {
     HUB_RUNTIME_ENDPOINT_ARN = aws_bedrockagentcore_agent_runtime_endpoint.hub.agent_runtime_endpoint_arn
   }
-  log_retention_days   = local.config.LOG_RETENTION_DAYS
+  log_retention_days = local.config.LOG_RETENTION_DAYS
 }
 
 moved {

@@ -153,7 +153,7 @@ for the http API surface, `tests/server/per_customer/` IS the per_customer stack
 - `python3 tests/server/per_customer/snapshot.py` — re-take the per_customer manifest (routes + every function's env) from the running stack
 - `bash scripts/deploy.sh source` — builds `per-customer-source.zip` (`scripts/build-codebuild-source.sh`) and uploads it for `tower-per-customer` codebuild
 - `bash scripts/bedrock-authorize-anthropic-org.sh` — one-time-per-org call to cascade Anthropic FTU approval to every member account
-- `terraform validate` — run from `modules/*/infra/`; every directory at once is `bash .github/workflows/tf-validate-all.sh`, which `.github/workflows/terraform.yaml` runs on every pull request
+- `terraform validate` — run from `modules/*/infra/`; every directory at once, in parallel, is `bash .github/workflows/tf-validate-all.sh`, which `.github/workflows/terraform.yaml` runs on every pull request after `terraform fmt -check -recursive` (format with `terraform fmt -recursive`)
 - `terraform apply` — provision infrastructure
 
 ## the accounts

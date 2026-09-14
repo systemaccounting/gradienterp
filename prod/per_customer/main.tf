@@ -725,7 +725,7 @@ module "mcp" {
   settings_table_arn       = module.settings.settings_table_arn
   cognito_user_pool_id     = local.config.COGNITO_USER_POOL_ID
   cognito_token_url        = "https://${local.stack_prefix}-auth.auth.us-east-1.amazoncognito.com/oauth2/token" # the pool's region
-  landing_invoker_role_arn = var.export_invoker_role_arn # the gerp-cloud BFF's role, the same on every gerp
+  landing_invoker_role_arn = var.export_invoker_role_arn                                                        # the gerp-cloud BFF's role, the same on every gerp
   gateway_id               = module.agent.gateway_id
   gateway_role_arn         = module.agent.gateway_role_arn
 

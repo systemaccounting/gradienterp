@@ -288,7 +288,7 @@ locals {
     OP_EVENT_BUS_ARN      = var.op_event_bus_arn # accept_po emits po.accepted here
     DIRECTORY_TABLE_ARN   = var.directory_table_arn
     HUB_ID                = var.hub_id
-    INTERNAL_BUS_NAME     = var.internal_bus_name # where a firm's transition rules announce
+    INTERNAL_BUS_NAME     = var.internal_bus_name                             # where a firm's transition rules announce
     OWNER_SUB_PARAM       = "/gradienterp/customers/${var.gerp_id}/owner_sub" # GET /invoices answers only this sub
   }
 }

@@ -24,9 +24,9 @@ data "aws_iam_policy_document" "scp_region_pin_region" {
   for_each = toset(local.other_regions)
 
   statement {
-    effect = "Deny"
+    effect      = "Deny"
     not_actions = local.region_pin_exceptions
-    resources = ["*"]
+    resources   = ["*"]
     condition {
       test     = "StringNotEquals"
       variable = "aws:RequestedRegion"

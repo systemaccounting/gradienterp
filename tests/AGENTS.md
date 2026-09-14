@@ -6,6 +6,9 @@
   Python `test_*.py` and Node `*.test.mjs` (Node's built-in `--test`, zero deps) in one run.
   `.github/workflows/unit.yaml` runs it on every pull request, on python3.12 and Node 22, the
   lambda runtimes
+- **checks before the suites** — `scripts/lint_schemas.py`, then `bash -n` over every `.sh` outside
+  `node_modules`, `.venv`, `.terraform`, `tmp` and `.git`; a script that doesn't parse fails the run naming the file
+  and line
 - **runs in parallel, one moto per worker** — worker count derived from cgroup quota then core
   count, capped at 8. 766 tests in ~47s
 - **real AWS calls against a local endpoint** — migrated modules make the same boto3 calls they
