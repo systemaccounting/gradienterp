@@ -1,6 +1,6 @@
 # Applies a stack from an uploaded working tree: a version of source.zip, through that tree's own
 # `scripts/apply.sh`. On the laptop: `bash scripts/zip.sh source`, `bash scripts/upload.sh source`, then
-# dispatch — by hand, or `bash scripts/dispatch.sh apply.yaml -f stack=<stack> …`, which waits on the
+# dispatch — by hand, or `bash scripts/workflow.sh run apply.yaml -f stack=<stack> …`, which waits on the
 # run. `per_customer` and `hub` build in CodeBuild from the same version; the operator stacks run
 # terraform here. `platform/management` isn't a choice: it applies from the laptop, with its own
 # terraform.tfvars and a management permission the job's role doesn't have. The run log is public, so

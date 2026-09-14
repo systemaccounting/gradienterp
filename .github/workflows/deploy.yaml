@@ -1,6 +1,6 @@
 # Deploys lambda code and the agent image from an uploaded working tree: a version of source.zip, the
 # dirs its deploy-dirs.txt names, to one gerp, a list or every active gerp — one job per gerp at once.
-# From a session: `bash scripts/dispatch.sh deploy.yaml --dirs <src-dir>… [-f gerp=…] [-f image=build]`,
+# From a session: `bash scripts/workflow.sh run deploy.yaml --dirs <src-dir>… [-f gerp=…] [-f image=build]`,
 # which zips and uploads the tree, dispatches on that version and waits on the run. Every job runs the
 # tree's own scripts.
 #
