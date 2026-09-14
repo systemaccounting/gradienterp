@@ -1,0 +1,37 @@
+# A version of the uploaded working tree, unzipped: what `zip.sh source` built and `upload.sh source`
+# put at s3://gerp-codebuild-source-185369506315/source.zip. The job runs that tree's own scripts, so
+# it deploys or applies the tree the laptop zipped, committed or not. Needs `.github/actions/aws` first.
+name: source
+description: download and unzip a version of source.zip, and name it in the run summary
+inputs:
+  version:
+    description: a version of source.zip; empty is its latest
+    required: false
+    default: ""
+outputs:
+  tree:
+    description: the unzipped tree
+    value: ${{ steps.fetch.outputs.tree }}
+  version:
+    description: the version downloaded, for a CodeBuild build to take the same one
+    value: ${{ steps.fetch.outputs.version }}
+runs:
+  using: composite
+  steps:
+    - id: fetch
+      shell: bash
+      env:
+        VERSION: ${{ inputs.version }}
+      run: |
+        bucket=gerp-codebuild-source-185369506315
+        version="${VERSION:-$(aws s3api head-object --bucket "$bucket" --key source.zip --profile operator-org --query VersionId --output text)}"
+        aws s3api get-object --bucket "$bucket" --key source.zip --version-id "$version" \
+          --profile operator-org "$RUNNER_TEMP/source.zip" > /dev/null
+        tree="$RUNNER_TEMP/tree"
+        rm -rf "$tree" && mkdir -p "$tree" && unzip -q "$RUNNER_TEMP/source.zip" -d "$tree"
+        echo "tree=$tree" >> "$GITHUB_OUTPUT"
+        echo "version=$version" >> "$GITHUB_OUTPUT"
+        jq -r --arg v "$version" '"**source.zip** at `\($v)` — commit `\(.commit[0:12])`"
+          + (if .dirty then ", with uncommitted changes" else "" end)
+          + "\n\ndirs: " + (if (.dirs | length) > 0 then (.dirs | map("`\(.)`") | join(", ")) else "none" end) + "\n"' \
+          "$tree/source.json" >> "$GITHUB_STEP_SUMMARY"

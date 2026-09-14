@@ -85,7 +85,7 @@ resource "aws_cognito_user_pool_client" "gradienterp_cloud" {
   # the execute-api URL = the deployed gerp-website BFF (interim, until the custom
   # domain lands — see prod/gradienterp_cloud/TODO.md).
   #
-  # var.chat_callback_urls appends each gerp's web-chat Function URL so the chat's
+  # config.json CHAT_CALLBACK_URLS appends each gerp's web-chat Function URL so the chat's
   # own "Sign in with Cognito" completes the hosted-UI code flow back to itself
   # (the chat lambda exchanges the code server-side). One shared client is fine at
   # this scale; at fleet scale source this list from the gerp-customers table
@@ -94,12 +94,12 @@ resource "aws_cognito_user_pool_client" "gradienterp_cloud" {
     "https://gradienterp.cloud/auth/callback",
     "http://localhost:3000/auth/callback",
     "https://oq5y2j1trc.execute-api.us-east-1.amazonaws.com/auth/callback",
-  ], var.chat_callback_urls)
+  ], local.config.CHAT_CALLBACK_URLS)
   logout_urls = concat([
     "https://gradienterp.cloud",
     "http://localhost:3000",
     "https://oq5y2j1trc.execute-api.us-east-1.amazonaws.com",
-  ], var.chat_callback_urls)
+  ], local.config.CHAT_CALLBACK_URLS)
 
   allowed_oauth_flows = ["code"]
   # `aws.cognito.signin.user.admin` is what lets an OAuth access token call UpdateUserAttributes /

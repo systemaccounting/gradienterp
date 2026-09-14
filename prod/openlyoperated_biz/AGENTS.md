@@ -60,7 +60,7 @@ stays a pointer.
 ## deploy / update
 
 ```
-cd prod/openlyoperated_biz && AWS_PROFILE=default terraform apply
+bash scripts/apply.sh --stack openlyoperated_biz        # --plan to stop after the plan
 ```
 
 Base creds = management (`default` profile); the provider assume-roles into the operator account. `apply` re-uploads changed `web/*` objects; they carry `Cache-Control: max-age=60`, so the edge refreshes within ~1 min — no manual CloudFront invalidation for routine edits.

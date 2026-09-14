@@ -52,19 +52,18 @@ data "aws_caller_identity" "current" {}
 # Empty by DEFAULT, so vending stays off unless someone turns it on deliberately:
 #
 #   terraform apply                                  # gerps stop at awaiting_payment
-#   terraform apply -var 'provision_queue=tower-vends'   # real sub-accounts
+#   config.json "PROVISION_QUEUE": "tower-vends"   # real sub-accounts
 #
-# Production carries it in `terraform.tfvars` since 2026-09-04, so every apply vends; the line
-# there is the switch.
+# Production has vended since 2026-09-04; config.json is tracked, so every tree applies the same
+# switch, and the line there is it.
 #
 # Off, `POST /api/gerps` records the row and `save-card` leaves it at awaiting_payment — the
 # whole create → pay → return path runs with no Control Tower and nothing to clean up after.
 # Defaulting to ON would mean a routine apply silently enables 15-minute account vending, which is
 # not a thing anyone should discover by accident.
-variable "provision_queue" {
-  description = "Tower's vends queue (the provisioner consumes it four at a time). Empty (the default) disables vending; set it to tower-vends to vend real sub-accounts."
-  type        = string
-  default     = ""
+locals {
+  # Tower's vends queue (the provisioner consumes it four at a time). Empty disables vending.
+  provision_queue = local.config.PROVISION_QUEUE
 }
 
 # ── the closure switch ──────────────────────────────────────────────────────
@@ -72,11 +71,9 @@ variable "provision_queue" {
 # so the dialog, the typed confirmation and the whole owner-facing path run with nothing destroyed.
 # On, the request goes to the seller gerp's closure scripts, which sit behind the operator's own
 # CLOSE_BUILD_PROJECT switch in turn. Closure destroys a customer's instance; it does not get
-# enabled by a routine apply.
-variable "closure_enabled" {
-  description = "Hand a requested closure to the seller gerp's closure scripts. False (the default) records the request and does nothing else."
-  type        = bool
-  default     = false
+# enabled by a routine apply. config.json "CLOSURE_ENABLED", on since 2026-09-05.
+locals {
+  closure_enabled = local.config.CLOSURE_ENABLED
 }
 
 variable "seller_gerp" {
@@ -244,7 +241,7 @@ resource "aws_iam_role_policy" "bff" {
   })
 }
 
-# Code ships with `deploy.sh push --webapp` (build → artifact bucket → update-function-code, the
+# Code ships with `deploy.sh push --dirs prod/gradienterp_cloud/bff` (build → artifact bucket → update-function-code, the
 # fleet's shape), so the bucket's latest version is the running code and an apply's re-pin is a
 # no-op. 29s timeout: just inside API Gateway's 30s integration cap — `save-card` invokes the
 # seller's lambda SYNCHRONOUSLY, three Stripe round trips deep, and a shorter timeout here fails
@@ -262,11 +259,11 @@ module "bff" {
   env_vars = {
     CUSTOMERS_TABLE  = "${local.stack_prefix}-customers"
     MEMBERS_TABLE    = "${local.stack_prefix}-members"
-    PROVISION_QUEUE  = var.provision_queue == "" ? "" : "https://sqs.${data.aws_region.current.id}.amazonaws.com/${data.aws_caller_identity.current.account_id}/${var.provision_queue}"
+    PROVISION_QUEUE  = local.provision_queue == "" ? "" : "https://sqs.${data.aws_region.current.id}.amazonaws.com/${data.aws_caller_identity.current.account_id}/${local.provision_queue}"
     OWNER_EMAIL_FN   = "tower-update-owner-email"
     BUSINESS_INFO_FN = "tower-update-business-info"
     # a requested closure goes to the seller gerp's closure scripts; empty records and stops
-    CLOSURE_BEGIN_FN = var.closure_enabled ? "arn:aws:lambda:${data.aws_region.current.id}:${var.seller_account_id}:function:${local.stack_prefix}-automation-${var.seller_gerp}-automate" : ""
+    CLOSURE_BEGIN_FN = local.closure_enabled ? "arn:aws:lambda:${data.aws_region.current.id}:${var.seller_account_id}:function:${local.stack_prefix}-automation-${var.seller_gerp}-automate" : ""
     # the card-saving pair, in the seller's account (cross-account invoke)
     # Full ARNs, not names: boto3 resolves an unqualified function name against the CALLER's
     # account, so a bare name looks for these in operator and fails on an arn that never existed.

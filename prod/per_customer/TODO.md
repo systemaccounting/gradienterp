@@ -18,7 +18,7 @@
 Registry config flows through the agent path (extend_schema + weekly canonical-pull), NOT terraform. Lambda code / schemas / IAM still flow through terraform/codebuild — detect when a customer is behind the operator's source bundle:
 
 - [ ] **`terraform_data.applied_source_etag`** — `data "aws_s3_object" "per_customer_source"` reads operator's source-bundle etag at apply; capture it as `input` so state holds the last-applied etag.
-- [ ] **`diff_config` lambda + EventBridge Scheduler** — per-customer cron reads operator's source-bundle etag (cross-account `s3:HeadObject` on `gerp-codebuild-source-185369506315/per-customer-source.zip`) vs own tfstate's `applied_source_etag`; on diff, assumes operator's `TowerStartBuild` role and calls `codebuild:StartBuild` on `tower-per-customer`. needs operator-side `TowerStartBuild` role + tfstate bucket policy (tower's TODO).
+- [ ] **`diff_config` lambda + EventBridge Scheduler** — per-customer cron reads operator's source-bundle etag (cross-account `s3:HeadObject` on `gerp-codebuild-source-185369506315/release/source.zip`) vs own tfstate's `applied_source_etag`; on diff, assumes operator's `TowerStartBuild` role and calls `codebuild:StartBuild` on `tower-per-customer`. needs operator-side `TowerStartBuild` role + tfstate bucket policy (tower's TODO).
 
 ## note: canonical-registry adds need a manual reseed
 

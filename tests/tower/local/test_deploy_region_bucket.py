@@ -62,17 +62,21 @@ class CB:
     def batch_get_builds(self, ids):
         return {"builds": [{"currentPhase": "COMPLETED", "buildComplete": True, "buildStatus": "SUCCEEDED", "logs": {}}]}
 cb = CB()
+class S3:
+    def head_object(self, Bucket, Key):
+        return {"VersionId": "v1"}
 class Op:
     def client(self, name):
-        return cb
-deploy._run_build(Op(), "dublin-x", "111", "apply", "eu-west-1")
+        return S3() if name == "s3" else cb
+import apply
+apply._run_build(Op(), "dublin-x", "111", "apply", "eu-west-1")
 print(cb.env["CUSTOMER_REGION"], cb.env["TF_ACTION"])
-src = open("scripts/deploy.py").read()
+src = open("scripts/apply.py").read()
 print(src.count('row.get("region") or "us-east-1"'))
 '''
     out = _run(code).splitlines()
     assert out[-2] == "eu-west-1 apply"
-    assert out[-1] == "2", "stop and start both pass the row's region"
+    assert out[-1] == "1", "every per-customer build (apply, stop, plan) passes the row's region through apply_gerp"
 
 if __name__ == "__main__":
     for _n in [k for k in dir() if k.startswith("test_")]:

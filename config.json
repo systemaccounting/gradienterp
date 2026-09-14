@@ -190,6 +190,10 @@
   "SELLER_GERP": "gradienterp",
   "SELLER_ACCOUNT_ID": "867637277314",
   "CLOSE_BUILD_PROJECT": "tower-per-customer",
+  "PROVISION_QUEUE": "tower-vends",
+  "CLOSURE_ENABLED": true,
+  "CHAT_CALLBACK_URLS": ["https://dgh7sd7zrbbstsxqid2vnuczia0mztfi.lambda-url.us-east-1.on.aws/"],
+  "CLOSURE_REQUESTER_ACCOUNTS": ["867637277314"],
   "OPS_ALERTS_TOPIC_ARN": "arn:aws:sns:us-east-1:185369506315:gerp-ops-alerts",
   "LOG_RETENTION_DAYS": 90,
   "OAM_SINKS": {

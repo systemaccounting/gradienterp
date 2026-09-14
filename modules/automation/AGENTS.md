@@ -473,7 +473,7 @@ what every gerp but the operator's own has. `CLOSE_BUILD_PROJECT` empty is the o
 switch, independent of any approval: `begin` records the request and schedules nothing, because an
 account-close timer against a live stack is the one thing this sequence must never arm.
 
-The operator's own teardown (`bash scripts/deploy.sh stop --gerp <id>`, `TF_ACTION=stop`) is the
+The operator's own teardown (`bash scripts/apply.sh --stack per_customer --gerp <id> --action stop`, `TF_ACTION=stop`) is the
 same build's export and destroy with the row set to `stopped` and nothing scheduled; it is not a
 closure and these scripts never see it.
 

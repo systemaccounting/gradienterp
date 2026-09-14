@@ -1,0 +1,113 @@
+# Applies a stack from an uploaded working tree: a version of source.zip, through that tree's own
+# `scripts/apply.sh`. On the laptop: `bash scripts/zip.sh source`, `bash scripts/upload.sh source`, then
+# dispatch — by hand, or `bash scripts/dispatch.sh apply.yaml -f stack=<stack> …`, which waits on the
+# run. `per_customer` and `hub` build in CodeBuild from the same version; the operator stacks run
+# terraform here. `platform/management` isn't a choice: it applies from the laptop, with its own
+# terraform.tfvars and a management permission the job's role doesn't have. The run log is public, so
+# apply.sh prints resource addresses, the Plan: line and errors, never a plan's attribute values.
+name: apply
+
+on:
+  workflow_dispatch:
+    inputs:
+      stack:
+        description: the stack
+        required: true
+        type: choice
+        options:
+          - per_customer
+          - hub
+          - api_openlyoperated
+          - dns
+          - email
+          - gradienterp_cloud
+          - openlyoperated_biz
+          - optimizer
+          - platform/operator
+          - tower
+      gerp:
+        description: per_customer — a gerp id, or all
+        required: false
+        default: gradienterp
+      action:
+        description: per_customer — apply (a stopped gerp's is the start) or stop
+        required: false
+        type: choice
+        default: apply
+        options: [apply, stop]
+      region:
+        description: hub — the hub's region
+        required: false
+        default: ""
+      source_version:
+        description: a version of source.zip (empty is its latest)
+        required: false
+        default: ""
+      plan_only:
+        description: stop after the plan
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  id-token: write
+
+# two applies of one state fail on its lock, so a second one waits
+concurrency:
+  group: apply-${{ inputs.stack }}-${{ inputs.gerp }}-${{ inputs.region }}
+  cancel-in-progress: false
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    environment: prod
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: tests/requirements.txt
+      - run: pip install -r tests/requirements.txt
+
+      # the operator stacks' state was written by 1.10.5, the laptop's; per_customer and hub build on
+      # CodeBuild's own
+      - uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_version: "1.10.5"
+          terraform_wrapper: false
+
+      - uses: ./.github/actions/aws
+        with:
+          role: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+
+      - id: source
+        uses: ./.github/actions/source
+        with:
+          version: ${{ inputs.source_version }}
+
+      - name: apply
+        working-directory: ${{ steps.source.outputs.tree }}
+        env:
+          STACK: ${{ inputs.stack }}
+          GERP: ${{ inputs.gerp }}
+          ACTION: ${{ inputs.action }}
+          REGION: ${{ inputs.region }}
+          PLAN_ONLY: ${{ inputs.plan_only }}
+          VERSION: ${{ steps.source.outputs.version }}
+        run: |
+          args=(--stack "$STACK")
+          case "$STACK" in
+            per_customer) args+=(--gerp "$GERP" --action "$ACTION" --source-version "$VERSION") ;;
+            hub)          args+=(--region "$REGION" --source-version "$VERSION") ;;
+          esac
+          if [ "$PLAN_ONLY" = true ]; then args+=(--plan); fi
+          bash scripts/apply.sh "${args[@]}" | tee "$RUNNER_TEMP/apply.out"
+          { echo; echo '```'; grep -E '^ *(==> |Plan:|No changes|Apply complete|row: |refused)' "$RUNNER_TEMP/apply.out" || true; echo '```'; } >> "$GITHUB_STEP_SUMMARY"

@@ -11,7 +11,7 @@ credential gerps send OUT through.
 Apply with the `default` profile (management → self-assume `OrganizationAccountAccessRole`):
 
 ```
-cd prod/email && AWS_PROFILE=default terraform apply
+bash scripts/apply.sh --stack email        # --plan to stop after the plan
 ```
 
 ## Forward destination (kept out of the repo)

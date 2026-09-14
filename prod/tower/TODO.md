@@ -4,8 +4,8 @@
 
 ## the vending switch
 
-`prod/gradienterp_cloud` defaults `var.provision_queue` to empty, so a created gerp stops at
-`awaiting_payment`; production names `tower-vends` in its `terraform.tfvars`. Everything below
+`prod/gradienterp_cloud` reads `PROVISION_QUEUE` from `config.json`: empty, a created gerp stops at
+`awaiting_payment`; production names `tower-vends`. Everything below
 about vending is testable only with it on.
 
 ## lambdas
@@ -34,7 +34,7 @@ Customer-side `diff_config` lambdas (per `prod/per_customer/TODO.md`) need a sma
 
 - [ ] **`TowerStartBuild` role** in operator account. trust policy scoped via `aws:PrincipalOrgID = <org-id>` so any principal in the org can assume. permissions: `codebuild:StartBuild` on `aws_codebuild_project.per_customer.arn`. one role, all customer crons consume it.
 - [ ] **bucket policy on tfstate bucket** (`gradienterp-tfstate-185369506315`) — adds an org-scoped `s3:GetObject` grant on path `<customer_id>/*`, so customer cron in account `<customer_id>` can read its own tfstate. one policy, no per-customer plumbing.
-- [ ] **bucket policy on source bundle bucket** (`gerp-codebuild-source-185369506315`) — org-scoped `s3:GetObject` + `s3:GetObjectAttributes` on `per-customer-source.zip` so customer crons can `HeadObject` for etag comparison. (Codebuild already reads this bucket; same policy widened.)
+- [ ] **bucket policy on source bundle bucket** (`gerp-codebuild-source-185369506315`) — org-scoped `s3:GetObject` + `s3:GetObjectAttributes` on `release/source.zip` so customer crons can `HeadObject` for etag comparison. (Codebuild already reads this bucket; same policy widened.)
 
 ## lifecycle
 
@@ -42,7 +42,7 @@ Customer-side `diff_config` lambdas (per `prod/per_customer/TODO.md`) need a sma
       (the chart, the registries, the settings defaults) are checked by each module's own tests
       and, live, by the agent answering; nothing reads the vended account once and pins the set
       by shape. The lifecycle rehearsal's step 4b, not written; `tests/e2e/lifecycle.spec.mjs`
-      holds step 1 (the purchase) and the rest of the sequence is `deploy.sh stop`/`start` and
+      holds step 1 (the purchase) and the rest of the sequence is `apply.sh --action stop`, the apply back, and
       the closure, run by hand on westwood.
 - [ ] **the close step does not check the export happened.** The build runs `export_gerp` with no
       arguments — everything — before the destroy, and `closure/close.py` closes the account fifteen

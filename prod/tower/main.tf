@@ -4,8 +4,8 @@
 # CodeBuild project that runs prod/per_customer/ terraform on trigger.
 # provision_customer triggers this project after a new sub-account is vended.
 #
-# Source: S3. per-customer-source.zip (prod/per_customer/ + every module it
-# instantiates + .codebuild/) is built and uploaded by `deploy.sh source`, not by
+# Source: S3. release/source.zip (a committed working tree, `zip.sh source` then
+# `upload.sh source --release`) is built and uploaded by those scripts, not by
 # an apply — the zip is CODE, and the lambda-code split applies to it for the same
 # reason. This stack owns the BUCKET only. The lambda just StartBuilds.
 ###############################################
@@ -37,12 +37,15 @@ data "terraform_remote_state" "management" {
 }
 
 ###############################################
-# S3 source bucket — holds per-customer-source.zip (uploaded by `deploy.sh source`); codebuild downloads
+# S3 source bucket — codebuild downloads its source from here. Two keys: `release/source.zip`, a
+# committed tree (`upload.sh source --release`) and both projects' own location, so what a signup,
+# a hub vend and a closure build from; and `source.zip`, every upload, which the operator's builds
+# and the workflows name through `sourceLocationOverride`.
 ###############################################
 
 resource "aws_s3_bucket" "codebuild_source" {
   bucket        = "${local.stack_prefix}-codebuild-source-${local.operator_account_id}"
-  force_destroy = true # per-customer-source.zip is re-bundled + re-uploaded; safe to drop on replace/teardown
+  force_destroy = true # the source zips are rebuilt + re-uploaded; safe to drop on replace/teardown
 }
 
 resource "aws_s3_bucket_versioning" "codebuild_source" {
@@ -269,7 +272,7 @@ resource "aws_codebuild_project" "per_customer" {
 
   source {
     type      = "S3"
-    location  = "${aws_s3_bucket.codebuild_source.bucket}/per-customer-source.zip"
+    location  = "${aws_s3_bucket.codebuild_source.bucket}/release/source.zip"
     buildspec = ".codebuild/per-customer.yml"
   }
 
@@ -309,7 +312,7 @@ resource "aws_codebuild_project" "hub" {
 
   source {
     type      = "S3"
-    location  = "${aws_s3_bucket.codebuild_source.bucket}/per-customer-source.zip"
+    location  = "${aws_s3_bucket.codebuild_source.bucket}/release/source.zip"
     buildspec = ".codebuild/hub.yml"
   }
 
@@ -326,9 +329,9 @@ resource "aws_cloudwatch_log_group" "hub" {
 }
 
 ###############################################
-# Source zip — built by `bash scripts/build-codebuild-source.sh`.
-# Re-run the script before `terraform apply` whenever per_customer/, modules/accounting/,
-# modules/schemas/, or .codebuild/ change.
+# Source zip — the working tree, built by `bash scripts/zip.sh source` and uploaded by
+# `bash scripts/upload.sh source` (`--release` for what a signup builds from). Upload it before a
+# build that should run a changed per_customer/, modules/ or .codebuild/.
 ###############################################
 
 

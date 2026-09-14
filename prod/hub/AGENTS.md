@@ -33,7 +33,7 @@ A `to` nobody holds a spoke for is undelivered and unlogged. It does not happen 
 emitter: `emit_to` refuses a recipient the directory does not hold, and the directory row and
 the spoke are written by the same vend and removed by the same close. A stopped gerp keeps its
 spoke: its bus is gone with its stack, the deliveries park on `gerp-edges-failed`, and
-`deploy.sh start` redrives them.
+its apply (`apply.sh --stack per_customer`) redrives them.
 
 `scripts/edge.sh <hub> list | add <kind> <to> … | remove <kind> <to>` is the door for a person.
 

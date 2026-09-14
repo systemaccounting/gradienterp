@@ -1,0 +1,86 @@
+# Deploys lambda code from an uploaded working tree: a version of source.zip, and the dirs its
+# deploy-dirs.txt names. On the laptop: `bash scripts/zip.sh source --dirs <src-dir>…`, `bash
+# scripts/upload.sh source`, then dispatch — by hand, or `bash scripts/dispatch.sh deploy.yaml`, which
+# waits on the run. The job runs the tree's own `deploy.sh push`, then the integ tests of the modules it
+# deployed. The agent image isn't deployed here: its arm64 build stays `deploy.sh image` on the laptop.
+name: deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      gerp:
+        description: a gerp id, or all (every active gerp; the BFF once)
+        required: true
+        default: gradienterp
+      source_version:
+        description: a version of source.zip (empty is its latest)
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+  id-token: write
+
+# one deploy per gerp at a time, and a second one waits rather than cancelling the first
+concurrency:
+  group: deploy-${{ inputs.gerp }}
+  cancel-in-progress: false
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: prod
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: tests/requirements.txt
+      - run: pip install -r tests/requirements.txt
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+
+      - uses: ./.github/actions/aws
+        with:
+          role: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+
+      - id: source
+        uses: ./.github/actions/source
+        with:
+          version: ${{ inputs.source_version }}
+
+      - name: deploy
+        working-directory: ${{ steps.source.outputs.tree }}
+        env:
+          GERP: ${{ inputs.gerp }}
+        run: |
+          mapfile -t dirs < deploy-dirs.txt
+          if [ ${#dirs[@]} -eq 0 ]; then
+            echo "deploy-dirs.txt is empty: nothing deployed" | tee -a "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          # push refuses a Node lambda without node_modules, and the zip leaves them out
+          for d in "${dirs[@]}"; do
+            if [ -f "$d/package-lock.json" ]; then (cd "$d" && npm ci --no-audit --no-fund); fi
+          done
+          target=(--gerp "$GERP")
+          if [ "$GERP" = all ]; then target=(--all); fi
+          bash scripts/deploy.sh push "${target[@]}" --dirs "${dirs[@]}" --notes "$(jq -r .commit source.json)" \
+            | tee "$RUNNER_TEMP/push.out"
+          { echo; echo '```'; cat "$RUNNER_TEMP/push.out"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: the deployed modules' integ tests
+        working-directory: ${{ steps.source.outputs.tree }}
+        run: |
+          for m in $(sed -E 's#^(modules|prod)/([^/]+)/.*#\2#' deploy-dirs.txt | sort -u); do
+            if [ -d "tests/$m/integ" ]; then bash scripts/test.sh --env integ --module "$m"; fi
+          done

@@ -326,8 +326,8 @@ the same rows modulo `computed_at`), and cash-flow sections using period deltas 
 cumulative balances.
 
 Terraform shape, asserted in `tower/local/test_codebuild_source.py` against the templates and
-every module they instantiate: the codebuild source zip carries every module the templates and
-their nested sources reach; no `try(module.` in `prod/per_customer`; no SSM `/agent/*` read at
+every module they instantiate (the source zip carrying every module the templates and their nested
+sources reach is `tower/local/test_zip.py`'s, against the zip `zip.sh source` builds); no `try(module.` in `prod/per_customer`; no SSM `/agent/*` read at
 plan; every function is a `modules/terraform/lambda` call (a bare `aws_lambda_function` fails);
 the buildspec's three actions and its post-build gate.
 

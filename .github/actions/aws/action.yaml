@@ -1,0 +1,35 @@
+# The AWS credentials a deploy or apply job runs the repo's scripts with, resolved the way the laptop
+# resolves them: the role's credentials are `[default]`, and `scripts/awsacct.sh --all` writes every
+# profile that chains from it (operator-org, hub-<region>, gerp-<id>).
+#
+# The job has to be in the `prod` environment (the role trusts nothing else) with `id-token: write`,
+# and pass the environment's secret:
+#
+#   - uses: ./.github/actions/aws
+#     with:
+#       role: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+name: aws
+description: take gerp-github-deploy as [default] and write the profiles that chain from it
+inputs:
+  role:
+    description: the role's arn (the prod environment's AWS_DEPLOY_ROLE_ARN)
+    required: true
+runs:
+  using: composite
+  steps:
+    - uses: aws-actions/configure-aws-credentials@v6
+      with:
+        role-to-assume: ${{ inputs.role }}
+        aws-region: us-east-1
+        role-session-name: gh-${{ github.workflow }}-${{ github.run_id }}
+        # written to the default profile rather than environment variables, so the profiles are the
+        # one source every script and terraform provider reads
+        aws-profile: default
+        overwrite-aws-profile: true
+        # the role lives in the management account; anything else is not this role
+        allowed-account-ids: "335667362239"
+    - name: the profiles
+      shell: bash
+      run: |
+        bash "$GITHUB_WORKSPACE/scripts/awsacct.sh" --all
+        echo "operator-org reaches $(aws sts get-caller-identity --profile operator-org --query Account --output text)"

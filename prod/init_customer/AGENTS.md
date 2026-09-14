@@ -58,7 +58,7 @@ which is the right failure — better than half a gerp built around a bucket tha
 
 Provisioning applies it: `.codebuild/per-customer.yml` runs this stack's init and apply ahead of
 per_customer's on every `TF_ACTION=apply` build, and never on a destroy. The source zip carries
-`prod/init_customer` (`scripts/build-codebuild-source.sh`). By hand:
+`prod/init_customer` (`scripts/zip.sh source`). By hand:
 
 ```bash
 cd prod/init_customer/

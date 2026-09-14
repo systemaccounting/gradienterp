@@ -4,8 +4,3 @@ variable "aws_region" {
   default     = "us-east-1"
 }
 
-variable "chat_callback_urls" {
-  description = "Per-gerp web-chat Function URLs to register as callbacks on the gerp-cloud client so each gerp's chat can complete the hosted-UI login back to itself. Each gerp's chat_url (with trailing slash). At fleet scale, source from the gerp-customers table instead."
-  type        = list(string)
-  default     = []
-}

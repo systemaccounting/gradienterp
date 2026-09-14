@@ -21,7 +21,7 @@ and served from `assets.gradienterp.cloud` — the working tree stays scripts-on
   (short demos ship the END frame only — the whole conversation on one screen, the readable
   transcript; long demos add a MID frame for the exchange the end frame scrolls past — never a
   start frame, which is just empty chat). `llms.txt § demos` points at them.
-- **shipping** — `bash scripts/deploy.sh assets` etag-diffs `prod/gradienterp_cloud/assets/` to the
+- **shipping** — `bash scripts/upload.sh assets` etag-diffs `prod/gradienterp_cloud/assets/` to the
   CDN bucket and invalidates what changed. The login page's `DEMOS` array in
   `prod/gradienterp_cloud/web/app.js` maps rows to gifs (`gif:` overrides the module name).
 

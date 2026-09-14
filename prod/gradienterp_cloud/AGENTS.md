@@ -89,7 +89,7 @@ SSM path). Private; the business's public face is its `gerp-profiles` row.
 | the BFF, the card landing | `status = queued`, `queued_at` (locally: `provisioning`, then `active`, `gateway_url`, `provision_stub`); the business's `gerp-profiles` row from `public`; the provisioning payload on tower's `tower-vends` queue | save-card or select; a card carrying an unpaid ending writes `prior` instead |
 | tower `provision_customer` | `status = provisioning` when it takes the message, then `aws_account_id`, `vended_at` | the Account Factory vend, ~15 minutes, four at a time; `owner_sub`, `owner_email`, `label`, `openly_operated`, `legal`, `public` ride the message into the tenant blob |
 | the per-customer CodeBuild apply | `gateway_url`, `status = active`, `provisioned_at`, `chat_url`, `runtime_endpoint_arn` | the stack is up |
-| the per-customer CodeBuild stop (`deploy.sh stop`) | `status = stopped`, `stopped_at`; `gateway_url`, `chat_url`, `runtime_endpoint_arn` removed | the operator's teardown between sessions: the export, then the destroy; the apply (`deploy.sh start`) writes the row active again |
+| the per-customer CodeBuild stop (`apply.sh --stack per_customer --action stop`) | `status = stopped`, `stopped_at`; `gateway_url`, `chat_url`, `runtime_endpoint_arn` removed | the operator's teardown between sessions: the export, then the destroy; the apply (`apply.sh --stack per_customer`) writes the row active again |
 | the BFF, `POST /api/gerp-info` | `label`, `legal`, `public` | the owner edits Business info; the profile row, the blob (tower `update_business_info`) and the seller's contact follow |
 | the BFF, `POST /api/gerps/close` | `status = close_requested`, `close_requested_at`, `close_requested_by` | the owner typed the phrase |
 | the closure scripts, tower `close_account` | `status = closing` → `closed`, `closed_at`, `closed_how`, `closed_invoice_id`, `balance_owed` | the export and destroy, then the AWS account closing on day 30 |
@@ -403,26 +403,23 @@ records nothing), checks ownership, marks the row `close_requested`, and hands t
 seller gerp's `closure/begin.py` by invoking its `automate` (`CLOSURE_BEGIN_FN`, cross-account by
 resource policy, the callee admitting this role by name). From there it is the same sequence an
 unpaid invoice ends in — export, destroy, fifteen days of notices, close the AWS account — and the
-typed confirmation is what the script records as the approval. `var.closure_enabled` false (the
-default) records the request and hands nothing on; on, the scripts still sit behind the operator's
+typed confirmation is what the script records as the approval. `config.json` `CLOSURE_ENABLED` false
+records the request and hands nothing on; on, the scripts still sit behind the operator's
 own `CLOSE_BUILD_PROJECT` switch. This stack starts no build.
 
-## vending is OFF by default
+## the vending switch
 
-`var.provision_queue` is empty, so `POST /api/gerps` records the row and `save-card` leaves it at
+`config.json` `PROVISION_QUEUE` (production: `tower-vends`). Empty, `POST /api/gerps` records the row and `save-card` leaves it at
 `awaiting_payment` — nothing is vended. The whole create → pay → return path runs with no Control
 Tower and nothing to clean up after. Named, the BFF sends the provisioning payload to that queue
 in the operator account (`PROVISION_QUEUE`, the queue url) and writes `queued`; tower's
 provisioner consumes it four at a time, so a burst of signups waits in line — Control Tower runs
 five account operations at once, and the sixth is refused.
 
-```bash
-terraform apply                                      # off
-terraform apply -var 'provision_queue=tower-vends'   # vends real sub-accounts
-```
-
-Off is the default because a routine apply must not silently enable 15-minute account vending. Turning
-it on is the deliberate act, and the open work around vending is in `prod/tower/TODO.md`.
+The switch is a tracked value, so every tree and every machine applies the same one: an apply from a
+fresh clone or a GitHub runner leaves vending as production has it. Changing it is an edit to
+`config.json` and `bash scripts/apply.sh --stack gradienterp_cloud`; the open work around vending is
+in `prod/tower/TODO.md`.
 
 ## SPA (`web/`)
 
@@ -471,7 +468,7 @@ A fetching model gets raw markup (no JS), so the page carries its own guide:
 
 `assets.gradienterp.cloud` = private S3 + CloudFront (OAC), the openlyoperated.biz shape. Serves
 the login-page gifs + the agent stills; the login page's `DEMOS` array (`app.js`) maps rows to
-gifs (`gif:` overrides the module name). **Content is `bash scripts/deploy.sh assets`** (etag-diffs
+gifs (`gif:` overrides the module name). **Content is `bash scripts/upload.sh assets`** (etag-diffs
 `assets/`, uploads the delta, invalidates those paths; operator-org creds — the bucket lives in
 the operator account); the tf owns SHAPE only, and the s3 objects are deliberately unmanaged so a
 stale apply can't clobber a deploy. The bucket also carries the demo-media archive under

@@ -2,7 +2,7 @@
 # openlyoperated.biz shape. These are ~23MB of media; inside the BFF bundle they'd ride every code
 # push and every cold start, so they get a CDN edge instead and the app references absolute URLs.
 #
-# CONTENT is not managed here (objects carry max-age=30d; deploy.sh invalidates what it changes) — `bash scripts/deploy.sh assets` uploads changed gifs from assets/
+# CONTENT is not managed here (objects carry max-age=30d; upload.sh invalidates what it changes) — `bash scripts/upload.sh assets` uploads changed gifs from assets/
 # and invalidates them on the distro (the lambda-code split, applied to media: content = deploy.sh,
 # shape = this file).
 

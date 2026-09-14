@@ -6,8 +6,8 @@ operator-singleton. Runs in the **operator account** (services OU sub-account). 
 
 | resource | purpose |
 |---|---|
-| `aws_s3_bucket.codebuild_source` (`gerp-codebuild-source-<account>`) | versioned + encrypted bucket. holds `per-customer-source.zip` (the bundled repo) — built and uploaded by `bash scripts/deploy.sh source`, never by an apply. codebuild reads it as its source; the lambda only triggers the build |
-| `aws_codebuild_project.per_customer` (`tower-per-customer`) | runs `prod/init_customer/` then `prod/per_customer/` terraform via the buildspec at `.codebuild/per-customer.yml` (`TF_ACTION=apply`). Two destroys, both of `per_customer` only and both after the export: a closure (`TF_ACTION=destroy`, from gradienterp's `closure/begin.py`) stamps the row `closing` then `closed`; a stop (`TF_ACTION=stop`, from `bash scripts/deploy.sh stop --gerp <id>`) sets it `stopped` with `gateway_url`, `chat_url` and `runtime_endpoint_arn` removed, schedules nothing, and `deploy.sh start --gerp <id>` is the apply that brings it back. The account and the row stay through all three. post_build writes the row only when the build phase passed (`CODEBUILD_BUILD_SUCCEEDING`): a failed apply leaves it `provisioning`, a failed destroy `closing`, and the build_failed alert says why |
+| `aws_s3_bucket.codebuild_source` (`gerp-codebuild-source-<account>`) | versioned + encrypted bucket. holds the source zips, the working tree `scripts/zip.sh source` builds, never uploaded by an apply: `release/source.zip` (a committed tree, `upload.sh source --release`), both projects' own location and so what a signup, a hub vend and a closure build from; and `source.zip` (every upload, `upload.sh source`), which `apply.sh` names through `sourceLocationOverride`. codebuild reads it as its source; the lambda only triggers the build |
+| `aws_codebuild_project.per_customer` (`tower-per-customer`) | runs `prod/init_customer/` then `prod/per_customer/` terraform via the buildspec at `.codebuild/per-customer.yml` (`TF_ACTION=apply`). Two destroys, both of `per_customer` only and both after the export: a closure (`TF_ACTION=destroy`, from gradienterp's `closure/begin.py`) stamps the row `closing` then `closed`; a stop (`TF_ACTION=stop`, from `bash scripts/apply.sh --stack per_customer --gerp <id> --action stop`) sets it `stopped` with `gateway_url`, `chat_url` and `runtime_endpoint_arn` removed, schedules nothing, and `apply.sh --stack per_customer --gerp <id>` is the apply that brings it back. A `plan` build (`apply.sh … --plan`) plans both stacks and changes nothing. The account and the row stay through all three. post_build writes the row only when the build phase passed (`CODEBUILD_BUILD_SUCCEEDING`): a failed apply leaves it `provisioning`, a failed destroy `closing`, and the build_failed alert says why |
 | `aws_iam_role.codebuild` (`tower-per-customer-codebuild`) | codebuild service role. Permissions: source bucket read, tfstate bucket r/w + DDB lock, `sts:AssumeRole` on `OperatorOrchestration` in any org member account (scoped via `aws:ResourceOrgID`), CloudWatch logs |
 | `aws_lambda_function.provision_customer` (`tower-provision-customer`) | orchestrator. See `lambdas/provision_customer/AGENTS.md` |
 | `aws_sqs_queue.vends` (`tower-vends`) + `aws_lambda_event_source_mapping.vends` | the card-to-vend queue, consumed four at a time (§ the vends queue); `tower-vends-failed` + `tower-vends-parked` |
@@ -193,7 +193,7 @@ reads the row for the owner console; nothing pushes from the seller's rules.
   one retry, apply only, never the destroy or stop. It publishes to the topic itself — subject
   "recovered after retry: <gerp>", the resource address and the cause — because the fix is that
   resource's own `time_sleep` edge on the policy it tests, in its module (the KB and the
-  browser have theirs), and the address is the message. `deploy.sh start` prints the
+  browser have theirs), and the address is the message. `apply.sh --stack per_customer` prints the
   `==> apply.retry` line too. No retry mail for a month means every edge is there.
 
 Each of those alarms is also work: the topic delivers every state change to `issue_collector`
@@ -245,7 +245,7 @@ the test of the guide is what it leaves alone):
 | (sell / vendors / employees / processor / statements) | nothing sold; no vendors; just me; bank transfers only; monthly | items, tax and a processor skipped; a `remember` for the payment method |
 | (close) | — | "setup is done; everyday bookkeeping starts now" |
 
-After a `deploy.sh start` (the settings went with the stack) the owner column goes in one message
+After a stopped gerp's apply (the settings went with the stack) the owner column goes in one message
 from the chat door, and the agent applies it without the questions:
 
     onboard my business, here is everything: Westwood Investments, we buy distribution rules and

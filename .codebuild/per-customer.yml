@@ -1,20 +1,23 @@
 # CodeBuild buildspec — runs prod/per_customer/ terraform against a customer sub-account.
 #
 # Driven by aws_codebuild_project.per_customer in prod/tower/main.tf.
-# Triggered by tower's provision_customer lambda (pass 5), from the repo zip at
-# s3://gerp-codebuild-source-<account>/per-customer-source.zip that `bash scripts/deploy.sh source` uploads.
+# Triggered by tower's provision_customer lambda (pass 5), from the working-tree zip at
+# s3://gerp-codebuild-source-<account>/release/source.zip (`bash scripts/upload.sh source --release`);
+# `bash scripts/apply.sh --stack per_customer` names `source.zip` instead, the latest upload of any tree.
 #
 # Per-build env vars (overridden via StartBuild --environment-variables-override):
 #   CUSTOMER_ID            — logical tenant identifier
 #   CUSTOMER_ACCOUNT_ID    — AWS sub-account ID returned by organizations:CreateAccount
-#   TF_ACTION              — apply (default) | destroy | stop. `apply` stands up prod/init_customer
+#   TF_ACTION              — apply (default) | destroy | stop | plan. `apply` stands up prod/init_customer
 #                            (the export bucket and its lambda, `<gerp>/init.tfstate`) and then
 #                            prod/per_customer. `destroy` is CLOSURE: it exports the firm's records
 #                            first and only then tears per_customer down; the row goes closing, then
 #                            closed; init_customer stands. `stop` is the operator's teardown: the
 #                            same export, then the row set to `stopped` with its stashes removed,
 #                            then the same destroy — nothing scheduled, nothing mailed, and the next
-#                            `apply` brings the gerp back. See the build phase below.
+#                            `apply` brings the gerp back. `plan` plans init_customer and
+#                            per_customer and changes nothing: no export, no apply, no row write,
+#                            no guide sync. See the build phase below.
 #
 # Project-level env vars (set in the codebuild project):
 #   SENDER_EMAIL           — operator-wide SES sender
@@ -53,7 +56,7 @@ phases:
       # the commands that name a lambda or a knowledge base in the gerp's account
       - 'export OPERATOR_REGION="${AWS_REGION}"'
       - 'export CUSTOMER_REGION="${CUSTOMER_REGION:-us-east-1}" && export TF_VAR_aws_region="${CUSTOMER_REGION}" && export AWS_REGION="${CUSTOMER_REGION}" && export AWS_DEFAULT_REGION="${CUSTOMER_REGION}"'
-      - 'case "${TF_ACTION}" in apply|destroy|stop) ;; *) echo "TF_ACTION must be apply, destroy or stop, got ${TF_ACTION}"; exit 1;; esac'
+      - 'case "${TF_ACTION}" in apply|destroy|stop|plan) ;; *) echo "TF_ACTION must be apply, destroy, stop or plan, got ${TF_ACTION}"; exit 1;; esac'
       - echo "    customer_id=${CUSTOMER_ID} customer_account_id=${CUSTOMER_ACCOUNT_ID} region=${CUSTOMER_REGION} action=${TF_ACTION}"
 
   build:
@@ -75,7 +78,7 @@ phases:
       # it machinery to work around a limit CodeBuild does not have. `set -e` gives the refusal for
       # free: the export failing means the destroy command is never reached.
       - |
-        if [ "${TF_ACTION}" != "apply" ]; then
+        if [ "${TF_ACTION}" = "destroy" ] || [ "${TF_ACTION}" = "stop" ]; then
           set -e
           EXPORT_FN="arn:aws:lambda:${AWS_REGION}:${CUSTOMER_ACCOUNT_ID}:function:gerp-export-${CUSTOMER_ID}-export_gerp"
           PAYLOAD='{}'
@@ -137,6 +140,16 @@ phases:
             && terraform apply -auto-approve -input=false -no-color \
                  -var "gerp_id=${CUSTOMER_ID}" \
                  -var "aws_account_id=${CUSTOMER_ACCOUNT_ID}" )
+        elif [ "${TF_ACTION}" = "plan" ]; then
+          echo "==> init_customer: terraform init (key=${CUSTOMER_ID}/init.tfstate)"
+          ( cd prod/init_customer \
+            && terraform init -backend-config="key=${CUSTOMER_ID}/init.tfstate" -reconfigure -input=false -no-color \
+            && echo "==> init_customer: terraform plan" \
+            && terraform plan -input=false -no-color \
+                 -var "gerp_id=${CUSTOMER_ID}" \
+                 -var "aws_account_id=${CUSTOMER_ACCOUNT_ID}" > /tmp/init-plan.out 2>&1 ) \
+            || { cat /tmp/init-plan.out 2>/dev/null; exit 1; }
+          grep -E '^  # |^Plan:|^No changes' /tmp/init-plan.out || true
         fi
       - echo "==> terraform init (key=${CUSTOMER_ID}/terraform.tfstate)"
       - cd prod/per_customer
@@ -187,6 +200,10 @@ phases:
         if [ "${TF_ACTION}" = "apply" ]; then
           # one pass: the agent's gateway reaches every module as an input through the graph
           tf_apply "per_customer"
+        elif [ "${TF_ACTION}" = "plan" ]; then
+          echo "==> terraform plan: per_customer"
+          terraform plan -input=false -no-color ${TFVARS} > /tmp/plan.out 2>&1 || { cat /tmp/plan.out; exit 1; }
+          grep -E '^  # |^Plan:|^No changes' /tmp/plan.out || true
         else
           echo "==> terraform destroy"
           terraform destroy -auto-approve -input=false -no-color ${TFVARS} > /tmp/destroy.out 2>&1; rc=$?

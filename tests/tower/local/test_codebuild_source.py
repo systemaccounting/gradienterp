@@ -1,14 +1,8 @@
-"""The CodeBuild source zip must carry every module prod/per_customer instantiates.
+"""What CodeBuild runs for a gerp: the buildspec's order and guards, and the shapes of the
+per_customer template a fresh vend's first plan depends on.
 
-`tower-per-customer` runs `terraform init` inside that zip. A module the template references
-but the zip omits is `Unreadable module directory` — init fails before it plans anything, so
-provisioning a gerp fails outright. It is a silent rot: `build-codebuild-source.sh` names its
-modules one per line, and nothing made adding a module to per_customer add it there too.
-
-This is a text comparison rather than a build because the invariant is two lists agreeing.
-No zip, no terraform, no network. The real check — build the zip, extract it, run
-`terraform init -backend=false` in it — is worth doing by hand when the script changes shape,
-but it needs providers and a minute, and it catches the same thing this does in milliseconds.
+What the source zip holds — every module the templates instantiate, the buildspec, the repo-root
+files a template reads — is `test_zip.py`'s, against the zip `zip.sh source` builds.
 """
 
 import re
@@ -16,63 +10,8 @@ import sys
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[3]
-SCRIPT = REPO / "scripts" / "build-codebuild-source.sh"
-TEMPLATE_DIRS = (REPO / "prod" / "init_customer", REPO / "prod" / "per_customer", REPO / "prod" / "hub")
-
-
-def zipped_paths():
-    """The paths the zip command bundles — the lines between `zip -rq "$ZIP" \\` and `-x`."""
-    body = SCRIPT.read_text()
-    start = body.index('zip -rq "$ZIP"')
-    end = body.index("-x", start)
-    return {
-        line.strip().rstrip("\\").strip()
-        for line in body[start:end].split("\n")[1:]
-        if line.strip().rstrip("\\").strip()
-    }
-
-
-def referenced_modules():
-    """Every local module source the two templates refer to, as a repo-relative directory — and
-    the sources those modules refer to in turn (`modules/terraform/lambda` from inside
-    `modules/inventory/infra`), since codebuild's init walks the whole tree."""
-    out, todo = set(), [t for d in TEMPLATE_DIRS for t in d.glob("*.tf")]
-    seen = set()
-    while todo:
-        tf = todo.pop()
-        if tf in seen:
-            continue
-        seen.add(tf)
-        text = tf.read_text()
-        for src in re.findall(r'source\s*=\s*"(\.\./[^"]+)"', text):
-            target = (tf.parent / src).resolve()
-            rel = target.relative_to(REPO).parts
-            if rel[0] == "modules":
-                out.add("/".join(rel[:2]))
-            todo += list(target.glob("*.tf"))
-        # a file() read of a shared lib (an archive manifest) needs the lib's dir in the zip too
-        for src in re.findall(r'file\("\$\{path\.module\}/((?:\.\./)+[^"]+)"\)', text):
-            rel = (tf.parent / src).resolve().relative_to(REPO).parts
-            if rel[0] == "modules":
-                out.add("/".join(rel[:2]))
-    return out
-
-
-def test_every_template_and_referenced_module_is_in_the_zip():
-    missing = sorted(referenced_modules() - zipped_paths())
-    missing += sorted(str(d.relative_to(REPO)) for d in TEMPLATE_DIRS if str(d.relative_to(REPO)) not in zipped_paths())
-    assert not missing, (
-        f"{len(missing)} module(s) prod/init_customer or prod/per_customer instantiate are not in the CodeBuild "
-        f"source zip, so `terraform init` there fails with 'Unreadable module directory' and "
-        f"provisioning cannot run: {missing}. Add them to scripts/build-codebuild-source.sh."
-    )
-
-
-def test_the_template_and_the_buildspec_are_in_the_zip():
-    """Without these there is nothing to run and nothing to run it with."""
-    paths = zipped_paths()
-    for required in ("prod/init_customer", "prod/per_customer", ".codebuild", "scripts/sync_playbooks.sh"):
-        assert required in paths, f"{required} missing from the CodeBuild source zip"
+BUILDSPEC = REPO / ".codebuild" / "per-customer.yml"
+MODULES = REPO / "modules"
 
 
 def test_the_guides_are_synced_before_the_row_is_marked_active():
@@ -85,34 +24,6 @@ def test_the_guides_are_synced_before_the_row_is_marked_active():
     sync, active = post.index("sync_playbooks.sh"), post.index('echo "marked ${CUSTOMER_ID} active')
     assert sync < active, "the guides sync must run before the row is marked active"
     assert "assume-role" in post[:sync] and 'role/OperatorOrchestration' in post[:sync], "the sync runs in the customer account"
-    # every guide's module rides in the zip
-    zipped = zipped_paths()
-    for kb in MODULES.glob("**/kb.md"):
-        top = "modules/" + kb.relative_to(MODULES).parts[0]
-        assert top in zipped, f"{kb.relative_to(REPO)} is a guide but {top} is not in the source zip"
-
-
-def test_every_repo_root_file_a_template_reads_is_in_the_zip():
-    """`file("${path.module}/../../x")` in a template is a repo-root file, and terraform's `file()`
-    fails at plan when it is not in the source — which the first CodeBuild apply after config.json
-    arrived did (2026-09-04, `no file exists at "./../../config.json"`). gradienterp's applies are
-    local, so nothing else would have caught it."""
-    paths = zipped_paths()
-    for d in TEMPLATE_DIRS:
-        for tf in d.glob("*.tf"):
-            for f in re.findall(r'file\("\$\{path\.module\}/\.\./\.\./([^"/]+)"\)', tf.read_text()):
-                assert f in paths, f"{tf.name} reads repo-root {f}, which the CodeBuild source zip does not carry"
-
-
-def test_the_zip_carries_no_module_the_template_does_not_use():
-    """Not fatal, but it means the zip is shipping dead weight — and more usefully, it catches
-    a module RENAMED in the template while the old name lingers in the script."""
-    stale = sorted(p for p in zipped_paths() if p.startswith("modules/"))
-    unused = sorted(set(stale) - referenced_modules())
-    assert not unused, f"zip carries modules neither template references: {unused}"
-
-
-BUILDSPEC = REPO / ".codebuild" / "per-customer.yml"
 
 
 def test_the_buildspec_applies_init_customer_first_and_never_destroys_it():
@@ -148,21 +59,42 @@ def _build_phase():
     return text[text.index("  build:"):text.index("  post_build:")]
 
 
-def test_the_three_actions_and_no_fourth():
-    """apply, destroy (the closure) and stop (the operator's teardown). Anything else fails in
-    pre_build, before the export or a plan."""
+def test_the_four_actions_and_no_fifth():
+    """apply, destroy (the closure), stop (the operator's teardown) and plan (apply.sh --plan).
+    Anything else fails in pre_build, before the export or a plan."""
     text = BUILDSPEC.read_text()
     pre = text[text.index("pre_build:"):text.index("  build:")]
-    assert 'case "${TF_ACTION}" in apply|destroy|stop) ;; *)' in pre and "exit 1" in pre
+    assert 'case "${TF_ACTION}" in apply|destroy|stop|plan) ;; *)' in pre and "exit 1" in pre
+
+
+def test_a_plan_changes_nothing():
+    """A plan build exports nothing, applies and destroys nothing, and writes no row: its branches
+    in the build phase run `terraform plan` alone, and post_build's writes are all guarded on another
+    action."""
+    import yaml
+    phases = yaml.safe_load(BUILDSPEC.read_text())["phases"]
+    for c in phases["build"]["commands"]:
+        for branch in re.findall(r'if \[ "\$\{TF_ACTION\}" = "plan" \]; then(.*?)(?:\n\s*(?:elif|else|fi))', c, re.S):
+            assert "terraform plan" in branch
+            for word in ("terraform apply", "destroy", "update-item", "invoke"):
+                assert word not in branch, f"a plan branch runs {word}"
+    export = next(c for c in phases["build"]["commands"] if "EXPORT_FN=" in c)
+    assert export.lstrip().startswith('if [ "${TF_ACTION}" = "destroy" ] || [ "${TF_ACTION}" = "stop" ]'), \
+        "only the two destroys export; a plan must not"
+    for c in phases["post_build"]["commands"]:
+        if "update-item" in c:
+            assert re.search(r'TF_ACTION\}" = "(apply|destroy)"', c), "every row write in post_build names its action"
+    hub = yaml.safe_load((REPO / ".codebuild" / "hub.yml").read_text())["phases"]
+    assert any('case "${TF_ACTION}" in apply|destroy|plan) ;; *)' in c for c in hub["pre_build"]["commands"])
 
 
 def test_both_destroys_export_first_and_only_the_closure_stamps_the_row_closed():
-    """The export loop runs for every action but apply, ahead of `terraform destroy`; after it the
+    """The export loop runs for the two destroys, ahead of `terraform destroy`; after it the
     closure writes `closing` with the download window and stop writes `stopped` with the stashes
     removed. post_build stamps `closed` for the closure only; stop has nothing left to say."""
     build = _build_phase()
     closing, stopped = '\\"S\\":\\"closing\\"', '\\"S\\":\\"stopped\\"'   # as the yaml carries them
-    export = build.index('if [ "${TF_ACTION}" != "apply" ]')
+    export = build.index('if [ "${TF_ACTION}" = "destroy" ] || [ "${TF_ACTION}" = "stop" ]')
     assert export < build.index("terraform destroy"), "the export runs before the destroy"
     assert 'if [ "${TF_ACTION}" = "destroy" ]' in build[export:] and closing in build[export:]
     stop = build.index(stopped)
@@ -197,8 +129,6 @@ def test_post_build_never_exits_early_and_the_applys_ending_is_one_guarded_comma
         assert step in apply_cmd, f"{step} is part of the apply's one command"
     assert "set -e" in apply_cmd[:apply_cmd.index("terraform output")], "a failing step fails the build"
 
-
-MODULES = REPO / "modules"
 
 
 def test_no_module_reads_the_agent_through_ssm_at_plan():
@@ -280,4 +210,4 @@ if __name__ == "__main__":
     for _n in [k for k in dir() if k.startswith("test_")]:
         globals()[_n]()
         print(f"ok {_n}")
-    print("all codebuild-source tests passed")
+    print("all codebuild tests passed")

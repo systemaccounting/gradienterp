@@ -7,7 +7,7 @@ Apply with the `default` profile (management → self-assume `OrganizationAccoun
 same as `gradienterp_cloud`/`tower`:
 
 ```
-cd prod/dns && AWS_PROFILE=default terraform apply
+bash scripts/apply.sh --stack dns        # --plan to stop after the plan
 ```
 
 ## Going live (manual, one-time per domain)

@@ -1,8 +1,13 @@
 # .github/workflows — open work
 
-Three workflows run on every pull request and every push to `main`: `unit.yaml`
+Two workflows run only when dispatched — `deploy.yaml` and `apply.yaml`, from an uploaded
+`source.zip` (`scripts/dispatch.sh` starts one and waits on it). Three run on every pull request and every push to `main`: `unit.yaml`
 (`bash scripts/test.sh`), `e2e.yaml` (`bash scripts/e2e.sh` against the local stack, the seed written by
 `--configure`) and `terraform.yaml` (`terraform fmt -check`, then `tf-validate-all.sh`). None needs AWS.
+A job that does reaches it through the `prod` environment (`environment.sh`: deployments from `main`
+only, no reviewers) and the shared step `.github/actions/aws`, which takes `gerp-github-deploy`
+(`prod/platform/management/github_deploy.tf`) with the environment's `AWS_DEPLOY_ROLE_ARN` and writes the
+profiles the scripts read.
 GitHub itself runs secret scanning with push protection, Dependabot alerts and Dependabot security
 updates, set in the repo settings. The
 other `.sh` files here are operator-run helpers; Actions ignores `.sh`. Current docs for everything below: fetch

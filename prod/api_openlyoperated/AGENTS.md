@@ -4,7 +4,7 @@ Operator account, `AWS_PROFILE=default` (the provider assumes the operator role;
 these resources is `operator-org`). State key `api_openlyoperated/terraform.tfstate`.
 
 ```
-cd prod/api_openlyoperated && AWS_PROFILE=default terraform apply
+bash scripts/apply.sh --stack api_openlyoperated        # --plan to stop after the plan
 ```
 
 Code and shape deploy together: every lambda here is packaged by `archive_file`, so a handler edit
