@@ -24,7 +24,7 @@ verbs (run via `bash scripts/deploy.sh …`):
       the bucket. `--all` pushes every active gerp through its gerp-<id> profile,
       the BFF once.
 
-  image [--gerp G | --all] [--no-build]
+  image [--gerp G | --all] [--no-build [--tag vNN]]
       build, `upload image`, then each gerp's runtimes onto the digest from its
       own region's copy of the image, named endpoints re-pinned.
 
@@ -755,8 +755,11 @@ def cmd_image(args):
     named gerps onto the image already at the top of ECR."""
     op = _boto(args.operator_profile)
     ecr = op.client("ecr")
+    if args.tag and not args.no_build:
+        sys.exit("--tag names an image already pushed, so it goes with --no-build")
     if args.no_build:
-        tag = f"v{latest_image_tag(ecr)}"
+        # a named tag holds still; the top of ECR moves with the next push
+        tag = args.tag or f"v{latest_image_tag(ecr)}"
         digest = image_digest(ecr, tag)
         print(f"==> walking the fleet onto {tag} (no build)")
     else:
@@ -974,6 +977,7 @@ def main():
     im.add_argument("--gerp", default="gradienterp", help="the gerp whose runtime takes the image (default: the operator's own)")
     im.add_argument("--all", action="store_true", help="every active gerp — said, never implied")
     im.add_argument("--no-build", action="store_true", help="no build: move the named gerps onto the image already at the top of ECR")
+    im.add_argument("--tag", help="with --no-build: the pushed vNN to move onto, rather than the top of ECR")
     im.add_argument("--operator-profile", default="operator-org")
     im.set_defaults(fn=cmd_image)
     up = sub.add_parser("upload", help="put what zip.sh or docker.sh --build made (upload.sh)")

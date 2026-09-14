@@ -8,6 +8,10 @@ inputs:
     description: a version of source.zip; empty is its latest
     required: false
     default: ""
+  summary:
+    description: write the version, commit and dirs to the run summary (one job of a run does)
+    required: false
+    default: "true"
 outputs:
   tree:
     description: the unzipped tree
@@ -22,6 +26,7 @@ runs:
       shell: bash
       env:
         VERSION: ${{ inputs.version }}
+        SUMMARY: ${{ inputs.summary }}
       run: |
         bucket=gerp-codebuild-source-185369506315
         version="${VERSION:-$(aws s3api head-object --bucket "$bucket" --key source.zip --profile operator-org --query VersionId --output text)}"
@@ -31,6 +36,7 @@ runs:
         rm -rf "$tree" && mkdir -p "$tree" && unzip -q "$RUNNER_TEMP/source.zip" -d "$tree"
         echo "tree=$tree" >> "$GITHUB_OUTPUT"
         echo "version=$version" >> "$GITHUB_OUTPUT"
+        [ "$SUMMARY" = true ] || exit 0
         jq -r --arg v "$version" '"**source.zip** at `\($v)` — commit `\(.commit[0:12])`"
           + (if .dirty then ", with uncommitted changes" else "" end)
           + "\n\ndirs: " + (if (.dirs | length) > 0 then (.dirs | map("`\(.)`") | join(", ")) else "none" end) + "\n"' \

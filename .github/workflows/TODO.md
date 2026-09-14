@@ -1,7 +1,8 @@
 # .github/workflows — open work
 
-Two workflows run only when dispatched — `deploy.yaml` and `apply.yaml`, from an uploaded
-`source.zip` (`scripts/dispatch.sh` starts one and waits on it). Three run on every pull request and every push to `main`: `unit.yaml`
+Two workflows run only when dispatched — `deploy.yaml` (lambdas and the agent image, one job per gerp)
+and `apply.yaml`, from an uploaded `source.zip` (`scripts/dispatch.sh` uploads the tree, starts one and
+waits on it). Three run on every pull request and every push to `main`: `unit.yaml`
 (`bash scripts/test.sh`), `e2e.yaml` (`bash scripts/e2e.sh` against the local stack, the seed written by
 `--configure`) and `terraform.yaml` (`terraform fmt -check`, then `tf-validate-all.sh`). None needs AWS.
 A job that does reaches it through the `prod` environment (`environment.sh`: deployments from `main`

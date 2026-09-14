@@ -1,17 +1,34 @@
-# Deploys lambda code from an uploaded working tree: a version of source.zip, and the dirs its
-# deploy-dirs.txt names. On the laptop: `bash scripts/zip.sh source --dirs <src-dir>…`, `bash
-# scripts/upload.sh source`, then dispatch — by hand, or `bash scripts/dispatch.sh deploy.yaml`, which
-# waits on the run. The job runs the tree's own `deploy.sh push`, then the integ tests of the modules it
-# deployed. The agent image isn't deployed here: its arm64 build stays `deploy.sh image` on the laptop.
+# Deploys lambda code and the agent image from an uploaded working tree: a version of source.zip, the
+# dirs its deploy-dirs.txt names, to one gerp, a list or every active gerp — one job per gerp at once.
+# From a session: `bash scripts/dispatch.sh deploy.yaml --dirs <src-dir>… [-f gerp=…] [-f image=build]`,
+# which zips and uploads the tree, dispatches on that version and waits on the run. Every job runs the
+# tree's own scripts.
+#
+#   gerps     the gerp list and the source's dirs, for the jobs after it
+#   bff       the BFF, once: it lives in the operator account, and a push per gerp would race
+#   lambdas   one job per gerp: deploy.sh push --gerp <g> --dirs <the fleet dirs>
+#   integ     the deployed modules' integ tests, once the pushes are done
+#   build     the agent image, on an arm64 runner (native, no emulation): docker.sh --build, upload.sh image
+#   runtimes  one job per gerp: its runtime onto the tag build pushed (or the top of ECR, image: no-build)
+#
+# A gerp's lambdas stay in one job, where push runs 8 at a time in seconds each; the fan-out is per gerp,
+# where a runtime waits minutes for READY. Runners cost nothing on this public repo; a job's price is its
+# minute of setup.
 name: deploy
 
 on:
   workflow_dispatch:
     inputs:
       gerp:
-        description: a gerp id, or all (every active gerp; the BFF once)
+        description: a gerp id, a comma list, or all (every active gerp)
         required: true
         default: gradienterp
+      image:
+        description: the agent image — none, build (build, push the next tag, move the runtimes) or no-build (move the runtimes onto the top of ECR)
+        required: false
+        type: choice
+        default: none
+        options: [none, build, no-build]
       source_version:
         description: a version of source.zip (empty is its latest)
         required: false
@@ -21,7 +38,7 @@ permissions:
   contents: read
   id-token: write
 
-# one deploy per gerp at a time, and a second one waits rather than cancelling the first
+# one deploy per gerp input at a time, and a second one waits rather than cancelling the first
 concurrency:
   group: deploy-${{ inputs.gerp }}
   cancel-in-progress: false
@@ -31,56 +48,210 @@ defaults:
     shell: bash
 
 jobs:
-  deploy:
+  gerps:
     runs-on: ubuntu-latest
     environment: prod
-    timeout-minutes: 45
+    timeout-minutes: 10
+    outputs:
+      list: ${{ steps.gerps.outputs.list }}
+      version: ${{ steps.source.outputs.version }}
+      fleet_dirs: ${{ steps.dirs.outputs.fleet }}
+      bff: ${{ steps.dirs.outputs.bff }}
     steps:
       - uses: actions/checkout@v7
+      - uses: ./.github/actions/aws
+        with:
+          role: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+      - id: source
+        uses: ./.github/actions/source
+        with:
+          version: ${{ inputs.source_version }}
+      - id: gerps
+        env:
+          GERP: ${{ inputs.gerp }}
+        run: |
+          if [ "$GERP" = all ]; then
+            # every gerp that runs: an active row with a real account, as deploy.py's _active_rows reads them
+            list="$(aws dynamodb scan --table-name gerp-customers --profile operator-org --no-cli-pager \
+              --filter-expression '#s = :a AND attribute_exists(aws_account_id)' \
+              --expression-attribute-names '{"#s": "status"}' --expression-attribute-values '{":a": {"S": "active"}}' \
+              --projection-expression gerp_id --output json | jq -c '[.Items[].gerp_id.S] | sort')"
+          else
+            list="$(jq -Rc 'split(",") | map(gsub("^ +| +$"; "")) | map(select(length > 0))' <<< "$GERP")"
+          fi
+          echo "list=$list" >> "$GITHUB_OUTPUT"
+          echo "gerps: $(jq -r 'join(", ")' <<< "$list")" >> "$GITHUB_STEP_SUMMARY"
+      - id: dirs
+        working-directory: ${{ steps.source.outputs.tree }}
+        run: |
+          echo "fleet=$(grep -vx 'prod/gradienterp_cloud/bff' deploy-dirs.txt | jq -Rsc 'split("\n") | map(select(length > 0))')" >> "$GITHUB_OUTPUT"
+          if grep -qx 'prod/gradienterp_cloud/bff' deploy-dirs.txt; then echo "bff=true" >> "$GITHUB_OUTPUT"; else echo "bff=false" >> "$GITHUB_OUTPUT"; fi
 
+  bff:
+    needs: gerps
+    if: needs.gerps.outputs.bff == 'true'
+    runs-on: ubuntu-latest
+    environment: prod
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
       - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
           cache: pip
           cache-dependency-path: tests/requirements.txt
       - run: pip install -r tests/requirements.txt
-
-      - uses: actions/setup-node@v7
-        with:
-          node-version: "22"
-
       - uses: ./.github/actions/aws
         with:
           role: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
-
       - id: source
         uses: ./.github/actions/source
         with:
-          version: ${{ inputs.source_version }}
+          version: ${{ needs.gerps.outputs.version }}
+          summary: "false"
+      - working-directory: ${{ steps.source.outputs.tree }}
+        run: bash scripts/deploy.sh push --dirs prod/gradienterp_cloud/bff --notes "$(jq -r .commit source.json)"
 
-      - name: deploy
+  lambdas:
+    needs: gerps
+    if: needs.gerps.outputs.fleet_dirs != '[]'
+    runs-on: ubuntu-latest
+    environment: prod
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        gerp: ${{ fromJSON(needs.gerps.outputs.list) }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: tests/requirements.txt
+      - run: pip install -r tests/requirements.txt
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+      - uses: ./.github/actions/aws
+        with:
+          role: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+      - id: source
+        uses: ./.github/actions/source
+        with:
+          version: ${{ needs.gerps.outputs.version }}
+          summary: "false"
+      - name: push
         working-directory: ${{ steps.source.outputs.tree }}
         env:
-          GERP: ${{ inputs.gerp }}
+          GERP: ${{ matrix.gerp }}
+          DIRS: ${{ needs.gerps.outputs.fleet_dirs }}
         run: |
-          mapfile -t dirs < deploy-dirs.txt
-          if [ ${#dirs[@]} -eq 0 ]; then
-            echo "deploy-dirs.txt is empty: nothing deployed" | tee -a "$GITHUB_STEP_SUMMARY"
-            exit 0
-          fi
+          mapfile -t dirs < <(jq -r '.[]' <<< "$DIRS")
           # push refuses a Node lambda without node_modules, and the zip leaves them out
           for d in "${dirs[@]}"; do
             if [ -f "$d/package-lock.json" ]; then (cd "$d" && npm ci --no-audit --no-fund); fi
           done
-          target=(--gerp "$GERP")
-          if [ "$GERP" = all ]; then target=(--all); fi
-          bash scripts/deploy.sh push "${target[@]}" --dirs "${dirs[@]}" --notes "$(jq -r .commit source.json)" \
+          bash scripts/deploy.sh push --gerp "$GERP" --dirs "${dirs[@]}" --notes "$(jq -r .commit source.json)" \
             | tee "$RUNNER_TEMP/push.out"
-          { echo; echo '```'; cat "$RUNNER_TEMP/push.out"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+          { echo "### $GERP"; echo '```'; cat "$RUNNER_TEMP/push.out"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
 
-      - name: the deployed modules' integ tests
-        working-directory: ${{ steps.source.outputs.tree }}
+  integ:
+    needs: [gerps, bff, lambdas]
+    if: ${{ !cancelled() && !contains(needs.*.result, 'failure') && (needs.lambdas.result == 'success' || needs.bff.result == 'success') }}
+    runs-on: ubuntu-latest
+    environment: prod
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: tests/requirements.txt
+      - run: pip install -r tests/requirements.txt
+      - uses: ./.github/actions/aws
+        with:
+          role: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+      - id: source
+        uses: ./.github/actions/source
+        with:
+          version: ${{ needs.gerps.outputs.version }}
+          summary: "false"
+      - working-directory: ${{ steps.source.outputs.tree }}
         run: |
           for m in $(sed -E 's#^(modules|prod)/([^/]+)/.*#\2#' deploy-dirs.txt | sort -u); do
             if [ -d "tests/$m/integ" ]; then bash scripts/test.sh --env integ --module "$m"; fi
           done
+
+  build:
+    needs: gerps
+    if: inputs.image == 'build'
+    runs-on: ubuntu-24.04-arm
+    environment: prod
+    timeout-minutes: 45
+    outputs:
+      tag: ${{ steps.push.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: tests/requirements.txt
+      - run: pip install -r tests/requirements.txt
+      - uses: ./.github/actions/aws
+        with:
+          role: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+      - id: source
+        uses: ./.github/actions/source
+        with:
+          version: ${{ needs.gerps.outputs.version }}
+          summary: "false"
+      - name: build
+        working-directory: ${{ steps.source.outputs.tree }}
+        run: bash scripts/docker.sh --build
+      - id: push
+        name: push
+        working-directory: ${{ steps.source.outputs.tree }}
+        run: |
+          bash scripts/upload.sh image | tee "$RUNNER_TEMP/image.out"
+          tag="$(sed -n 's/^==> \(v[0-9]*\) = .*/\1/p' "$RUNNER_TEMP/image.out" | tail -1)"
+          [ -n "$tag" ] || { echo "upload.sh image printed no tag"; exit 1; }
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "image: $(grep '^==> v' "$RUNNER_TEMP/image.out")" >> "$GITHUB_STEP_SUMMARY"
+
+  runtimes:
+    needs: [gerps, build]
+    if: ${{ !cancelled() && inputs.image != 'none' && needs.gerps.result == 'success' && (needs.build.result == 'success' || (inputs.image == 'no-build' && needs.build.result == 'skipped')) }}
+    runs-on: ubuntu-latest
+    environment: prod
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        gerp: ${{ fromJSON(needs.gerps.outputs.list) }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: tests/requirements.txt
+      - run: pip install -r tests/requirements.txt
+      - uses: ./.github/actions/aws
+        with:
+          role: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+      - id: source
+        uses: ./.github/actions/source
+        with:
+          version: ${{ needs.gerps.outputs.version }}
+          summary: "false"
+      - working-directory: ${{ steps.source.outputs.tree }}
+        env:
+          GERP: ${{ matrix.gerp }}
+          TAG: ${{ needs.build.outputs.tag }}
+        run: |
+          # the tag build pushed holds still; without one (image: no-build), the top of ECR
+          bash scripts/deploy.sh image --no-build --gerp "$GERP" ${TAG:+--tag "$TAG"} | tee "$RUNNER_TEMP/image.out"
+          { echo "### $GERP"; echo '```'; cat "$RUNNER_TEMP/image.out"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"

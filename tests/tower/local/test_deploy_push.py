@@ -174,6 +174,32 @@ def test_an_image_deploy_reaches_a_gerp_in_its_own_region_from_that_regions_copy
     assert not Ctl.updated, "a runtime already on the region's copy of the digest is left alone"
 
 
+def test_an_image_deploy_with_a_tag_moves_onto_that_tag_and_not_the_top_of_ecr():
+    """The deploy workflow builds once and moves each gerp in its own job; by the time a job starts,
+    another push could have moved the top of ECR."""
+    class ECR:
+        def describe_images(self, repositoryName, imageIds=None, **kw):
+            if imageIds:
+                return {"imageDetails": [{"imageDigest": f"sha256:{imageIds[0]['imageTag']}"}]}
+            return {"imageDetails": [{"imageTags": ["v128"]}, {"imageTags": ["v129"]}]}
+
+    moved = []
+    with _patched(_boto=lambda p: Session({"ecr": ECR()}),
+                  _gerp_sessions=lambda op, only=None: iter([("westwood", "2", "us-east-1", Session({"bedrock-agentcore-control": None}))]),
+                  image_replicated=lambda op, region, digest: True,
+                  _update_runtimes=lambda ctl, digest, label, region: moved.append(digest)):
+        deploy.cmd_image(Namespace(operator_profile="op", no_build=True, tag="v128", all=False, gerp="westwood"))
+        assert moved == ["sha256:v128"]
+        deploy.cmd_image(Namespace(operator_profile="op", no_build=True, tag=None, all=False, gerp="westwood"))
+        assert moved[-1] == "sha256:v129", "without a tag, the top of ECR"
+        try:
+            deploy.cmd_image(Namespace(operator_profile="op", no_build=False, tag="v128", all=False, gerp="westwood"))
+        except SystemExit as e:
+            assert "--no-build" in str(e)
+        else:
+            raise AssertionError("--tag without --no-build names a build it won't make")
+
+
 if __name__ == "__main__":
     for _name, _fn in sorted(globals().items()):
         if _name.startswith("test_") and callable(_fn):
