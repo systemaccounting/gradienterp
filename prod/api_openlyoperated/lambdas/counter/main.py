@@ -6,16 +6,33 @@ trivial arithmetic on the schemaless counters table, keyed `<key>#<YYYY-MM>` (pe
 boundary); this just does the math. Extensible by op — today `add` (atomic ADD); new ops are new match
 limbs, still dumb. The counter takes every business's events (aggregate = terms-of-use baseline), so there
 is no openly_operated gate — the routing rule matches on `detail.counters` existing.
+
+A count is taken only from the gerp an event names: EventBridge stamps the sending account (`account`,
+kept when the hub forwards it) and the gerp's row's `aws_account_id` has to match, since any account
+in the organization can put on the bus.
 """
 
 import os
+import time
 from datetime import datetime, timezone
 from decimal import Decimal
 
-from aws import client as _aws_client, resource as _aws_resource
+from aws import client as _aws_client, resource as _aws_resource, log
 
 
 _table = _aws_resource("dynamodb").Table(os.environ["COUNTERS_TABLE"])
+CUSTOMERS_TABLE = os.environ.get("CUSTOMERS_TABLE", "gerp-customers")
+_accounts = {}   # gerp_id -> (at, aws_account_id)
+
+
+def _account_of(gerp_id):
+    hit = _accounts.get(gerp_id)
+    if hit and time.time() - hit[0] < 60:
+        return hit[1]
+    it = _aws_client("dynamodb").get_item(TableName=CUSTOMERS_TABLE, Key={"gerp_id": {"S": gerp_id}},
+                                          ProjectionExpression="aws_account_id").get("Item") or {}
+    _accounts[gerp_id] = (time.time(), it.get("aws_account_id", {}).get("S", ""))
+    return _accounts[gerp_id][1]
 
 
 def _period(detail):
@@ -39,6 +56,10 @@ def _apply(op, key, magnitude, period):
 
 def handler(event, _context):
     detail = event.get("detail", {})
+    gerp_id, sender = detail.get("customer_id") or "", str(event.get("account") or "")
+    if not gerp_id or not sender or _account_of(gerp_id) != sender:
+        log.warning("counters refused: not from the gerp they name", gerp_id=gerp_id, account=sender)
+        return {"refused": "not the gerp's account", "gerp_id": gerp_id}
     period = _period(detail)
     for c in detail.get("counters", []):
         _apply(c.get("op", "add"), c["key"], Decimal(str(c.get("magnitude", 1))), period)

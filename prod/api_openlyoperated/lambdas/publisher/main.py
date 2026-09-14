@@ -13,6 +13,11 @@ two firms). Each lands here and goes out on up to two channels:
 
 Publishes over HTTP with SigV4 (the api's publish auth is IAM; a subscriber's is the public key).
 The row's `published` bit is read per gerp and cached a minute per container.
+
+An event goes out only when it comes from the gerp it names: EventBridge stamps the sending account
+(`account`, kept when the hub forwards it) and the row's `aws_account_id` has to match, since any
+account in the organization can put on the bus. A contract marked `"audience": "operator"` is the
+operator's signal and has no public channel.
 """
 
 import json
@@ -27,14 +32,15 @@ import boto3
 from botocore.auth import SigV4Auth
 from botocore.awsrequest import AWSRequest
 
-from aws import client as _aws
+from aws import client as _aws, log
 
 EVENTS_HTTP = os.environ.get("EVENTS_HTTP", "")          # https://<host>/event
 CUSTOMERS_TABLE = os.environ.get("CUSTOMERS_TABLE", "gerp-customers")
 CONTRACTS_DIR = Path(os.environ.get("CONTRACTS_DIR", str(Path(__file__).parent / "contracts")))
 REGION = os.environ.get("AWS_REGION", "us-east-1")
 ENVELOPE = {"schema_version", "openly_operated", "customer_id", "counters"}
-_published_cache = {}   # gerp_id -> (at, bool)
+_row_cache = {}   # gerp_id -> (at, published, aws_account_id)
+_DROP = object()
 _contracts = {}
 
 
@@ -42,15 +48,20 @@ def channel_slug(s):
     return re.sub(r"[^A-Za-z0-9-]", "-", s).strip("-")[:50]
 
 
-def _published(gerp_id):
-    hit = _published_cache.get(gerp_id)
+def _row(gerp_id):
+    """(published, aws_account_id) off the gerp's row, cached a minute."""
+    hit = _row_cache.get(gerp_id)
     if hit and time.time() - hit[0] < 60:
-        return hit[1]
+        return hit[1], hit[2]
     it = _aws("dynamodb").get_item(TableName=CUSTOMERS_TABLE, Key={"gerp_id": {"S": gerp_id}},
-                                   ProjectionExpression="published").get("Item") or {}
-    val = bool(it.get("published", {}).get("BOOL", False))
-    _published_cache[gerp_id] = (time.time(), val)
+                                   ProjectionExpression="published, aws_account_id").get("Item") or {}
+    val = (bool(it.get("published", {}).get("BOOL", False)), it.get("aws_account_id", {}).get("S", ""))
+    _row_cache[gerp_id] = (time.time(), *val)
     return val
+
+
+def _published(gerp_id):
+    return _row(gerp_id)[0]
 
 
 def contract(kind):
@@ -62,17 +73,30 @@ def contract(kind):
 
 
 def project(value, schema):
-    """`value` reduced to the properties `schema` names, recursively; subject and secret dropped."""
-    if isinstance(value, dict) and isinstance(schema.get("properties"), dict):
+    """`value` reduced to the properties `schema` names, recursively; subject and secret dropped. An
+    object or a list where the contract describes no shape for one (a property typed `string` that
+    arrives as an object) is dropped rather than passed whole."""
+    out = _project(value, schema)
+    return None if out is _DROP else out
+
+
+def _project(value, schema):
+    if isinstance(value, dict):
+        if not isinstance(schema.get("properties"), dict):
+            return _DROP
         out = {}
         for k, v in value.items():
             prop = schema["properties"].get(k)
             if prop is None or k in ENVELOPE or prop.get("class") in ("subject", "secret"):
                 continue
-            out[k] = project(v, prop)
+            projected = _project(v, prop)
+            if projected is not _DROP:
+                out[k] = projected
         return out
-    if isinstance(value, list) and isinstance(schema.get("items"), dict):
-        return [project(v, schema["items"]) for v in value]
+    if isinstance(value, list):
+        if not isinstance(schema.get("items"), dict):
+            return _DROP
+        return [p for p in (_project(v, schema["items"]) for v in value) if p is not _DROP]
     return value
 
 
@@ -103,6 +127,10 @@ def route(event):
     gerp_id = detail.get("customer_id") or ""
     kind = event.get("detail-type") or ""
     at = event.get("time") or datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    sender = str(event.get("account") or "")
+    if not gerp_id or not sender or _row(gerp_id)[1] != sender:
+        log.warning("event refused: not from the gerp it names", gerp_id=gerp_id, kind=kind, account=sender)
+        return []
     out = []
     counters = [c for c in detail.get("counters") or [] if c.get("key")]
     if counters:
@@ -110,7 +138,7 @@ def route(event):
         out.append(("/oob/counters", [{"key": c["key"], "op": c.get("op", "add"), "magnitude": c.get("magnitude", 1),
                                        "period": period, "at": at} for c in counters]))
     schema = contract(kind) if gerp_id and kind else None
-    if schema and _published(gerp_id):
+    if schema and schema.get("audience") != "operator" and _published(gerp_id):
         out.append((f"/oob/{channel_slug(gerp_id)}/{channel_slug(kind)}",
                     [{"kind": kind, "gerp_id": gerp_id, "at": at, "detail": project(detail, schema)}]))
     return out

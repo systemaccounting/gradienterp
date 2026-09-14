@@ -40,7 +40,7 @@ resource "aws_iam_role_policy" "published" {
     Statement = [
       {
         Effect   = "Allow"
-        Action   = ["dynamodb:UpdateItem"]
+        Action   = ["dynamodb:UpdateItem", "dynamodb:GetItem"]
         Resource = "arn:aws:dynamodb:${data.aws_region.current.region}:${local.operator_account_id}:table/${local.stack_prefix}-customers"
       },
       {

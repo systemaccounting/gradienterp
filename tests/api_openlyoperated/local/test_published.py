@@ -1,4 +1,5 @@
-"""published: a gerp's openly_operated flip, announced on the bus, lands on its row."""
+"""published: a gerp's openly_operated flip, announced on the bus, lands on its row — only when it was
+sent from the gerp's own account."""
 
 import importlib.util
 import os
@@ -19,25 +20,42 @@ def _load():
 
 def _row(gerp_id):
     from aws import client
-    client("dynamodb").put_item(TableName=os.environ["CUSTOMERS_TABLE"], Item={"gerp_id": {"S": gerp_id}, "status": {"S": "active"}})
+    client("dynamodb").put_item(TableName=os.environ["CUSTOMERS_TABLE"], Item={
+        "gerp_id": {"S": gerp_id}, "status": {"S": "active"}, "aws_account_id": {"S": ACCT[gerp_id]}})
+
+
+ACCT = {"cafe": "111111111111", "mallory": "222222222222"}
 
 
 def test_the_flip_lands_on_the_row_and_a_stranger_is_skipped():
     with scratch_env():
         mod = _load()
         _row("cafe")
-        out = mod.handler({"detail-type": "gerp.published", "detail": {"gerp_id": "cafe", "at": "2026-09-04T00:00:00Z"}}, None)
+        out = mod.handler({"detail-type": "gerp.published", "account": ACCT["cafe"], "detail": {"gerp_id": "cafe", "at": "2026-09-04T00:00:00Z"}}, None)
         assert out == {"gerp_id": "cafe", "published": True}
         [r] = [r for r in rows(os.environ["CUSTOMERS_TABLE"]) if r["gerp_id"] == "cafe"]
         assert r["published"] is True and r["published_at"] == "2026-09-04T00:00:00Z"
-        out = mod.handler({"detail-type": "gerp.unpublished", "detail": {"gerp_id": "cafe", "at": "2026-09-05T00:00:00Z"}}, None)
+        out = mod.handler({"detail-type": "gerp.unpublished", "account": ACCT["cafe"], "detail": {"gerp_id": "cafe", "at": "2026-09-05T00:00:00Z"}}, None)
         assert out["published"] is False
         [r] = [r for r in rows(os.environ["CUSTOMERS_TABLE"]) if r["gerp_id"] == "cafe"]
         assert r["published"] is False
         # a flip for a gerp with no row here, and an event of another kind
-        assert mod.handler({"detail-type": "gerp.published", "detail": {"gerp_id": "ghost"}}, None) == {"skipped": "no row", "gerp_id": "ghost"}
+        assert mod.handler({"detail-type": "gerp.published", "account": ACCT["cafe"], "detail": {"gerp_id": "ghost"}}, None) == {"skipped": "no row", "gerp_id": "ghost"}
         assert mod.handler({"detail-type": "journal_entry.posted", "detail": {"gerp_id": "cafe"}}, None)["skipped"] == "not a publish flip"
         assert len(rows(os.environ["CUSTOMERS_TABLE"])) == 1
+
+
+def test_a_flip_from_another_account_is_refused_and_the_row_stays():
+    """Any account in the organization can put on the bus; only the gerp's own account flips its row."""
+    with scratch_env():
+        mod = _load()
+        _row("cafe")
+        _row("mallory")
+        for account in (ACCT["mallory"], ""):
+            out = mod.handler({"detail-type": "gerp.published", "account": account, "detail": {"gerp_id": "cafe"}}, None)
+            assert out["refused"] and out["gerp_id"] == "cafe", account
+        [r] = [r for r in rows(os.environ["CUSTOMERS_TABLE"]) if r["gerp_id"] == "cafe"]
+        assert "published" not in r
 
 
 if __name__ == "__main__":

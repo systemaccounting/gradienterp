@@ -72,6 +72,12 @@ resource "aws_iam_role_policy" "econ" {
         Resource = aws_dynamodb_table.counters.arn
       },
       {
+        # the gerp's account, to take a count only from the gerp the event names
+        Effect   = "Allow"
+        Action   = ["dynamodb:GetItem"]
+        Resource = "arn:aws:dynamodb:${data.aws_region.current.region}:${local.operator_account_id}:table/${local.stack_prefix}-customers"
+      },
+      {
         Effect   = "Allow"
         Action   = ["logs:CreateLogGroup", "logs:CreateLogStream", "logs:PutLogEvents"]
         Resource = "arn:aws:logs:${data.aws_region.current.region}:${local.operator_account_id}:*"
@@ -91,7 +97,7 @@ module "counter" {
   source_code_hash   = data.archive_file.econ["counter"].output_base64sha256
   src_dir            = "prod/api_openlyoperated/lambdas/counter"
   timeout            = 15
-  env_vars           = { COUNTERS_TABLE = aws_dynamodb_table.counters.name }
+  env_vars           = { COUNTERS_TABLE = aws_dynamodb_table.counters.name, CUSTOMERS_TABLE = "${local.stack_prefix}-customers" }
   log_retention_days = local.config.LOG_RETENTION_DAYS
 }
 

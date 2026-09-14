@@ -114,6 +114,7 @@ every `detail` payload carries these fields regardless of event type:
 
 deliberately not in detail:
 - **PII** — names, contact info, free-form notes that may carry identifiers. A field that references a person carries `"class": "subject"` in the contract and never reaches a channel.
+- **operator signals** — a contract with `"audience": "operator"` at its top (`platform/registry.extended`) is for the operator's consumers and has no public channel, whatever the gerp's publish setting.
 - **internal storage shapes** — e.g. accounting's pair-decomposed ledger rows. implementation detail, not contract.
 
 ## schema source of truth

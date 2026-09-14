@@ -46,7 +46,16 @@ to answer on the custom domain; a 403 in that window is propagation.
   `/oob/<gerp_id>/<kind>` only when the gerp row reads `published`, its detail projected through
   the event's contract (`modules/events/<module>/<kind>.v1.json`, bundled into the zip): a property
   the contract does not name is dropped, one marked `class: subject` or `class: secret` is
-  dropped, and a kind with no contract has no channel. Signs the publish with SigV4.
+  dropped, an object or list where the contract describes no shape is dropped, a kind with no
+  contract has no channel, and a contract marked `"audience": "operator"` has none either. Signs the
+  publish with SigV4.
+- **only the gerp's own account speaks for it** — any account in the organization can put on the
+  hub and operator buses, so `publisher`, `counter` and `published` each compare the event's
+  `account` (stamped by EventBridge, and kept when the hub forwards the event) with the
+  `aws_account_id` on the row of the gerp the event names. An event from any other account, or from
+  none, is refused and logged (`event refused: not from the gerp it names`, `counters refused: …`,
+  `publish flip refused: …`, with the gerp and the sending account); nothing reaches a channel, a
+  counter or the row.
 - **`GET /events?channel=`** (`api/v1/events`, Node, STREAM, keyed) — the SSE relay: subscribes
   to the channel on the consumer's behalf over the Events WebSocket protocol and writes `id:`
   (a millisecond timestamp), `event:` (the channel), `data:` (the event JSON), a comment
