@@ -92,7 +92,8 @@ one task, keyed on the alarm's name, with `category: threshold`, the datapoint t
 reports in `NewStateReason` as the count, the metric and its threshold from `Trigger`, and the
 metric's `get-metric-statistics` over the alarm's own period as the query. No role is assumed.
 
-Dedupe is the open task for that `<function>#<kind>` (`subject_key`, `category: alarm`): a
+Dedupe is the open task for that `<function>#<kind>` (`subject_key`, `category: alarm`; a parked
+record's key is its `-failed` queue's name): a
 second ALARM strikes the same task, an OK closes every task the alarm opened (found by the
 `alarm:` line in the content — a tag would be a registry meaning, and an alarm name is not
 one). The operator gerp's `tasks_poke` fires on the insert like any escalation.

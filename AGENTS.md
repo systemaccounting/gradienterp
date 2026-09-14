@@ -162,7 +162,8 @@ for the http API surface, `tests/server/per_customer/` IS the per_customer stack
   `log_archive` `238599091185`; operator `185369506315` (tfstate,
   `gerp-customers`, the owner app, the collector); a hub per region (`config.json` `HUBS`; the
   first, `582129522725`, in us-east-1 — the bus its region's gerps put to, its edges); gradienterp
-  customer `867637277314` — the dogfood, fully provisioned via `prod/per_customer/`; the Irish gerp
+  customer `867637277314` — the dogfood, fully provisioned via `prod/per_customer/`; the staging gerp `westwood-c40fd8` (`222165865776`,
+  us-east-1); the Irish gerp
   `dublin-test-roasters-d542eb` (`832348493159`, eu-west-1) — the first outside us-east-1. No
   real customer bookkeeping yet (the books carry the demo cafe); destroy / re-apply is reversible
   churn.

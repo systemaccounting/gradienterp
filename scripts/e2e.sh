@@ -62,7 +62,7 @@ ENV_FILE="$REPO_ROOT/.env"
 
 # the local seed: one owner of the gerp the local per_customer stack is built as
 # (tests/server/per_customer/image.json); the bff points its gateway at the local stack
-LOCAL_SEED='{"local-owner": [{"gerp_id": "gradienterp", "label": "gradientERP"}]}'
+LOCAL_SEED='{"local-dev": [{"gerp_id": "gradienterp", "label": "gradientERP"}]}'
 PROD_PROFILE="operator-org"
 OWNER_PASSWORD_PARAM="/gradienterp/test/e2e/owner_password"
 
