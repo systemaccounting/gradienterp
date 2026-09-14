@@ -2,6 +2,8 @@
 
 terraform modules for an ai-first, cloud-native ERP. each module provisions serverless erp features (lambda + dynamodb) for one customer's sub-account, managed by a per-tenant bedrock agentcore agent. every transaction is a spec-compliant event; whether it gets *published* is gated per-customer by the `openly_operated` flag (default-true for businesses seeking transparency-driven capital, default-false for private individuals running the ERP for personal use).
 
+the use case, end to end: someone signs up at gradienterp.cloud, provisions a gerp, connects their own payment accounts, gets billed and pays, and — if openly operated — appears on the public dashboard.
+
 signup flow: cognito post-confirmation seeds the account row; a gerp is created in the owner app, and its card landing sends the vend to tower's `tower-vends` queue → `tower-provision-customer` lambda (four at a time) → SC Account Factory product vends a fresh AWS sub-account under the operator's AWS Organization (CT-managed) → codebuild runs `prod/per_customer/` terraform against the new account → modules deploy. cross-account eventbridge connects customers' agents for purchasing, disputes, and other coordination.
 
 ## the protocol
