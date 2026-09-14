@@ -231,6 +231,8 @@ tests/
                          # gerp's own lambdas, polls the other; the judgment cases spend a model turn;
                          # case 6 puts events from westwood's account naming gradienterp and holds every
                          # consumer to refusing them (counter, publisher, publish flip, inbox), each with a control
+  payments/integ/        # the three live gerps: each webhook door's own role held by the IAM policy
+                         # simulator, and an unsigned POST to each door refused (400/401), never a 500
   server/                # the stacks, locally — bff :3000, per_customer :8080, oob.biz :3001
     snapshot.py _image.py <stack>/{server.py,image.json}
   agent/local/           # prompts.jsonc + smoke.py (live) + mocked flows

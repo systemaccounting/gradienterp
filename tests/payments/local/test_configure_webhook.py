@@ -392,6 +392,37 @@ def test_the_key_path_still_works_when_named():
     assert status == 200 and stored == {"stripe": "whsec_live"}
 
 
+def test_square_setup_leaves_one_subscription_at_the_url():
+    """POST has no upsert, so each run used to add a subscription that kept delivering every event,
+    signed with a key the vault drops on the next run."""
+    url = f"{BASE}/webhooks/square"
+    replies = {
+        "POST /v2/webhooks/subscriptions": {"subscription": {"id": "sub_new", "signature_key": "sig_new"}},
+        "GET /v2/webhooks/subscriptions": {"subscriptions": [
+            {"id": "sub_old", "notification_url": url},
+            {"id": "sub_new", "notification_url": url},
+            {"id": "sub_elsewhere", "notification_url": "https://another.example/hook"},
+        ]},
+        "DELETE /v2/webhooks/subscriptions/sub_old": {},
+        "/v2/locations": {"locations": []},
+    }
+    status, body, stored, _, http = run({"provider": "square", "secret_name": "square_token"}, replies=replies)
+    assert status == 200, body
+    assert stored == {"square": "sig_new"}, "the key still comes from the CREATE response"
+    deletes = [c["url"].rsplit("/", 1)[-1] for c in http.calls if c["method"] == "DELETE"]
+    assert deletes == ["sub_old"], "the one just created and one at another url stay"
+    assert "duplicate_sweep_skipped" not in body
+
+
+def test_square_setup_still_stores_the_key_when_the_subscriptions_cannot_be_listed():
+    replies = {"POST /v2/webhooks/subscriptions": {"subscription": {"id": "sub_new", "signature_key": "sig_new"}},
+               "/v2/locations": {"locations": []}}   # the GET raises: not in the reply map
+    status, body, stored, rows, _ = run({"provider": "square", "secret_name": "square_token"}, replies=replies)
+    assert status == 200, body
+    assert stored == {"square": "sig_new"} and rows == ["square"]
+    assert body["duplicate_sweep_skipped"] is True
+
+
 if __name__ == "__main__":
     for _n in [k for k in dir() if k.startswith("test_")]:
         globals()[_n]()

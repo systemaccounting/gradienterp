@@ -26,13 +26,14 @@ FIXTURES = Path(__file__).resolve().parents[3] / "tests" / "testdata" / "stripe"
 def test_stripe_charge_lands_in_accounting_pending():
     with scratch_env():
         ing = load_lambda("ingest_stripe")
-        import hashlib, hmac, os
+        import hashlib, hmac, os, time
         from aws import client
         client("ssm").put_parameter(Name=f"{os.environ['SECRET_PARAM_PREFIX']}/stripe/signing_secret",
                                     Value="whsec_test_signing", Type="SecureString", Overwrite=True)
         raw = (FIXTURES / "charge.succeeded.json").read_text()
-        mac = hmac.new(b"whsec_test_signing", b"1700000000." + raw.encode(), hashlib.sha256).hexdigest()
-        resp = ing.handler({"body": raw, "headers": {"stripe-signature": f"t=1700000000,v1={mac}"}}, None)
+        ts = int(time.time())
+        mac = hmac.new(b"whsec_test_signing", f"{ts}.".encode() + raw.encode(), hashlib.sha256).hexdigest()
+        resp = ing.handler({"body": raw, "headers": {"stripe-signature": f"t={ts},v1={mac}"}}, None)
         assert json.loads(resp["body"])["status"] == "posted", resp
 
         # no accountType → the entry sits in accounting's pending queue, not the ledger

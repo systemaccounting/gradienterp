@@ -62,10 +62,17 @@ depends on accounting. the webhook ingestion layer — translates payment proces
   existed.
 
 - `ingest_stripe` / `ingest_square` / `ingest_paypal` lambdas — receive a provider webhook, verify its signature (no stored verification value → 401, nothing written; a failed or erroring verification → 400), dedup by provider event id, dispatch to accounting's `transform_<provider>_<event>` → `post_journal_entry`.
-  Stripe verifies against EITHER of two secrets. A signing secret belongs to an endpoint and
-  appears only in the response that created it, so replacing an endpoint rotates it and both are
-  briefly live; `_helpers.webhook_secrets` keeps the previous one beside the current with a 60s
-  cache TTL, and without that a swap 400s events into a deleted endpoint's dropped retries.
+  Stripe and Square verify against EITHER of two secrets. A signing secret belongs to an endpoint
+  (a subscription, on Square) and appears only in the response that created it, so replacing one
+  rotates it and both are briefly live; `_helpers.webhook_secrets` keeps the previous one beside the
+  current with a 60s cache TTL. The previous one verifies for 24 hours after it was moved — the
+  `_previous` parameter's own `LastModifiedDate` — and then not at all: setup disables or deletes
+  what it replaced in the same run, so only deliveries already on their way need it.
+  Each door runs as its own role (`aws_iam_role.door` in `infra/main.tf`): `GetParameter` on its
+  own verification parameters, `PutItem` on the dedup and dead-letter tables, invoke on
+  `post_journal_entry` (and `record_invoice_paid` for Stripe, the settings `Query` for Square's
+  locations). No parameter write and no other processor's secret; the other six lambdas share
+  `${prefix}-lambda`. `tests/payments/integ/test_door_roles.py` holds each role to that on the live gerps.
 - `configure_webhook` — agent tool, ONE for every processor: create the provider's webhook
   subscription and store what verifies deliveries. Stripe's default is the firm path: after
   `manage_mcp install` with Write on webhook endpoints at Stripe's approval screen, the lambda
@@ -76,6 +83,8 @@ depends on accounting. the webhook ingestion layer — translates payment proces
   the same call with `approval_token` goes through. Stripe's server has no webhook delete, so
   the sweep disables older endpoints at the url (`PostWebhookEndpointsWebhookEndpoint`, by `id`).
   `secret_name` is the key path, kept for a firm that prefers a key and for Square and PayPal.
+  Square's setup sweeps too: after the create it lists the subscriptions and deletes every other
+  one at the url, and a listing failure keeps the setup with `duplicate_sweep_skipped`.
   `payment_links {kind: test}` has no Stripe adapter any more: the agent makes a test payment
   through Stripe's own tools. `provider` is
   a parameter, because the agent should not have to know which processor a firm uses in order to
@@ -327,7 +336,10 @@ One thin ingest lambda per provider (`lambdas/ingest_<provider>/`), each wired t
 `lambdas/_helpers.py` (dedup, DLQ, signature verification, the post_journal_entry
 cross-invoke).
 
-- **stripe** — `Stripe-Signature` HMAC over `t.body`.
+- **stripe** — `Stripe-Signature` HMAC over `t.body`. Any `v1` in the header may match (Stripe sends
+  one per active secret while a secret rolled in its dashboard overlaps), and a match whose `t` is
+  more than 300 s old is a 400: Stripe signs each delivery attempt with a fresh `t`, and the
+  event-id dedup forgets a replay once reset-dev empties `webhook_log`.
 - **square** — HMAC over `notification_url + body`, header `x-square-hmacsha256-signature`.
 - **paypal** — verification is an **API callback**, not an offline HMAC: `POST /v1/notifications/verify-webhook-signature` with the request's transmission headers + the stored `webhook_id`. The **raw request body** must reach that call verbatim — PayPal CRC32s the bytes as-sent, so a re-serialized parsed event fails verification.
 - a new provider is a webhook route + an ingest lambda + its `transform_<provider>_*` functions. (adp / clio / wells fargo tracked in TODO.)

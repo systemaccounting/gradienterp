@@ -219,6 +219,39 @@ def test_location_resolved_from_settings_map():
         assert entries()[-1]["dimensions"]["location"] == "2", entries()[-1]
 
 
+def test_a_delivery_signed_with_the_previous_key_verifies():
+    """A setup run replaces the subscription; a delivery the replaced one already sent carries the
+    old key."""
+    import os
+    from aws import client
+    with scratch_env():
+        ing = load_lambda("ingest_square")
+        event = _event(_fixture("payment.updated.json"))       # signed with TEST_KEY, stored as current
+        prefix = os.environ["SECRET_PARAM_PREFIX"]
+        client("ssm").put_parameter(Name=f"{prefix}/square/signing_secret_previous", Value=TEST_KEY,
+                                    Type="SecureString", Overwrite=True)
+        client("ssm").put_parameter(Name=f"{prefix}/square/signing_secret", Value="sq_sig_key_new",
+                                    Type="SecureString", Overwrite=True)
+        ing.h._secrets.clear()
+        resp = ing.handler(event, None)
+        assert resp["statusCode"] == 200 and json.loads(resp["body"])["status"] == "posted", resp
+
+
+def test_a_delivery_signed_with_neither_key_is_refused():
+    import os
+    from aws import client
+    with scratch_env():
+        ing = load_lambda("ingest_square")
+        event = _event(_fixture("payment.updated.json"))
+        prefix = os.environ["SECRET_PARAM_PREFIX"]
+        for leaf, value in (("signing_secret", "sq_new"), ("signing_secret_previous", "sq_old")):
+            client("ssm").put_parameter(Name=f"{prefix}/square/{leaf}", Value=value,
+                                        Type="SecureString", Overwrite=True)
+        ing.h._secrets.clear()
+        assert ing.handler(event, None)["statusCode"] == 400
+        assert entries() == [] and webhook_log() == []
+
+
 if __name__ == "__main__":
     for _name, _fn in sorted(globals().items()):
         if _name.startswith("test_") and callable(_fn):

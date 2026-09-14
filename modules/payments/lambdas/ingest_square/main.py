@@ -68,15 +68,15 @@ def handler(event, context):
 
     # 1. signature — no stored signature key means no subscription was set up, so no delivery can
     # be genuine: refused. Square signs over notification_url + body, so the URL must match the
-    # subscription.
-    secret = h.webhook_secret(PROVIDER)
-    if not secret:
+    # subscription. Either key verifies: a setup run replaces the subscription, and a delivery the
+    # replaced one already sent carries the old key (see `_helpers.webhook_secrets`)
+    secrets = h.webhook_secrets(PROVIDER)
+    if not secrets:
         log.warning("square webhook secret not configured; refused")
         return h.err("webhook not configured", 401)
     notification_url = f"{WEBHOOK_BASE_URL}/webhooks/{PROVIDER}"
-    if not h.verify_square_signature(
-        raw_bytes, headers.get("x-square-hmacsha256-signature", ""), secret, notification_url
-    ):
+    sig = headers.get("x-square-hmacsha256-signature", "")
+    if not any(h.verify_square_signature(raw_bytes, sig, s, notification_url) for s in secrets):
         return h.err("invalid signature", 400)
 
     try:

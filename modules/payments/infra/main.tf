@@ -247,8 +247,8 @@ resource "aws_iam_role_policy" "lambda" {
         Resource = var.settings_table_arn != "" ? var.settings_table_arn : aws_dynamodb_table.webhook_log.arn
       },
       {
-        # processor secrets at /gradienterp/customers/<id>/secrets/<provider>:
-        # ingest_<provider> reads what verifies a delivery; configure_webhook writes it.
+        # processor secrets at /gradienterp/customers/<id>/secrets/: configure_webhook writes what
+        # verifies a delivery, and the lambdas that call a processor read the owner's key
         Effect   = "Allow"
         Action   = ["ssm:GetParameter", "ssm:PutParameter"]
         Resource = "arn:aws:ssm:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:parameter/gradienterp/customers/${var.gerp_id}/secrets/*"
@@ -275,6 +275,95 @@ resource "aws_iam_role_policy" "lambda" {
         Resource = "arn:aws:logs:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:*"
       },
     ]
+  })
+}
+
+# ─── the doors' roles ───
+#
+# The ingest lambdas answer anyone on the internet, and a provider's signature is their whole check.
+# Each runs as its own role holding what that door reads and calls: no write to a parameter, and
+# nothing of another processor's.
+
+locals {
+  secrets_arn   = "arn:aws:ssm:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:parameter/gradienterp/customers/${var.gerp_id}/secrets"
+  settings_arn  = var.settings_table_arn != "" ? var.settings_table_arn : aws_dynamodb_table.webhook_log.arn
+  invoicing_arn = "arn:aws:lambda:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:function:${var.stack_prefix}-invoicing-${replace(var.gerp_id, "_", "-")}"
+
+  doors = {
+    ingest_stripe = {
+      params   = ["stripe/signing_secret", "stripe/signing_secret_previous"]
+      invokes  = [var.post_journal_entry_fn_arn, "${local.invoicing_arn}-record_invoice_paid"]
+      settings = false
+    }
+    ingest_square = {
+      params  = ["square/signing_secret", "square/signing_secret_previous"]
+      invokes = [var.post_journal_entry_fn_arn]
+      # the LOCATION# rows map a provider location onto an ordinal; only Square's events carry one
+      settings = true
+    }
+    ingest_paypal = {
+      # PayPal verifies by calling back with the webhook's id, as the firm's client
+      params   = ["paypal/webhook_id", "paypal_client_id", "paypal_secret"]
+      invokes  = [var.post_journal_entry_fn_arn]
+      settings = false
+    }
+  }
+}
+
+resource "aws_iam_role" "door" {
+  for_each = local.doors
+  name     = "${local.prefix}-${each.key}"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Action    = "sts:AssumeRole"
+      Effect    = "Allow"
+      Principal = { Service = "lambda.amazonaws.com" }
+    }]
+  })
+}
+
+resource "aws_iam_role_policy" "door" {
+  for_each = local.doors
+  name     = "${local.prefix}-${each.key}"
+  role     = aws_iam_role.door[each.key].id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = concat([
+      {
+        # the event-id dedup, and the dead letter's two halves
+        Effect   = "Allow"
+        Action   = "dynamodb:PutItem"
+        Resource = [aws_dynamodb_table.webhook_log.arn, aws_dynamodb_table.dlq.arn, aws_dynamodb_table.dlq_bodies.arn]
+      },
+      {
+        Effect   = "Allow"
+        Action   = "ssm:GetParameter"
+        Resource = [for p in each.value.params : "${local.secrets_arn}/${p}"]
+      },
+      {
+        Effect    = "Allow"
+        Action    = "kms:Decrypt"
+        Resource  = "*"
+        Condition = { StringEquals = { "kms:ViaService" = "ssm.${data.aws_region.current.id}.amazonaws.com" } }
+      },
+      {
+        Effect   = "Allow"
+        Action   = "lambda:InvokeFunction"
+        Resource = compact(each.value.invokes)
+      },
+      {
+        Effect   = "Allow"
+        Action   = ["logs:CreateLogStream", "logs:PutLogEvents"]
+        Resource = "arn:aws:logs:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:log-group:/aws/lambda/${local.prefix}-${each.key}:*"
+      },
+      ], each.value.settings ? [{
+        Effect   = "Allow"
+        Action   = "dynamodb:Query"
+        Resource = local.settings_arn
+    }] : [])
   })
 }
 
@@ -335,7 +424,7 @@ module "fn" {
   source   = "../../terraform/lambda"
 
   name               = "${local.prefix}-${each.key}"
-  role               = aws_iam_role.lambda.arn
+  role               = contains(keys(local.doors), each.key) ? aws_iam_role.door[each.key].arn : aws_iam_role.lambda.arn
   artifact_bucket    = var.artifact_bucket
   artifact_key       = "modules/payments/lambdas/${each.key}.zip"
   src_dir            = "modules/payments/lambdas/${each.key}"

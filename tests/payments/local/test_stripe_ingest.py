@@ -13,6 +13,9 @@ import hashlib
 import hmac
 import json
 import sys
+import time
+from types import SimpleNamespace
+from unittest.mock import patch
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -42,7 +45,7 @@ def test_a_non_ascii_signature_is_a_400_not_a_crash():
         ing = load_lambda("ingest_stripe")
         _put("stripe/signing_secret", TEST_SECRET)
         resp = ing.handler({"body": _fixture("charge.succeeded.json"),
-                            "headers": {"stripe-signature": "t=1700000000,v1=\u00e9\u00e9"}}, None)
+                            "headers": {"stripe-signature": f"t={int(time.time())},v1=\u00e9\u00e9"}}, None)
         assert resp["statusCode"] == 400
         assert entries() == []
 
@@ -160,7 +163,7 @@ def test_invalid_json_is_400():
 def test_signature_helper_accepts_valid_rejects_tampered():
     with scratch_env():
         ing = load_lambda("ingest_stripe")
-        secret, ts = "whsec_test", "1700000000"
+        secret, ts = "whsec_test", str(int(time.time()))
         payload = b'{"id":"evt_1","type":"charge.succeeded"}'
         good = hmac.new(secret.encode(), f"{ts}.".encode() + payload, hashlib.sha256).hexdigest()
         assert ing.h.verify_stripe_signature(payload, f"t={ts},v1={good}", secret) is True
@@ -256,7 +259,8 @@ def test_a_second_provider_does_not_steal_the_default():
 # endpoint signs with the new one while events already in flight carry the old. These pin the two
 # halves that keep that moment from dropping a live charge.
 
-def _sign(secret, payload, ts="1700000000"):
+def _sign(secret, payload, ts=None):
+    ts = str(int(time.time())) if ts is None else str(ts)
     mac = hmac.new(secret.encode(), f"{ts}.".encode() + payload, hashlib.sha256).hexdigest()
     return f"t={ts},v1={mac}"
 
@@ -438,6 +442,58 @@ def test_each_way_out_logs_the_event_id():
         assert len(collected) == 1, lines
         assert collected[0]["event_id"] == "evt_3Tek05RBOqTW9S9W1QDIzyBO"
         assert (collected[0]["invoice_id"], collected[0]["journal_entry_id"]) == ("1#abc", "inv-1#abc-payment")
+
+
+# ─── every v1, and the age of a delivery ───
+
+def test_a_header_with_several_v1_verifies_whichever_one_matches():
+    """While a secret rolled in Stripe's dashboard overlaps its replacement, Stripe sends one v1 per
+    secret, in an order nothing promises. The vault holds one of them."""
+    payload = _fixture("charge.succeeded.json").encode()
+    ts = str(int(time.time()))
+    right = _sign(TEST_SECRET, payload, ts).split("v1=")[1]
+    wrong = hmac.new(b"whsec_the_other_one", f"{ts}.".encode() + payload, hashlib.sha256).hexdigest()
+    for header in (f"t={ts},v1={wrong},v1={right}", f"t={ts},v1={right},v1={wrong}"):
+        with scratch_env():
+            _put("stripe/signing_secret", TEST_SECRET)
+            ing = load_lambda("ingest_stripe")
+            resp = ing.handler({"body": payload.decode(), "headers": {"stripe-signature": header}}, None)
+            assert json.loads(resp["body"])["status"] == "posted", (header, resp)
+
+
+def test_a_delivery_signed_more_than_five_minutes_ago_is_refused_and_writes_nothing():
+    """Stripe signs each attempt afresh, so an old t is an earlier send played again — one the dedup
+    no longer remembers once reset-dev has emptied the webhook log."""
+    payload = _fixture("charge.succeeded.json").encode()
+    with scratch_env():
+        _put("stripe/signing_secret", TEST_SECRET)
+        ing = load_lambda("ingest_stripe")
+        old = _sign(TEST_SECRET, payload, int(time.time()) - 301)
+        resp = ing.handler({"body": payload.decode(), "headers": {"stripe-signature": old}}, None)
+        assert resp["statusCode"] == 400, resp
+        assert webhook_log() == [] and entries() == [], "a refused delivery writes nothing"
+
+        recent = _sign(TEST_SECRET, payload, int(time.time()) - 299)
+        resp = ing.handler({"body": payload.decode(), "headers": {"stripe-signature": recent}}, None)
+        assert json.loads(resp["body"])["status"] == "posted", resp
+
+
+def test_the_replaced_secret_verifies_for_a_day_and_then_not_at_all():
+    """A secret from an endpoint deleted months ago must not still sign events. The day starts when
+    the secret was moved to `_previous`."""
+    payload = _fixture("charge.succeeded.json").encode()
+    for hours, previous_posts in ((23, True), (25, False)):
+        with scratch_env():
+            _put("stripe/signing_secret", "whsec_new")
+            _put("stripe/signing_secret_previous", "whsec_old")
+            ing = load_lambda("ingest_stripe")
+            clock = time.time() + hours * 3600
+            with patch.object(ing.h, "time", SimpleNamespace(time=lambda: clock)):
+                for secret, expect in (("whsec_old", previous_posts), ("whsec_new", True)):
+                    ing.h._secrets.clear()
+                    resp = ing.handler({"body": payload.decode(),
+                                        "headers": {"stripe-signature": _sign(secret, payload, int(clock))}}, None)
+                    assert (resp["statusCode"] == 200) is expect, (hours, secret, resp)
 
 
 if __name__ == "__main__":

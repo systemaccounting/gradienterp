@@ -7,9 +7,8 @@ sink for unmapped events, and per-provider webhook signature verification.
 Secrets follow the per-provider convention `/gradienterp/customers/<id>/secrets/<provider>`:
 the agent's `configure_webhook` tool writes it (creates the Stripe webhook
 from a restricted key, then stores its signing secret); each ingest lambda reads
-its own provider's path at cold start. The secret may be absent (owner hasn't
-configured the processor yet) — the handler treats that as "skip verification" so
-the route is live before setup completes.
+its own provider's path. The secret may be absent (owner hasn't configured the processor
+yet) — the handler refuses every delivery until it is there.
 """
 
 import hashlib
@@ -138,6 +137,13 @@ def dead_letter(provider: str, event_type: str, event_id: str | None, raw: dict,
 _secrets: dict[str, tuple[float, list[str]]] = {}
 SECRET_TTL_SECONDS = 60
 
+# The replaced secret is only needed for deliveries already on their way: setup disables or deletes
+# the endpoint it replaces in the same run, and a provider stops retrying for an endpoint that is
+# gone. So it verifies for a day after the move — the overlap Stripe gives a secret rolled in its own
+# dashboard, and how long Square retries a delivery — and then not at all. The move's time is the
+# `_previous` parameter's own LastModifiedDate, written when `_store_verification` put it there.
+PREVIOUS_SECRET_SECONDS = 24 * 3600
+
 
 def webhook_secrets(provider: str) -> list[str]:
     """Every signing secret currently valid for this provider, newest first — the live one and the
@@ -154,12 +160,17 @@ def webhook_secrets(provider: str) -> list[str]:
     found = []
     for suffix in ("signing_secret", "signing_secret_previous"):
         try:
-            found.append(_aws("ssm").get_parameter(
+            param = _aws("ssm").get_parameter(
                 Name=f"{SECRET_PARAM_PREFIX}/{provider}/{suffix}", WithDecryption=True
-            )["Parameter"]["Value"])
+            )["Parameter"]
         except ClientError as e:
             if e.response["Error"]["Code"] != "ParameterNotFound":
                 raise
+            continue
+        if suffix.endswith("_previous") and \
+                time.time() - param["LastModifiedDate"].timestamp() > PREVIOUS_SECRET_SECONDS:
+            continue
+        found.append(param["Value"])
     _secrets[provider] = (time.time(), found)
     return found
 
@@ -173,19 +184,36 @@ def webhook_secret(provider: str) -> str | None:
 
 # ─── stripe signature ───
 #
-# Stripe-Signature header is `t=<unix>,v1=<hex-hmac>`. The signed payload is
-# `<t>.<raw-body>`, HMAC-SHA256 with the endpoint secret. See stripe docs.
+# Stripe-Signature header is `t=<unix>,v1=<hex-hmac>[,v1=<hex-hmac>…]`. The signed payload is
+# `<t>.<raw-body>`, HMAC-SHA256 with the endpoint secret. There is one `v1` per secret the endpoint
+# has active — two while a secret rolled in Stripe's dashboard overlaps its replacement — so any of
+# them matching is a match; other schemes (`v0` on test events) are ignored.
+#
+# Stripe signs every delivery attempt with a fresh `t`, so a matching signature with an old `t` is an
+# earlier send played again. The event-id dedup answers that with `duplicate` only while the event's
+# `webhook_log` row exists, and reset-dev empties that table. 300 s is the tolerance Stripe's
+# libraries use.
+STRIPE_TOLERANCE_SECONDS = 300
+
 
 def verify_stripe_signature(payload: bytes, sig_header: str, secret: str) -> bool:
     if not sig_header:
         return False
-    parts = dict(p.split("=", 1) for p in sig_header.split(",") if "=" in p)
-    ts, v1 = parts.get("t"), parts.get("v1")
-    if not ts or not v1:
+    pairs = [p.strip().split("=", 1) for p in sig_header.split(",") if "=" in p]
+    ts = next((v for k, v in pairs if k == "t"), "")
+    sigs = [v for k, v in pairs if k == "v1"]
+    if not ts.isdigit() or not sigs:
         return False
-    expected = hmac.new(secret.encode(), f"{ts}.".encode() + payload, hashlib.sha256).hexdigest()
+    expected = hmac.new(secret.encode(), f"{ts}.".encode() + payload, hashlib.sha256).hexdigest().encode()
     # compare_digest raises on a non-ASCII str: bytes compare, so a garbled header is a mismatch
-    return hmac.compare_digest(expected.encode(), v1.encode("utf-8", "replace"))
+    if not any(hmac.compare_digest(expected, v.encode("utf-8", "replace")) for v in sigs):
+        return False
+    age = int(time.time()) - int(ts)
+    if age > STRIPE_TOLERANCE_SECONDS:
+        log.warning("stripe delivery signed too long ago; refused", provider="stripe",
+                    detail=f"signed {age}s ago", limit=STRIPE_TOLERANCE_SECONDS)
+        return False
+    return True
 
 
 # ─── square signature ───
