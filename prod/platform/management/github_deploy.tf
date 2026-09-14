@@ -4,7 +4,10 @@
 # and every profile those scripts name chains from `default`. The job's shared
 # step (.github/actions/aws) writes this role's credentials as `[default]`.
 #
-# Trust: a job in the repo's `prod` environment and nothing else. The environment
+# Trust: a job in the repo's `prod` environment and nothing else. The repo's tokens carry GitHub's
+# immutable subject, owner and repo each with its id (`gh api
+# repos/systemaccounting/gradienterp/actions/oidc/customization/sub`), so a repo renamed or recreated
+# under the same name is not this one. The environment
 # takes deployment branches from `main` only (.github/workflows/environment.sh),
 # so a pull request, a fork or a workflow edited on another branch gets no token
 # this trust accepts.
@@ -32,7 +35,7 @@ resource "aws_iam_role" "github_deploy" {
       Condition = {
         StringEquals = {
           "token.actions.githubusercontent.com:aud" = "sts.amazonaws.com"
-          "token.actions.githubusercontent.com:sub" = "repo:systemaccounting/gradienterp:environment:prod"
+          "token.actions.githubusercontent.com:sub" = "repo:systemaccounting@12200511/gradienterp@1368357735:environment:prod"
         }
       }
     }]
