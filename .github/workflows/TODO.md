@@ -8,6 +8,13 @@ updates, set in the repo settings. The
 other `.sh` files here are operator-run helpers; Actions ignores `.sh`. Current docs for everything below: fetch
 `code.claude.com/docs/llms.txt` and pull pages as raw markdown with an `.md` suffix.
 
+## terraform validate time
+
+- [ ] **validate takes about four minutes.** `tf-validate-all.sh` runs one directory per core on a
+      4-core runner, and 8 at a time measured 3m39s — the work is CPU. Split the directories across
+      parallel jobs (a matrix, the script validating one shard of the sorted list), tried on a branch
+      with a pull request.
+
 ## the issue-triage workflow (the escalation loop's outside net)
 
 claude-code-action on `issues.opened` / `issue_comment`: labels (`bug|feature`, module),
