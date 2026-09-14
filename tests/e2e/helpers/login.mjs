@@ -1,4 +1,4 @@
-import { expect } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 import { isLocal } from "./env.mjs";
 
 // An unsigned JWT. Nothing local verifies one: the SPA decodes the payload for display, and the bff
@@ -25,19 +25,51 @@ export async function login(page, { email, password, sub }) {
     await expect(page.locator('[data-view="whoChip"]')).toContainText(email);
     return;
   }
+  // every request the page starts, until it answers or fails — what a slow step was still waiting on
+  const waiting = new Map();
+  page.on("request", (r) => waiting.set(r, Date.now()));
+  page.on("requestfinished", (r) => waiting.delete(r));
+  page.on("requestfailed", (r) => waiting.delete(r));
+
   await page.goto("/");
+  let t0 = Date.now();
   await page.getByRole("button", { name: /log in/i }).click();
 
   // Cognito Managed Login (v2, Cloudscape): single-rendered form. The inputs keep the
   // classic name= attrs (username/password); the submit is now a <button>Sign in</button>
   // (the classic input[name=signInSubmitButton] no longer exists).
+  await within(page, waiting, page.locator('input[name="username"]'), LOGIN_PAGE_MS,
+               "Cognito's login page did not render its form");
+  const pageMs = Date.now() - t0;
   await page.locator('input[name="username"]').fill(email);
   await page.locator('input[name="password"]').fill(password);
+  t0 = Date.now();
   await page.getByRole("button", { name: /^sign in$/i }).click();
 
   // back on the SPA, landed on the homeScreen (appbar shows the email)
-  await expect(page.locator('[data-view="homeScreen"]')).toBeVisible({ timeout: 30_000 });
+  await within(page, waiting, page.locator('[data-view="homeScreen"]'), SIGN_IN_MS,
+               "signing in did not land on the app's home screen");
+  const signInMs = Date.now() - t0;
+  test.info().annotations.push({ type: "login", description: `login page ${pageMs}ms, sign-in to home ${signInMs}ms` });
+  console.log(`[e2e] login page ${pageMs}ms, sign-in to home ${signInMs}ms`);
   await expect(page.locator('[data-view="whoChip"]')).toContainText(email);
+}
+
+// What a person waits for at each step of signing in, before the step counts as failed.
+export const LOGIN_PAGE_MS = 3_000;   // "Log in" clicked → Cognito's form on screen
+export const SIGN_IN_MS = 5_000;      // "Sign in" clicked → the app's home screen, signed in
+
+// Wait for `locator`, and when the budget runs out fail with what the page was still waiting on.
+async function within(page, waiting, locator, ms, what) {
+  const t0 = Date.now();
+  try {
+    await locator.waitFor({ state: "visible", timeout: ms });
+  } catch {
+    const now = Date.now();
+    const open = [...waiting].map(([r, at]) => `  ${r.method()} ${r.url().split("?")[0]} — no response after ${now - at}ms`);
+    throw new Error(`${what} within ${ms}ms (waited ${now - t0}ms, on ${page.url().split("?")[0]})` +
+                    (open.length ? `\nrequests with no response:\n${open.join("\n")}` : "\nno request was waiting on a response"));
+  }
 }
 
 // Enter a gerp from the gerps table by its label → lands on the gerpScreen.

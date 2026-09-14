@@ -114,6 +114,15 @@ which is the PKCE redirect to Cognito Managed Login — so a browser signup type
 time, on the hosted UI, before reaching `homeScreen`. Waiting for `homeScreen` straight after the
 confirm click just times out.
 
+## the login's time budget
+
+Against prod, `helpers/login.mjs` times the two steps a person waits on: "Log in" to Cognito's form on
+screen (`LOGIN_PAGE_MS`, 3s) and "Sign in" to the app's home screen (`SIGN_IN_MS`, 5s). Measured
+2026-09-14: about 0.6–1.2s and 1.9s. Each run prints both (`[e2e] login page …ms, sign-in to home …ms`,
+also a `login` annotation on the test). Past a budget the test fails saying which step, how long it
+waited, the url it was on, and each request still without a response — a stalled page reads as a
+stalled page, with no trace to open, and it counts as a failure.
+
 ## running
 
 ```
