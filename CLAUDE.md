@@ -14,6 +14,10 @@ avoid words like "proper", "correct", "appropriate" and "valid" in your comments
 
 avoid hedging and filler
 
+## commits
+
+a subject names the one change in about 40 characters, so GitHub's file list shows it whole. detail goes in the body, after a blank line
+
 ## requirement docs
 
 design work goes in `tmp/NNN-title.md` — 3 digit prefix, latest number last
