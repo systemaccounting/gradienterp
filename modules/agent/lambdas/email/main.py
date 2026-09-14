@@ -3,7 +3,8 @@
 SES drops the raw .eml in s3://<bucket>/in/<messageId> and this fires. We:
   1. parse the message,
   2. gate it — sender on the allowlist AND DMARC=pass (the allowlist is only a wall if it
-     stands on DMARC; `From:` is a plain string),
+     stands on DMARC; `From:` is a plain string), and no automatic message (an out-of-office
+     answering the agent's reply would be answered, and answer back, forever),
   3. dedup on Message-ID (SES can redeliver / S3 can double-fire),
   4. invoke this gerp's own AgentCore runtime with a thread-stable session,
   5. SES-reply, threaded, From the agent's subdomain address.
@@ -82,6 +83,10 @@ def handler(event, _context):
     if not _sender_authenticated(msg, sender):
         log.info("dropped: sender not authenticated (no DMARC pass, no aligned DKIM)", sender=sender)
         return
+    why = automatic(msg, sender)
+    if why:
+        log.info("dropped: an automatic message", sender=sender, reason=why)
+        return
 
     # 3. dedup — conditional put; if it's already there, this is a redelivery
     if _seen(message_id):
@@ -113,6 +118,31 @@ def handler(event, _context):
 
     # 6. reply, threaded
     _reply(msg, sender, answer)
+
+
+_AUTO_PRECEDENCE = {"bulk", "junk", "list", "auto_reply"}
+
+
+def automatic(msg, sender: str) -> str:
+    """Why `msg` is a message a machine sent — one the agent must not answer — or "" for a person's.
+    RFC 3834's `Auto-Submitted`, the older `Precedence` and `X-Autoreply`/`X-Autorespond` headers that
+    out-of-office responders still send, a mailing list's `List-Id`, a bounce's null return path, and
+    this agent's own address."""
+    auto = (msg.get("Auto-Submitted") or "").strip().lower()
+    if auto and auto != "no":
+        return f"Auto-Submitted: {auto}"
+    if (msg.get("Precedence") or "").strip().lower() in _AUTO_PRECEDENCE:
+        return f"Precedence: {msg.get('Precedence').strip().lower()}"
+    for header in ("X-Autoreply", "X-Autorespond"):
+        if msg.get(header) is not None:
+            return header
+    if msg.get("List-Id") is not None:
+        return "List-Id"
+    if (msg.get("Return-Path") or "").strip() == "<>":
+        return "a null return path"
+    if sender == AGENT_ADDRESS.lower():
+        return "the agent's own address"
+    return ""
 
 
 def _mailboxes() -> set:
@@ -260,6 +290,8 @@ def _reply(orig, to_addr: str, answer: str):
     reply = EmailMessage()
     reply["From"] = AGENT_ADDRESS
     reply["To"] = to_addr
+    # the agent's reply is automatic (RFC 3834): a compliant out-of-office stays quiet instead of answering it
+    reply["Auto-Submitted"] = "auto-replied"
     subject = orig.get("Subject", "") or "your agent"
     reply["Subject"] = subject if subject.lower().startswith("re:") else f"Re: {subject}"
     mid = orig.get("Message-ID")

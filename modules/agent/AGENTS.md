@@ -63,7 +63,7 @@ In-process agent tools (Strands, run under the runtime role; each gated on its r
 - Trust: each spoke's `hub_inbound` resource policy grants the hub role on its runtime **and** endpoint arn (both are authorized on a qualified invoke); wiring = `var.hub_runtime_endpoint_arn` + `var.hub_role_arn`, both empty ⇒ no hub.
 
 Lambdas:
-- `lambdas/chat/` (Node, `index.mjs`) — web-chat front door behind a Function URL; validates the operator-pool JWT itself (key ids looked up as own properties only). Answers the owner only: the container gives every turn the owner's prompt and tools whatever `role` arrives, so a resolved employee/customer/vendor gets a 403 until a per-role tool gate exists. A `session_id` continues a chat only when this account's chats row holds it (a `frame_submit` for one it doesn't is a 404); a `values_key` naming `__proto__`/`prototype`/`constructor` is refused.
+- `lambdas/chat/` (Node, `index.mjs`) — web-chat front door behind a Function URL; its role invokes only a function tagged `agent_frame_sink=true` (`aws:ResourceTag` on the grant — `manage_secret`, the one form sink the code resolves by that tag); validates the operator-pool JWT itself (key ids looked up as own properties only). Answers the owner only: the container gives every turn the owner's prompt and tools whatever `role` arrives, so a resolved employee/customer/vendor gets a 403 until a per-role tool gate exists. A `session_id` continues a chat only when this account's chats row holds it (a `frame_submit` for one it doesn't is a 404); a `values_key` naming `__proto__`/`prototype`/`constructor` is refused.
 - `lambdas/email/` (Python, `main.py`) — SES-inbound front door: allowlist + DMARC gate → invoke runtime → threaded reply. The gate reads only the `Authentication-Results` SES prepends (the first, authserv-id `amazonses.com`): `dmarc=pass` for the From domain, or `dkim=pass` aligned to it; any such header below it is the sender's text.
 
 HTTP routes (chat Function URL):
@@ -439,6 +439,12 @@ list must not lose the way to reach its own agent.
 
 **The landing zone and the mailboxes are different top-level prefixes on purpose.** Filing into the
 watched prefix would re-trigger this lambda on its own output, forever.
+
+**An automatic message gets no turn and no reply.** After the gate, `automatic()` drops mail a
+machine sent — `Auto-Submitted` other than `no`, `Precedence: bulk|junk|list|auto_reply`, `X-Autoreply` /
+`X-Autorespond`, a `List-Id`, a null `Return-Path`, or the agent's own address — so an owner's
+out-of-office answering the agent's reply ends there. The agent's own reply carries
+`Auto-Submitted: auto-replied` (RFC 3834), so a compliant responder doesn't answer it in the first place.
 
 **The allowlist + DMARC gate applies only to the `agent` path.** Forwarded mail routinely fails
 DMARC — the forwarding server is not authorised to send for the original sender's domain — and

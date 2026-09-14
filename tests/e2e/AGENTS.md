@@ -74,6 +74,12 @@ A spec can carry both (e.g. the OO toggle is a quick core check **and** mutates 
 - `../mailbox/` — reads inbound mail off the live SES catch-all (its own AGENTS.md). Addresses are
   created `test+…@gradienterp.cloud`; the forwarder does not relay those, so test mail never reaches a
   personal inbox.
+- `headers.spec.mjs` (prod only) — every surface a browser reaches (gradienterp.cloud, openlyoperated.biz, the
+  owner gerp's chat page and portal) answers the five security headers on a page and an asset; the
+  owner app's pages, the dashboard and the chat page load under their CSP with no violation and no page
+  error; a chat link's `say` naming no key sends nothing. A page that grows an outside origin or an
+  inline script fails here, naming the page. `getGerpRow` reads the operator's table and
+  `getPortalOrigin` the gerp's portal function url.
 - `*.spec.mjs` — specs. Compose the helpers; address screens **and** elements via
   `[data-view="…"]` (suffix = kind: `homeScreen`/`gerpScreen`, `gerpsTable`/`gerpCard`,
   `ooToggle`, `whoChip`, `secretNameInput`). `#id` is only the app's functional refs (form fields, `#status`).

@@ -110,9 +110,12 @@ resource "aws_iam_role_policy" "chat" {
         Resource = "*"
       },
       {
-        Effect   = "Allow"
-        Action   = "lambda:InvokeFunction"
-        Resource = "arn:aws:lambda:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:function:${var.stack_prefix}-*"
+        # the form's sink, and nothing else in the account: the function has to carry the tag the
+        # discovery query above finds it by (manage_secret, modules/secrets)
+        Effect    = "Allow"
+        Action    = "lambda:InvokeFunction"
+        Resource  = "arn:aws:lambda:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:function:${var.stack_prefix}-*"
+        Condition = { StringEquals = { "aws:ResourceTag/agent_frame_sink" = "true" } }
       },
       {
         # saved-chat index — list / upsert / delete the caller's own chat rows

@@ -129,7 +129,7 @@ def route(event):
     at = event.get("time") or datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     sender = str(event.get("account") or "")
     if not gerp_id or not sender or _row(gerp_id)[1] != sender:
-        log.warning("event refused: not from the gerp it names", gerp_id=gerp_id, kind=kind, account=sender)
+        log.warning("event refused: not from the gerp it names", gerp_id=gerp_id, detail_type=kind, account=sender)
         return []
     out = []
     counters = [c for c in detail.get("counters") or [] if c.get("key")]

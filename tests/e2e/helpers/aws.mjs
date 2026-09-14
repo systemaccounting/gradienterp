@@ -4,7 +4,7 @@
 
 import { SSMClient, GetParameterCommand } from "@aws-sdk/client-ssm";
 import { DynamoDBClient, DeleteItemCommand, GetItemCommand, PutItemCommand, QueryCommand, ScanCommand } from "@aws-sdk/client-dynamodb";
-import { LambdaClient, InvokeCommand } from "@aws-sdk/client-lambda";
+import { LambdaClient, InvokeCommand, GetFunctionUrlConfigCommand } from "@aws-sdk/client-lambda";
 import { fromIni } from "@aws-sdk/credential-providers";
 import { resolveEnv } from "./env.mjs";
 
@@ -93,7 +93,7 @@ export async function deleteGerpRow(sub, gerp_id) {
 /** The gerp-customers row, raw. */
 const plain = (v) => v.S ?? v.N ?? v.BOOL ?? (v.M ? Object.fromEntries(Object.entries(v.M).map(([k, x]) => [k, plain(x)])) : v.L ? v.L.map(plain) : undefined);
 export async function getGerpRow(gerpId) {
-  const r = await ddb().send(new GetItemCommand({
+  const r = await ddb(OPERATOR_PROFILE).send(new GetItemCommand({   // the operator's table; one emulator locally
     TableName: "gerp-customers", Key: { gerp_id: { S: gerpId } },
   }));
   return Object.fromEntries(Object.entries(r.Item || {}).map(([k, v]) => [k, plain(v)]));
@@ -168,4 +168,12 @@ export async function postJournalEntry(gerpId, { amount, memo = "e2e" }) {
   const out = JSON.parse(Buffer.from(r.Payload).toString());
   if (out.statusCode !== 200) throw new Error(`post_journal_entry: ${JSON.stringify(out)}`);
   return JSON.parse(out.body);
+}
+
+// The gerp's owner portal origin: its storage `ui` function's url (the slug is the capability and
+// isn't needed to read the headers every response carries).
+export async function getPortalOrigin(gerpId) {
+  const client = new LambdaClient(cfg(CUSTOMER_PROFILE));
+  const r = await client.send(new GetFunctionUrlConfigCommand({ FunctionName: `gerp-storage-${gerpId}-ui` }));
+  return r.FunctionUrl.replace(/\/$/, "");
 }

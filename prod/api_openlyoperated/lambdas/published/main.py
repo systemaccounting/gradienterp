@@ -28,7 +28,7 @@ def handler(event, context):
         return {"skipped": "not a publish flip", "detail-type": kind}
     sender = str(event.get("account") or "")
     if not sender:
-        log.warning("publish flip refused: no sending account", gerp_id=gerp_id, kind=kind)
+        log.warning("publish flip refused: no sending account", gerp_id=gerp_id, detail_type=kind)
         return {"refused": "no sending account", "gerp_id": gerp_id}
     ddb = _aws("dynamodb")
     try:
@@ -44,6 +44,6 @@ def handler(event, context):
             raise
         if not ddb.get_item(TableName=CUSTOMERS_TABLE, Key={"gerp_id": {"S": gerp_id}}).get("Item"):
             return {"skipped": "no row", "gerp_id": gerp_id}
-        log.warning("publish flip refused: sent from another account", gerp_id=gerp_id, kind=kind, account=sender)
+        log.warning("publish flip refused: sent from another account", gerp_id=gerp_id, detail_type=kind, account=sender)
         return {"refused": "not the gerp's account", "gerp_id": gerp_id}
     return {"gerp_id": gerp_id, "published": KINDS[kind]}
