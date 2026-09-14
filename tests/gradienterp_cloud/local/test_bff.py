@@ -715,14 +715,16 @@ def test_the_card_page_is_served_with_the_publishable_key_and_returns_only_to_th
         resp = mod.handler(event("GET", "/card"), None)
         assert resp["statusCode"] == 200 and resp["headers"]["content-type"].startswith("text/html")
         body = resp["body"]
-        assert 'const key = "pk_test_abc"' in body and "<!--STRIPE-PUBLISHABLE-KEY-->" not in body
-        assert "js.stripe.com/dahlia/stripe.js" in body and "confirmSetup" in body
-        assert "u.origin === location.origin" in body, "a return url from another origin is refused"
+        assert '<meta name="stripe-key" content="pk_test_abc"' in body and "<!--STRIPE-PUBLISHABLE-KEY-->" not in body
+        assert "js.stripe.com/dahlia/stripe.js" in body and '<script src="/card.js">' in body
+        script = mod.handler(event("GET", "/card.js"), None)["body"]
+        assert "confirmSetup" in script and 'meta[name="stripe-key"]' in script
+        assert "u.origin === location.origin" in script, "a return url from another origin is refused"
     deploy = (Path(__file__).resolve().parents[3] / "scripts" / "deploy.py").read_text()
     files = deploy[deploy.index("BFF_FILES = ["):deploy.index("]", deploy.index("BFF_FILES = ["))]
     assert '"card.html"' in files, "the page ships in the BFF bundle"
     assert '"paid.html"' in files, "the payer's landing ships in the BFF bundle"
-    paid = (Path(__file__).resolve().parents[3] / "prod" / "gradienterp_cloud" / "web" / "paid.html").read_text()
+    paid = (Path(__file__).resolve().parents[3] / "prod" / "gradienterp_cloud" / "web" / "paid.js").read_text()
     assert "innerHTML" not in paid and ".textContent = " in paid, "the invoice id from the url is set as text"
 
 
@@ -1579,7 +1581,7 @@ def test_the_spa_carries_no_stripe_js():
     """The card is entered on Stripe's own surfaces: its hosted Checkout page, or — for an Indian
     business, whose e-mandate needs a SetupIntent — Stripe's Payment Element iframe on the card
     page. The SPA never loads Stripe.js; the card page loads it from js.stripe.com and carries no
-    other script but its own inline one (no app.js, nothing third-party), so the page that frames
+    other script but its own (card.js — no app.js, nothing third-party), so the page that frames
     the card field has nothing on it that could read or rewrite it."""
     import re
     web = Path(__file__).resolve().parents[3] / "prod" / "gradienterp_cloud" / "web"
@@ -1587,7 +1589,10 @@ def test_the_spa_carries_no_stripe_js():
         text = f.read_text()
         if f.name == "card.html":
             srcs = re.findall(r'<script[^>]*\ssrc="([^"]+)"', text)
-            assert srcs == ["https://js.stripe.com/dahlia/stripe.js"], f"card.html loads only Stripe.js: {srcs}"
+            assert srcs == ["https://js.stripe.com/dahlia/stripe.js", "/card.js"], f"card.html loads only Stripe.js and its own: {srcs}"
+            continue
+        if f.name == "card.js":
+            assert "js.stripe.com" not in text, "card.js loads nothing itself; card.html loads Stripe.js"
             continue
         assert "js.stripe.com" not in text and not re.search(r"\bStripe\(", text), f"{f.name} loads Stripe.js"
 
@@ -1819,6 +1824,26 @@ def test_mcp_complete_passes_a_gerps_refusal_through():
         _with_fake_mcp_lambda(mod, {"867637277314": (502, {"error": "the consent could not be completed: Invalid or expired session", "provider": "stripe"})})
         resp = mod.handler(event("POST", "/api/mcp/complete", sub="alice", body={"session_id": "urn:s1"}), None)
         assert resp["statusCode"] == 502 and "expired" in json.loads(resp["body"])["error"]
+
+
+
+def test_every_response_carries_the_security_headers_and_the_pages_run_no_inline_script():
+    """The CSP allows no inline script, so every page's script is a file; every response, a page, an
+    asset or the api, carries the same five headers."""
+    import re
+    with scratch_env(GERPS):
+        mod = load_handler()
+        for path in ("/", "/card", "/support", "/paid", "/app.js", "/api/gerps"):
+            h = mod.handler(event("GET", path), None)["headers"]
+            assert "script-src 'self'" in h["content-security-policy"] and "'unsafe-inline'" not in h["content-security-policy"].split("script-src")[1].split(";")[0], path
+            assert "frame-ancestors 'none'" in h["content-security-policy"], path
+            assert (h["x-content-type-options"], h["referrer-policy"]) == ("nosniff", "no-referrer"), path
+            assert h["strict-transport-security"].startswith("max-age=") and h["cross-origin-opener-policy"], path
+    web = Path(__file__).resolve().parents[3] / "prod" / "gradienterp_cloud" / "web"
+    for page in web.glob("*.html"):
+        text = page.read_text()
+        assert not re.search(r"<script(?![^>]*\bsrc=)[^>]*>", text), f"{page.name} has an inline script"
+        assert not re.search(r"\son[a-z]+=\"", text), f"{page.name} has an inline event handler"
 
 
 if __name__ == "__main__":

@@ -9,7 +9,7 @@ from urllib.parse import parse_qs, urlparse
 
 REPO = Path(__file__).resolve().parents[3]
 FORMS = REPO / ".github" / "ISSUE_TEMPLATE"
-DASHBOARD = REPO / "prod" / "openlyoperated_biz" / "web" / "index.html"
+DASHBOARD = REPO / "prod" / "openlyoperated_biz" / "web" / "main.js"   # the dashboard page's script
 SUPPORT = "https://gradienterp.cloud/support"
 REPO_URL = "https://github.com/systemaccounting/gradienterp"
 

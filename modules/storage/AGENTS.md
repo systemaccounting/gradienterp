@@ -54,6 +54,10 @@ each tool's `index.mjs` + `schema.json` + this file; the filing-side rationale i
   any origin, the signature being the capability. `?bucket=email` reads the inbound-mail bucket. The delete refuses
   a document captioned `retention: "retained"` with the same 409 as `manage_storage op=delete`; deleting under
   `automations/approved/` stays allowed (retiring an automation).
+- security headers on every portal response (`SECURITY_HEADERS` in `ui/index.mjs`): agent-written pages and the
+  shell run inline scripts, so the CSP leaves scripts alone — `object-src 'none'; base-uri 'self'; frame-ancestors
+  'none'` — with `nosniff`, HSTS, `Cross-Origin-Opener-Policy: same-origin-allow-popups`, and `Referrer-Policy:
+  no-referrer`, which keeps the slug out of the `Referer` a page's links and images send (they still link and load).
 - outputs: `manage_storage_fn_name`, `inspect_document_fn_name`, `portal_url` (surfaced from
   `prod/per_customer` too — the link the agent hands the owner).
 

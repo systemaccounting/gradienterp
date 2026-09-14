@@ -1272,7 +1272,44 @@ def _html(path: str, inm: str = "") -> dict:
 
 # ── handler ───────────────────────────────────────────────────────────────────
 
+# Every response carries these. The CSP allows no inline script: the pages' scripts are files
+# (app.js, boot.js, card.js). Stripe.js's directives are Stripe's published set for Elements and
+# Link (docs.stripe.com/security/guide); the card page is the only one that loads it. COOP allows
+# popups: the card window reports back over a BroadcastChannel, never `opener`, but it is opened
+# from here.
+_COGNITO_REGION = (os.environ.get("COGNITO_USER_POOL_ID") or "us-east-1_").split("_")[0] or "us-east-1"
+CSP = "; ".join([
+    "default-src 'self'",
+    "script-src 'self' https://js.stripe.com https://*.js.stripe.com https://maps.googleapis.com",
+    f"connect-src 'self' https://cognito-idp.{_COGNITO_REGION}.amazonaws.com https://*.auth.{_COGNITO_REGION}.amazoncognito.com"
+    " https://api.stripe.com https://maps.googleapis.com https://link.com https://*.link.com",
+    "frame-src https://js.stripe.com https://*.js.stripe.com https://hooks.stripe.com https://link.com https://*.link.com",
+    "img-src 'self' data: https://assets.gradienterp.cloud https://*.stripe.com https://*.link.com",
+    "media-src 'self' https://assets.gradienterp.cloud",
+    "style-src 'self' 'unsafe-inline'",
+    "font-src 'self' data:",
+    "object-src 'none'",
+    "base-uri 'self'",
+    "form-action 'self'",
+    "frame-ancestors 'none'",
+])
+SECURITY_HEADERS = {
+    "content-security-policy": CSP,
+    "x-content-type-options": "nosniff",
+    "strict-transport-security": "max-age=31536000; includeSubDomains",
+    "cross-origin-opener-policy": "same-origin-allow-popups",
+    "referrer-policy": "no-referrer",
+}
+
+
 def handler(event, context):
+    resp = _handle(event, context)
+    if isinstance(resp, dict):
+        resp["headers"] = {**SECURITY_HEADERS, **(resp.get("headers") or {})}
+    return resp
+
+
+def _handle(event, context):
     method = event.get("requestContext", {}).get("http", {}).get("method", "GET")
     path = event.get("rawPath") or event.get("requestContext", {}).get("http", {}).get("path", "/")
     headers = {k.lower(): v for k, v in (event.get("headers") or {}).items()}

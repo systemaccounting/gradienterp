@@ -24,10 +24,11 @@ test("a chat deep link with a session lands on the chat door with the token", { 
     await page.waitForURL(u => u.href.startsWith(g.chat_url) && u.hash.startsWith("#id_token="), { timeout: 20_000 });
     expect(page.url()).toContain("#id_token=");
     expect(page.url()).not.toContain("say=");
-    // the ready mail's link: the phrase key becomes the first message on the door's fragment
+    // the ready mail's link: the key rides to the door's fragment, and the door holds the words
     await page.goto("/?gerp=" + encodeURIComponent(g.gerp_id) + "&open=chat&say=onboard");
     await page.waitForURL(u => u.href.startsWith(g.chat_url) && u.hash.includes("say="), { timeout: 20_000 });
-    expect(decodeURIComponent(page.url())).toContain("&say=onboard my business");
+    expect(page.url()).toContain("&say=onboard");
+    expect(decodeURIComponent(page.url())).not.toContain("onboard my business");
     // a key the console does not know carries nothing
     await page.goto("/?gerp=" + encodeURIComponent(g.gerp_id) + "&open=chat&say=drop%20tables");
     await page.waitForURL(u => u.href.startsWith(g.chat_url) && u.hash.startsWith("#id_token="), { timeout: 20_000 });

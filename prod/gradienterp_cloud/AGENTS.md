@@ -8,6 +8,18 @@ Two reasons, both load-bearing with multi-gerp:
 1. **Authorization.** The per-customer gateways' JWT authorizer proves *"a valid platform user,"* not *"the owner of THIS gerp"* — every account's token shares issuer/audience. So a static SPA hitting a gerp gateway directly leaves a cross-tenant hole (any owner's token passes any gerp's authorizer). The BFF closes it: `claims.sub` → owned gerps (`gerp-customers`) → the requested `gerp_id` must be owned, else 403.
 2. **Topology + resolution.** An account owns many gerps, each with its own random APIGW URL. The BFF resolves `account → owned gerps → selected gerp's gateway` and hides the per-customer URLs; the browser only ever sees `/api/*` (single origin, no per-customer CORS).
 
+## security headers
+
+`handler` puts `SECURITY_HEADERS` on every response the lambda answers (the api's unauthenticated 401s come from
+API Gateway's authorizer and carry none): a CSP that allows no inline script — `script-src 'self'` plus Stripe.js's
+published set, connections to this origin, Cognito and Stripe, frames from Stripe, images and the demo videos from
+`assets.gradienterp.cloud`, `frame-ancestors 'none'` — and `nosniff`, HSTS, `Referrer-Policy: no-referrer`,
+`Cross-Origin-Opener-Policy: same-origin-allow-popups` (the card window reports back over a `BroadcastChannel`).
+So every page's script is a file in `web/`: `index.html` → `boot.js` (the pre-render sign-in check and the demo
+thumbs' load-failure cleanup) and `app.js`, `card.html` → `card.js` (the publishable key in its `stripe-key` meta
+tag), `support.html` → `support.js`, `paid.html` → `paid.js`; each is in `BFF_FILES`. No page carries an inline
+script or an `on…=` attribute (`test_bff.py` holds that). A new outside origin a page loads from goes into `CSP`.
+
 ## auth split
 
 - **authn** — the BFF's APIGW JWT authorizer (operator Cognito pool, `issuer=pool`, `audience=gerp-cloud`) validates the token; claims arrive at `requestContext.authorizer.jwt.claims`. The handler never validates tokens itself. The static SPA + `/auth/callback` are public (`$default` route, no authorizer) so the page can load to log in.

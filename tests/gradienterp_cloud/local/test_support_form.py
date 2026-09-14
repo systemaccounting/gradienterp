@@ -98,7 +98,8 @@ def test_the_page_is_served_at_support_and_no_page_carries_the_address():
         mod = load_handler()
         resp = mod.handler(event("GET", "/support"), None)
         assert resp["statusCode"] == 200 and resp["headers"]["content-type"].startswith("text/html")
-        assert 'id="f"' in resp["body"] and "/api/support" in resp["body"]
+        assert 'id="f"' in resp["body"] and '<script src="/support.js">' in resp["body"]
+        assert "/api/support" in mod.handler(event("GET", "/support.js"), None)["body"]
     address = re.compile(r"mailto:|[A-Za-z0-9._+-]+@gradienterp\.cloud")
     for f in list(WEB.glob("*.html")) + list(WEB.glob("*.js")):
         hits = [m.group(0) for m in address.finditer(f.read_text())

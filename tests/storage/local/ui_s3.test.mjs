@@ -68,3 +68,15 @@ test("an unretained document is deleted, every version", async () => {
   const [, input] = sent.find(([n]) => n === "DeleteObjectsCommand");
   assert.deepEqual(input.Delete.Objects, [{ Key: "outputs/draft.txt", VersionId: "v1" }]);
 });
+
+test("every portal response carries the security headers, and the CSP leaves agent scripts alone", async () => {
+  stub();
+  for (const r of [await call("GET", { key: "a.pdf" }), await call("GET", { key: "gone.pdf" }),
+                   await ui.handler({ rawPath: "/wrongslug/x.html", requestContext: { http: { method: "GET" } } })]) {
+    assert.equal(r.headers["referrer-policy"], "no-referrer", "the slug stays out of Referer");
+    assert.equal(r.headers["x-content-type-options"], "nosniff");
+    assert.match(r.headers["content-security-policy"], /frame-ancestors 'none'/);
+    assert.doesNotMatch(r.headers["content-security-policy"], /script-src|default-src/, "agent pages keep their inline scripts");
+    assert.ok(r.headers["strict-transport-security"] && r.headers["cross-origin-opener-policy"]);
+  }
+});

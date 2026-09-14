@@ -9,6 +9,11 @@ CloudFront + S3 static dashboard at `openlyoperated.biz` — **live**. The publi
 - **search** — the masthead input on Enter: `GET /v1/gerps?q=`, a picker overlay, the curl under the results.
 - **the business page** (`#b/<gerp_id>`) — the directory row for its name and place, `GET /v1/gerps/<id>/sources` for the catalog, each source through `GET /v1/gerps/<id>/sources/<key>`, rendered by `kind`; the curl under every section; an *as it happens* section subscribed to `/oob/<gerp_id>/journal-entry-posted`.
 - **`llms.txt`** — the site in three calls on the api and the stream, and the metric shape.
+- **security headers** — `aws_cloudfront_response_headers_policy.site` on every response: a CSP that allows no
+  inline script (`script-src 'self'`; connections to `api.openlyoperated.biz` and `wss://events.openlyoperated.biz`;
+  Google Fonts for styles and fonts; `frame-ancestors 'none'`), `nosniff`, HSTS, `Referrer-Policy: no-referrer`,
+  `Cross-Origin-Opener-Policy: same-origin`. So a page's script is a file: `index.html` loads `main.js`,
+  `index.mock.html` loads `mock.js`, beside `app.js`. A new connection or outside asset goes in the policy first.
 
 Every read goes through `getJson` with `cache: 'no-store'`, so the page shows the api's answer now and a live repaint reads the table, not the browser's copy of a minute ago.
 

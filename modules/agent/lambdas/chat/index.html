@@ -111,9 +111,11 @@ function tokenValid(t){ const c=tokenClaims(t); return !!(c && c.exp && c.exp*10
   // the refresh token beside it is what replaces the id token for a month without a sign-in
   const rt = h.get("refresh_token");
   if(rt) localStorage.setItem(KEY_REFRESH, rt);
-  // a first message on the link (the ready mail's "onboard my business"): kept for the moment
-  // the chat renders, sent once, then gone — a reload does not say it again
-  const say = (h.get("say") || "").trim().slice(0, 200);
+  // a first message on the link (the ready mail's onboarding): kept for the moment the chat renders,
+  // sent once, then gone — a reload does not say it again. The link names a KEY; the words are this
+  // page's own, so a crafted link can't make the owner's agent act on text the owner never typed
+  const SAY = { onboard: "onboard my business" };
+  const say = SAY[(h.get("say") || "").trim()] || "";
   if(say) sessionStorage.setItem("say_once", say);
   if(t || say){ if(t) localStorage.setItem(KEY_TOKEN, t); history.replaceState(null,"",location.pathname); }
 })();

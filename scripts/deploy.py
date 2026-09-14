@@ -70,7 +70,7 @@ BFF_FN = f"{CONFIG['STACK_PREFIX']}-cloud-bff"
 BFF_KEY = f"{WEBAPP_ROOT}/bff.zip"  # terraform reads this key; it does not track the src-dir
 # purchase-terms.txt is not optional: `_html` inlines it into EVERY page, so a bundle without it
 # 500s the whole site rather than one route.
-BFF_FILES = ["index.html", "support.html", "card.html", "paid.html", "app.js", "vendor/lit-html.js", "art/gradientERP-lockup.svg", "llms.txt",
+BFF_FILES = ["index.html", "support.html", "card.html", "paid.html", "app.js", "boot.js", "card.js", "support.js", "paid.js", "vendor/lit-html.js", "art/gradientERP-lockup.svg", "llms.txt",
              "robots.txt", "purchase-terms.txt"]
 TAG_KEY = "gerp:src-dir"
 

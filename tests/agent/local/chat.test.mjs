@@ -61,6 +61,24 @@ test("servePage injects config + no placeholder", () => {
   assert.ok(!html.includes("{{CONFIG}}"));
   assert.ok(html.includes("testclient123"));
 });
+test("the page's config can't close its script, and the CSP allows exactly the script it built", async () => {
+  const mod = await import("../../../modules/agent/lambdas/chat/index.mjs");
+  const html = servePage("</script><script>alert(1)</script>$&");
+  const script = html.match(/<script>([\s\S]*?)<\/script>/)[1];
+  assert.ok(!script.includes("</script><script>alert(1)"), "a value closes nothing");
+  assert.ok(script.includes("\\u003c/script>") && script.includes("$&"), "escaped, and `$&` is text");
+  const h = mod.pageHeaders(html);
+  const hash = (await import("node:crypto")).createHash("sha256").update(script).digest("base64");
+  assert.match(h["content-security-policy"], new RegExp(`script-src 'sha256-${hash.replace(/[+/]/g, "\\$&")}'`));
+  assert.doesNotMatch(h["content-security-policy"], /unsafe-inline'[^;]*script|script-src[^;]*unsafe-inline/);
+  assert.equal(h["referrer-policy"], "no-referrer");
+  assert.match(h["content-security-policy"], /frame-ancestors 'none'/);
+});
+test("a chat link's say is a key the page maps, never the words", () => {
+  const html = servePage("");
+  assert.match(html, /const SAY = \{ onboard: "onboard my business" \};/);
+  assert.match(html, /const say = SAY\[\(h\.get\("say"\) \|\| ""\)\.trim\(\)\] \|\| "";/);
+});
 test("servePage injects a token when present", () => {
   assert.ok(servePage("injected-tok-xyz").includes("injected-tok-xyz"));
   // the refresh token rides beside it, and the page's refresh path is there to use it

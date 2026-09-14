@@ -394,7 +394,25 @@ async function s3read(q) {
   }
 }
 
+// Every HTTP response carries these. Agent-written pages and the shell wrapped around them run inline
+// scripts, so the CSP leaves scripts alone and keeps to what a page never needs: plugins, a <base>
+// pointing elsewhere, being framed. `no-referrer` keeps the slug — the portal's capability — out of the
+// Referer a page's links and images send. COOP allows popups an agent page may open.
+export const SECURITY_HEADERS = {
+  "content-security-policy": "object-src 'none'; base-uri 'self'; frame-ancestors 'none'",
+  "x-content-type-options": "nosniff",
+  "strict-transport-security": "max-age=31536000; includeSubDomains",
+  "cross-origin-opener-policy": "same-origin-allow-popups",
+  "referrer-policy": "no-referrer",
+};
+
 export const handler = async (event) => {
+  const resp = await route(event);
+  if (event.Records || !resp || typeof resp !== "object") return resp;
+  return { ...resp, headers: { ...SECURITY_HEADERS, ...(resp.headers || {}) } };
+};
+
+const route = async (event) => {
   if (event.Records) {                                  // tasks-table stream batch → one bump
     try { await bump(); return { batchItemFailures: [] }; }
     catch (e) {

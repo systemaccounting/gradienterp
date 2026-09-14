@@ -9,7 +9,7 @@ import subprocess
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[3]
-PAGE = (REPO / "prod" / "openlyoperated_biz" / "web" / "index.html").read_text()
+PAGE = (REPO / "prod" / "openlyoperated_biz" / "web" / "main.js").read_text()   # the dashboard page's script
 
 
 def test_the_escaper_turns_markup_into_text():

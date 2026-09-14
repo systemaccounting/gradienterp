@@ -158,7 +158,7 @@ async function followDeepLink() {
   const g = (S.gerps || []).find(x => x.gerp_id === link.gerp);
   if (!g) return false;
   if (link.open === "chat" && g.chat_url) {
-    const say = SAY[link.say] ? "&say=" + encodeURIComponent(SAY[link.say]) : "";
+    const say = SAY[link.say] ? "&say=" + encodeURIComponent(link.say) : "";   // the key; the chat page holds the words
     location.assign(g.chat_url + chatHash() + say); return true;
   }
   enterGerp(g.gerp_id, g.label);

@@ -206,9 +206,42 @@ export async function exchangeCode(code, redirectUri) {
   return d.id_token ? { id_token: d.id_token, refresh_token: d.refresh_token || "" } : null;
 }
 
+// The config goes into the page's inline script, and BUSINESS_NAME is text the owner typed: every `<`
+// is written as `\u003c` (and the two JS line separators escaped), so no value can close the script.
+// The replacement is a function, so a `$&` in a value is text, not a replace pattern.
 export function servePage(injectedToken, injectedRefresh = "") {
-  const cfg = JSON.stringify({ issuer: ISSUER, clientId: CLIENT_ID, domainPrefix: DOMAIN_PREFIX, region: REGION, injectedToken: injectedToken || "", injectedRefresh: injectedRefresh || "", businessName: BUSINESS_NAME });
-  return HTML.replace("{{CONFIG}}", cfg);
+  const cfg = JSON.stringify({ issuer: ISSUER, clientId: CLIENT_ID, domainPrefix: DOMAIN_PREFIX, region: REGION, injectedToken: injectedToken || "", injectedRefresh: injectedRefresh || "", businessName: BUSINESS_NAME })
+    .replace(/</g, "\\u003c").replace(/\u2028/g, "\\u2028").replace(/\u2029/g, "\\u2029");
+  return HTML.replace("{{CONFIG}}", () => cfg);
+}
+
+// Every response carries these; the page's CSP allows its one inline script by the hash of what
+// servePage built, and nothing else.
+const SECURITY_HEADERS = {
+  "x-content-type-options": "nosniff",
+  "strict-transport-security": "max-age=31536000; includeSubDomains",
+  "cross-origin-opener-policy": "same-origin",
+  "referrer-policy": "no-referrer",
+  "content-security-policy": "default-src 'none'; frame-ancestors 'none'",
+};
+
+export function pageHeaders(html) {
+  const script = (html.match(/<script>([\s\S]*?)<\/script>/) || [, ""])[1];
+  const hash = crypto.createHash("sha256").update(script).digest("base64");
+  return {
+    ...SECURITY_HEADERS,
+    "content-security-policy": [
+      "default-src 'self'",
+      `script-src 'sha256-${hash}'`,
+      `connect-src 'self' https://cognito-idp.${REGION}.amazonaws.com`,
+      "img-src 'self' data: https:",
+      "style-src 'self' 'unsafe-inline'",
+      "object-src 'none'",
+      "base-uri 'self'",
+      "form-action 'self'",
+      "frame-ancestors 'none'",
+    ].join("; "),
+  };
 }
 
 // ── saved chats (durable per-user index + Memory-backed replay) ────────────────
@@ -384,7 +417,7 @@ async function handlerImpl(event, responseStream) {
   let started = false;
   const open = (statusCode, contentType, extra = {}) => {
     started = true;
-    return awslambda.HttpResponseStream.from(responseStream, { statusCode, headers: { "content-type": contentType, ...extra } });
+    return awslambda.HttpResponseStream.from(responseStream, { statusCode, headers: { ...SECURITY_HEADERS, "content-type": contentType, ...extra } });
   };
   const finish = (statusCode, obj) => { const s = open(statusCode, "application/json"); s.write(JSON.stringify(obj)); s.end(); };
 
@@ -396,8 +429,9 @@ async function handlerImpl(event, responseStream) {
         try { const got = await exchangeCode(code, `https://${headers.host}/`); token = got?.id_token || ""; refresh = got?.refresh_token || ""; }
         catch (e) { console.log("code exchange failed:", e?.name); }
       }
-      const s = open(200, "text/html; charset=utf-8", { "cache-control": "no-store" });
-      s.write(servePage(token, refresh)); s.end();
+      const page = servePage(token, refresh);
+      const s = open(200, "text/html; charset=utf-8", { "cache-control": "no-store", ...pageHeaders(page) });
+      s.write(page); s.end();
       return;
     }
     if (path.startsWith("/api/")) {
