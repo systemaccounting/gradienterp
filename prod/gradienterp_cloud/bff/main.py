@@ -1188,6 +1188,20 @@ def _iso_now() -> str:
     return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
 
 
+def _foreign_return(event, url):
+    """Why `url` may not be a return address, or "" when it is this site's: the host the request
+    reached (API Gateway's `requestContext.domainName`), over https — http only on localhost."""
+    host = (event.get("requestContext") or {}).get("domainName") or ""
+    try:
+        u = urllib.parse.urlsplit(url)
+    except ValueError:
+        return "return_url is not a url"
+    local = u.hostname in ("localhost", "127.0.0.1")
+    if not host or u.netloc.lower() != host.lower() or u.scheme not in (("http", "https") if local else ("https",)):
+        return f"return_url must be a page of {host or 'this site'}"
+    return ""
+
+
 def _json(status: int, obj) -> dict:
     return {"statusCode": status, "headers": {"content-type": "application/json"}, "body": json.dumps(obj)}
 
@@ -1571,6 +1585,13 @@ def _handle(event, context):
         return_url = (body.get("return_url") or "").strip()
         if not return_url:
             return _json(400, {"error": "return_url required"})
+        # Stripe sends whoever completes the page to `return_url`. Unchecked, a signed-in person could
+        # make a card page for their own account that returns to their own site and hand it to someone
+        # else, whose card would then be saved onto the sender's customer. So the return is this site:
+        # the host the request reached. Not the Origin header — the caller writes that.
+        why = _foreign_return(event, return_url)
+        if why:
+            return _json(400, {"error": why})
         # Two subjects, one route. A gerp is what gets BILLED — its own AWS account, its own invoice
         # — so its card hangs off it. No gerp_id means the ACCOUNT's default: the card a gerp with
         # none of its own falls back to, and the only one settable without creating a gerp.

@@ -25,13 +25,13 @@ def load_handler():
     return mod
 
 
-def event(method, path, sub=None, body=None, auth=None, email=None):
+def event(method, path, sub=None, body=None, auth=None, email=None, headers=None, domain="gradienterp.cloud"):
     """Build an APIGW v2 event. `sub` populates the authorizer's validated claims
-    (what the prod JWT authorizer hands the lambda)."""
-    headers = {}
+    (what the prod JWT authorizer hands the lambda); `domain` is the host the request reached."""
+    headers = dict(headers or {})
     if auth:
         headers["authorization"] = auth
-    rc = {"http": {"method": method, "path": path}}
+    rc = {"http": {"method": method, "path": path}, "domainName": domain}
     if sub:
         rc["authorizer"] = {"jwt": {"claims": {"sub": sub, **({"email": email} if email else {})}}}
     return {

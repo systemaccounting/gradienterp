@@ -319,7 +319,7 @@ def test_the_legal_profile_reaches_the_gerps_contact():
             body={"business_name": "Blue Bottle", "terms_version": "v1", "legal": LEGAL}), None)["body"])["gerp_id"]
         calls = _with_fake_seller(mod, reply={"url": "https://checkout/x", "session_id": "cs_1"})
         mod.handler(event("POST", "/api/billing/setup-link", sub="alice", email="ada@x.io",
-                          body={"gerp_id": gid, "return_url": "https://x/"}), None)
+                          body={"gerp_id": gid, "return_url": "https://gradienterp.cloud/"}), None)
         assert calls[-1]["payload"]["legal_name"] == "Analytical Engines Ltd" and calls[-1]["payload"]["legal"] == LEGAL
         sel = _with_fake_methods(mod)
         mod.handler(event("POST", "/api/billing/methods", sub="alice", email="ada@x.io",
@@ -327,7 +327,7 @@ def test_the_legal_profile_reaches_the_gerps_contact():
         assert sel[-1]["payload"]["legal_name"] == "Analytical Engines Ltd" and sel[-1]["payload"]["legal"] == LEGAL
         # the seeded row has no profile
         mod.handler(event("POST", "/api/billing/setup-link", sub="alice", email="ada@x.io",
-                          body={"gerp_id": "gradienterp", "return_url": "https://x/"}), None)
+                          body={"gerp_id": "gradienterp", "return_url": "https://gradienterp.cloud/"}), None)
         assert calls[-1]["payload"]["legal_name"] == "Ada Lovelace" and "legal" not in calls[-1]["payload"]
 
 
@@ -679,7 +679,7 @@ def test_an_indian_business_is_sent_to_the_card_page_every_other_to_checkout():
             body={"business_name": "Blue Bottle", "terms_version": "v1", "legal": LEGAL}), None)["body"])["gerp_id"]
         calls = _with_fake_seller(mod, reply={"url": "https://checkout.stripe.com/c/pay/cs_1", "session_id": "cs_1"})
         out = json.loads(mod.handler(event("POST", "/api/billing/setup-link", sub="alice", email="ada@x.io",
-                                           body={"gerp_id": gb, "return_url": "https://x/"}), None)["body"])
+                                           body={"gerp_id": gb, "return_url": "https://gradienterp.cloud/"}), None)["body"])
         assert "mandate" not in calls[-1]["payload"] and out["url"].startswith("https://checkout.stripe.com/")
 
 
@@ -965,7 +965,7 @@ def test_setup_link_for_someone_elses_gerp_is_403():
         mod = load_handler()
         calls = _with_fake_seller(mod, reply={"url": "https://checkout.stripe.com/c/pay/cs_1"})
         resp = mod.handler(event("POST", "/api/billing/setup-link", sub="alice",
-                                 body={"gerp_id": "bobco", "return_url": "https://x.io"}), None)
+                                 body={"gerp_id": "bobco", "return_url": "https://gradienterp.cloud/"}), None)
         assert resp["statusCode"] == 403
         assert calls == [], "nothing crosses the account boundary for a gerp you do not own"
 
@@ -1036,7 +1036,7 @@ def test_a_seller_side_failure_is_502_not_200():
         mod = load_handler()
         _with_fake_seller(mod, error={"error": "no 'stripe_billing' secret"})
         resp = mod.handler(event("POST", "/api/billing/setup-link", sub="alice",
-                                 body={"gerp_id": "gradienterp", "return_url": "https://x.io"}), None)
+                                 body={"gerp_id": "gradienterp", "return_url": "https://gradienterp.cloud/"}), None)
         assert resp["statusCode"] == 502
 
 
@@ -1280,10 +1280,10 @@ def test_the_setup_link_names_the_business():
         mod = load_handler()
         calls = _with_fake_seller(mod, reply={"url": "https://x/", "session_id": "cs_1"})
         mod.handler(event("POST", "/api/billing/setup-link", sub="alice", email="alice@x.io",
-                          body={"gerp_id": "gradienterp", "return_url": "https://x/"}), None)
+                          body={"gerp_id": "gradienterp", "return_url": "https://gradienterp.cloud/"}), None)
         assert calls[-1]["payload"]["name"] == "gradientERP"
         mod.handler(event("POST", "/api/billing/setup-link", sub="alice", email="alice@x.io",
-                          body={"return_url": "https://x/"}), None)
+                          body={"return_url": "https://gradienterp.cloud/"}), None)
         assert calls[-1]["payload"]["name"] == "alice@x.io"
 
 
@@ -1607,10 +1607,10 @@ def test_the_owners_legal_name_rides_to_the_gerps_contact_and_not_to_the_account
         _complete_account(mod, "alice")
         calls = _with_fake_seller(mod, reply={"url": "https://checkout/x", "session_id": "cs_1"})
         mod.handler(event("POST", "/api/billing/setup-link", sub="alice", email="ada@x.io",
-                          body={"gerp_id": "gradienterp", "return_url": "https://x/"}), None)
+                          body={"gerp_id": "gradienterp", "return_url": "https://gradienterp.cloud/"}), None)
         assert calls[-1]["payload"]["name"] == "gradientERP" and calls[-1]["payload"]["legal_name"] == "Ada Lovelace"
         mod.handler(event("POST", "/api/billing/setup-link", sub="alice", email="ada@x.io",
-                          body={"return_url": "https://x/"}), None)
+                          body={"return_url": "https://gradienterp.cloud/"}), None)
         assert calls[-1]["payload"]["name"] == "ada@x.io" and "legal_name" not in calls[-1]["payload"]
         sel = _with_fake_methods(mod)
         mod.handler(event("POST", "/api/billing/methods", sub="alice", email="ada@x.io",
@@ -1844,6 +1844,36 @@ def test_every_response_carries_the_security_headers_and_the_pages_run_no_inline
         text = page.read_text()
         assert not re.search(r"<script(?![^>]*\bsrc=)[^>]*>", text), f"{page.name} has an inline script"
         assert not re.search(r"\son[a-z]+=\"", text), f"{page.name} has an inline event handler"
+
+
+def test_a_setup_link_returns_only_to_the_host_the_request_reached():
+    """Stripe sends whoever completes the page to `return_url`. A link on the caller's own account that
+    returned to their own site could be handed to someone else, whose card would then be saved onto the
+    caller's customer. So the return is the host the request reached — never a host the caller names,
+    in the url or in an Origin header they write themselves."""
+    with scratch_env(GERPS):
+        mod = load_handler()
+        _complete_account(mod, "alice")
+        calls = _with_fake_seller(mod, reply={"url": "https://checkout.stripe.com/c/pay/cs_1", "session_id": "cs_1"})
+        for foreign in ("https://example.com/?billing=account", "http://gradienterp.cloud/", "https://gradienterp.cloud.example.com/",
+                        "//example.com/", "/?billing=account", "javascript:alert(1)"):
+            resp = mod.handler(event("POST", "/api/billing/setup-link", sub="alice", email="ada@x.io",
+                                     body={"return_url": foreign}), None)
+            assert resp["statusCode"] == 400, foreign
+        resp = mod.handler(event("POST", "/api/billing/setup-link", sub="alice", email="ada@x.io",
+                                 headers={"origin": "https://example.com"},
+                                 body={"return_url": "https://example.com/"}), None)
+        assert resp["statusCode"] == 400, "an Origin header the caller writes grants nothing"
+        assert calls == [], "a refused return invokes nothing in the seller's account"
+
+        resp = mod.handler(event("POST", "/api/billing/setup-link", sub="alice", email="ada@x.io",
+                                 headers={"origin": "https://example.com"},
+                                 body={"return_url": "https://gradienterp.cloud/?billing=account"}), None)
+        assert resp["statusCode"] == 200 and calls[-1]["payload"]["return_url"] == "https://gradienterp.cloud/?billing=account"
+        # the local stack serves http on localhost, and names that host
+        resp = mod.handler(event("POST", "/api/billing/setup-link", sub="alice", email="ada@x.io", domain="localhost:3000",
+                                 body={"return_url": "http://localhost:3000/?billing=account"}), None)
+        assert resp["statusCode"] == 200
 
 
 if __name__ == "__main__":

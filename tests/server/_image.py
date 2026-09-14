@@ -151,7 +151,8 @@ def _event(request: Request, body: bytes, route: dict) -> dict:
     if sub := headers.get("x-debug-sub"):
         claims = {"sub": sub, "email": headers.get("x-debug-email", ""), **claims}
 
-    rc = {"http": {"method": request.method, "path": request.url.path}}
+    # domainName: the host the request reached, as API Gateway names it
+    rc = {"http": {"method": request.method, "path": request.url.path}, "domainName": headers.get("host", "")}
     if claims:
         rc["authorizer"] = {"jwt": {"claims": claims}}
     return {
