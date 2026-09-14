@@ -76,6 +76,19 @@ resource "aws_s3_bucket" "email" {
   force_destroy = true
 }
 
+# The owner portal's `/s3?key=…&bucket=email` answers with a presigned GET on this bucket's own
+# endpoint (modules/storage/lambdas/ui), and a page that fetch()es a message follows the redirect
+# cross-origin. The URL signature is the auth; CORS just lets the page read it.
+resource "aws_s3_bucket_cors_configuration" "email" {
+  count  = local.email_enabled
+  bucket = aws_s3_bucket.email[0].id
+  cors_rule {
+    allowed_methods = ["GET", "HEAD"]
+    allowed_origins = ["*"]
+    max_age_seconds = 3000
+  }
+}
+
 resource "aws_s3_bucket_lifecycle_configuration" "email" {
   count  = local.email_enabled
   bucket = aws_s3_bucket.email[0].id

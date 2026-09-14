@@ -16,14 +16,16 @@
  * (focus refetch + visibility-gated version polling, reload skipped while a form is dirty) is
  * plumbing here, never agent composition. A body that is already a full document serves as-is.
  */
-import { S3Client, GetObjectCommand, PutObjectCommand, PutObjectAnnotationCommand,
+import { S3Client, GetObjectCommand, HeadObjectCommand, PutObjectCommand, PutObjectAnnotationCommand,
          ListObjectsV2Command, GetObjectAnnotationCommand, DeleteObjectCommand,
          ListObjectVersionsCommand, DeleteObjectsCommand } from "@aws-sdk/client-s3";
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import { DynamoDBDocumentClient, QueryCommand } from "@aws-sdk/lib-dynamodb";
 import { createHmac } from "node:crypto";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
-const s3 = new S3Client({});
+// a holder, so a test can stand the client and the presigner in
+export const clients = { s3: new S3Client({}), presign: getSignedUrl };
 const ddb = DynamoDBDocumentClient.from(new DynamoDBClient({}));
 
 const BUCKET = process.env.STORAGE_BUCKET;
@@ -178,7 +180,7 @@ const text = (statusCode, type, body) => ({ statusCode, headers: { "content-type
 async function serve(rest, servedSlug = slug()) {
   let obj;
   try {
-    obj = await s3.send(new GetObjectCommand({ Bucket: BUCKET, Key: PAGES + rest }));
+    obj = await clients.s3.send(new GetObjectCommand({ Bucket: BUCKET, Key: PAGES + rest }));
   } catch (e) {
     if (e.name === "NoSuchKey" || e.name === "AccessDenied") return notFound();
     throw e;
@@ -198,7 +200,7 @@ async function serve(rest, servedSlug = slug()) {
 
 async function version() {
   try {
-    const obj = await s3.send(new GetObjectCommand({ Bucket: BUCKET, Key: MARKER_KEY }));
+    const obj = await clients.s3.send(new GetObjectCommand({ Bucket: BUCKET, Key: MARKER_KEY }));
     return text(200, "text/plain", await obj.Body.transformToString());
   } catch (e) {
     // no ListBucket on the role, so a missing marker surfaces as AccessDenied, not NoSuchKey
@@ -243,17 +245,17 @@ async function submit(kind, event) {
   const files = [];
   for (const p of parts) {
     const fkey = `${SUBMISSIONS}${kind}/${stem}/${safeName(p.filename)}`;
-    await s3.send(new PutObjectCommand({
+    await clients.s3.send(new PutObjectCommand({
       Bucket: BUCKET, Key: fkey, ContentType: p.contentType, Body: p.data,
     }));
     files.push({ field: p.field, key: fkey, size: p.data.length });
   }
-  await s3.send(new PutObjectCommand({
+  await clients.s3.send(new PutObjectCommand({
     Bucket: BUCKET, Key: key, ContentType: "application/json",
     Body: JSON.stringify({ kind, fields, files, submitted_at, source: "portal" }),
   }));
   // caption so manage_storage find surfaces it like any filed doc
-  await s3.send(new PutObjectAnnotationCommand({
+  await clients.s3.send(new PutObjectAnnotationCommand({
     Bucket: BUCKET, Key: key, AnnotationName: "caption",
     AnnotationPayload: new TextEncoder().encode(JSON.stringify({
       title: `form ${kind}`, occurred_at: new Date(submitted_at).toISOString().slice(0, 10), tags: ["portal"],
@@ -268,7 +270,7 @@ async function submit(kind, event) {
 // ─── ddb stream branch: bump the marker ───
 
 async function bump() {
-  await s3.send(new PutObjectCommand({
+  await clients.s3.send(new PutObjectCommand({
     Bucket: BUCKET, Key: MARKER_KEY, ContentType: "text/plain", Body: String(Date.now()),
   }));
 }
@@ -286,13 +288,19 @@ async function bump() {
  *   GET /<slug>/s3?key=in/abc123&bucket=email  → the object itself
  *
  * List and get differ and are not merged: a listing is metadata as JSON (plus the caption
- * annotation, which is where a document's title and note live), while a get is the bytes
- * with their own content type — an html document, a pdf, a raw .eml. Collapsing them would
- * mean base64 in JSON for every binary.
+ * annotation, which is where a document's title and note live), while a get is the object.
+ *
+ * A get never serves the bytes itself. It answers 302 to a presigned URL on the bucket's own
+ * endpoint (five minutes, SigV4 — the cabinet is SSE-KMS), so an object renders on S3's origin and
+ * never the portal's: a form upload carries whatever Content-Type its uploader sent, and an html or
+ * svg one rendered here could call the owner slug's routes. It also serves past the Function URL's
+ * 6 MB response. A page that fetch()es an object follows the redirect cross-origin; the buckets'
+ * CORS rule allows it (modules/storage/infra/ui.tf).
  *
  *   DELETE /<slug>/s3?key=…                    remove it, versions and all
  *
- * It is the firm's bucket and they can delete their own things. Delete means delete: on the
+ * It is the firm's bucket and they can delete their own things, except a document captioned
+ * `retention: "retained"` — the same 409 `manage_storage op=delete` answers. Delete means delete: on the
  * versioned cabinet a plain DeleteObject only writes a delete marker, so the bytes stay billed
  * forever while looking gone. This lists the key's versions and removes them in one batch, so
  * what disappears from the listing is actually gone.
@@ -305,7 +313,7 @@ function bucketFor(q) {
 }
 
 async function s3list(bucket, prefix) {
-  const out = await s3.send(new ListObjectsV2Command({
+  const out = await clients.s3.send(new ListObjectsV2Command({
     Bucket: bucket, Prefix: prefix, MaxKeys: LIST_MAX,
   }));
   const objects = await Promise.all((out.Contents || []).map(async (o) => {
@@ -313,7 +321,7 @@ async function s3list(bucket, prefix) {
     if (bucket === BUCKET) {
       // the caption is an S3 annotation, so a listing shows titles and notes rather than keys
       try {
-        const a = await s3.send(new GetObjectAnnotationCommand({
+        const a = await clients.s3.send(new GetObjectAnnotationCommand({
           Bucket: bucket, Key: o.Key, AnnotationName: "caption",
         }));
         row.caption = JSON.parse(await a.AnnotationPayload.transformToString());
@@ -326,36 +334,45 @@ async function s3list(bucket, prefix) {
   }));
 }
 
+export const GET_URL_SECONDS = 300;
+
 async function s3get(bucket, key) {
-  const r = await s3.send(new GetObjectCommand({ Bucket: bucket, Key: key }));
+  await clients.s3.send(new HeadObjectCommand({ Bucket: bucket, Key: key }));   // missing or denied → the caller's 404
   const ext = key.split(".").pop()?.toLowerCase() || "";
-  const type = r.ContentType || CONTENT_TYPES[ext] || "application/octet-stream";
-  if (BINARY.has(ext)) {
-    const bytes = await r.Body.transformToByteArray();
-    return {
-      statusCode: 200, headers: { "content-type": type, "cache-control": "no-store" },
-      body: Buffer.from(bytes).toString("base64"), isBase64Encoded: true,
-    };
+  const command = new GetObjectCommand({ Bucket: bucket, Key: key,
+    ...(CONTENT_TYPES[ext] ? { ResponseContentType: CONTENT_TYPES[ext] } : {}) });
+  const url = await clients.presign(clients.s3, command, { expiresIn: GET_URL_SECONDS });
+  return { statusCode: 302, headers: { location: url, "cache-control": "no-store" }, body: "" };
+}
+
+async function captionOf(bucket, key) {
+  try {
+    const a = await clients.s3.send(new GetObjectAnnotationCommand({ Bucket: bucket, Key: key, AnnotationName: "caption" }));
+    return JSON.parse(await a.AnnotationPayload.transformToString());
+  } catch {
+    return {};                                          // no caption filed
   }
-  return text(200, type, await r.Body.transformToString());
 }
 
 async function s3delete(q) {
   const bucket = bucketFor(q);
   const key = q.key || "";
   if (!bucket || !key || key.includes("..")) return notFound();
+  if (bucket === BUCKET && (await captionOf(bucket, key)).retention === "retained") {
+    return text(409, "application/json", JSON.stringify({ status: "refused", reason: "retained document", key }));
+  }
   try {
     // Prefix matches partially, so filter to the exact key — deleting "invoice.pdf" must not
     // take "invoice.pdf.bak" with it.
-    const v = await s3.send(new ListObjectVersionsCommand({ Bucket: bucket, Prefix: key }));
+    const v = await clients.s3.send(new ListObjectVersionsCommand({ Bucket: bucket, Prefix: key }));
     const objects = [...(v.Versions || []), ...(v.DeleteMarkers || [])]
       .filter((o) => o.Key === key)
       .map((o) => ({ Key: o.Key, VersionId: o.VersionId }));
 
     if (objects.length) {
-      await s3.send(new DeleteObjectsCommand({ Bucket: bucket, Delete: { Objects: objects } }));
+      await clients.s3.send(new DeleteObjectsCommand({ Bucket: bucket, Delete: { Objects: objects } }));
     } else {
-      await s3.send(new DeleteObjectCommand({ Bucket: bucket, Key: key })); // unversioned bucket
+      await clients.s3.send(new DeleteObjectCommand({ Bucket: bucket, Key: key })); // unversioned bucket
     }
     await bump();                                       // open pages notice it went
     return text(200, "application/json", JSON.stringify({ deleted: key, versions: objects.length }));

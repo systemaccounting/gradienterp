@@ -140,14 +140,21 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "uploads" {
   }
 }
 
-# The browser PUTs cross-origin (from the chat Function URL) straight to S3 via the presigned URL —
-# the URL signature is the auth; CORS just lets the page issue it.
+# The browser PUTs cross-origin (from the chat Function URL) straight to S3 via the presigned URL,
+# and a portal page's fetch() of `/s3?key=` follows the redirect to a presigned GET — in both the
+# URL signature is the auth; CORS just lets the page issue it. One configuration per bucket, so both
+# rules live here.
 resource "aws_s3_bucket_cors_configuration" "uploads" {
   bucket = aws_s3_bucket.uploads.id
   cors_rule {
     allowed_methods = ["PUT"]
     allowed_origins = ["*"]
     allowed_headers = ["*"]
+    max_age_seconds = 3000
+  }
+  cors_rule {
+    allowed_methods = ["GET", "HEAD"]
+    allowed_origins = ["*"]
     max_age_seconds = 3000
   }
 }

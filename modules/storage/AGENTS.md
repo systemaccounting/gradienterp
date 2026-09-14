@@ -45,6 +45,15 @@ each tool's `index.mjs` + `schema.json` + this file; the filing-side rationale i
   serves only `pages/forms/`, their `POST f/<kind>` and the version marker; everything else under it is a 404. Publishing needs no
   tool: `manage_storage op=put key=pages/...` (returns the served url via `PORTAL_URL` env; a put under `pages/forms/` also
   returns `form_url`, the link for anyone outside the chat). The public surface design lives in `modules/site/`.
+- the `/s3` routes (owner slug only) — `GET ?prefix=` lists (JSON with each key's caption), `GET ?key=` answers
+  `302` to a presigned `GetObject` URL on the bucket's own endpoint (five minutes, SigV4; a known extension sets the
+  response type) after a `HeadObject` (missing or denied → 404), and `DELETE ?key=` removes every version. An object
+  never renders on the portal's origin — a form upload carries whatever `Content-Type` its uploader sent — and the
+  get serves past the Function URL's 6 MB response. A page `fetch()`ing an object follows the redirect
+  cross-origin: the uploads bucket (`prod/init_customer`) and the email bucket (`modules/agent`) allow `GET` from
+  any origin, the signature being the capability. `?bucket=email` reads the inbound-mail bucket. The delete refuses
+  a document captioned `retention: "retained"` with the same 409 as `manage_storage op=delete`; deleting under
+  `automations/approved/` stays allowed (retiring an automation).
 - outputs: `manage_storage_fn_name`, `inspect_document_fn_name`, `portal_url` (surfaced from
   `prod/per_customer` too — the link the agent hands the owner).
 
