@@ -40,7 +40,6 @@ Sequence to bootstrap the org from a single AWS account. Manual steps are flagge
    operator_admin_username   = "<the IC username from step 2>"
    audit_account_email       = "ops+audit@<domain>"
    log_archive_account_email = "ops+log-archive@<domain>"
-   operator_account_id       = "<from a prior apply or manual lookup>"
    EOF
    terraform init
    terraform apply

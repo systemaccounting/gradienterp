@@ -493,8 +493,8 @@ terraform:
 
 `deploy.sh` special-cases this src-dir (`_push_webapp`): it builds `bff/main.py` + the `web/`
 files, versions them to the operator artifact bucket, and update-function-codes the BFF at that
-version. The lambda sources from the bucket (`data.aws_s3_object.bff`), so `terraform apply`
-(operator account, `AWS_PROFILE=default`) is SHAPE-only — new routes, IAM, APIGW, env vars — and a
+version. The lambda sources from the bucket (`data.aws_s3_object.bff`), so `bash scripts/apply.sh --stack
+gradienterp_cloud` (operator account, as `default`) is SHAPE-only — new routes, IAM, APIGW, env vars — and a
 pointer-sync no-op after a push. A brand-new deploy is push-then-apply (the data source fails the
 plan until the artifact exists).
 

@@ -15,11 +15,10 @@ Operator-account hub-and-spoke economic optimizer. Why → `README.md`; open wor
 
 ## apply
 
-Operator-singleton stack — same chain as `api_openlyoperated/` (see `prod/AGENTS.md` §local apply). Assumes `OrganizationAccountAccessRole`, which trusts management, so run under `AWS_PROFILE=default` (NOT `operator-org`):
+Operator-singleton stack — same chain as `api_openlyoperated/` (see `prod/AGENTS.md` §local apply). Assumes `OrganizationAccountAccessRole`, which trusts management, so a direct run is under `AWS_PROFILE=default` (NOT `operator-org`), which `apply.sh` sets:
 
 ```bash
-AWS_PROFILE=default terraform -chdir=prod/optimizer/infra init
-AWS_PROFILE=default terraform -chdir=prod/optimizer/infra apply
+bash scripts/apply.sh --stack optimizer        # --plan to stop after the plan
 ```
 
 State: `s3://gradienterp-tfstate-185369506315/optimizer/terraform.tfstate`.

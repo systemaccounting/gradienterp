@@ -157,7 +157,7 @@ for the http API surface, `tests/server/per_customer/` IS the per_customer stack
 - `bash scripts/upload.sh source [--release]|lambda <src-dir>…|bff|assets|image` — every put a deploy makes, operator credentials: `source` puts `.build/source.zip` at `source.zip`, the key `apply.sh` builds from; `--release` refuses a tree with uncommitted changes and puts it at `release/source.zip`, both CodeBuild projects' own location, so what a signup, a hub vend and a closure build from; `lambda` and `bff` put the `.build` zip through `push`'s put, refusing one the tree no longer builds to; `assets` syncs the demo gifs and invalidates what changed; `image` pushes the local agent image under the next `vNN` tag
 - `bash scripts/bedrock-authorize-anthropic-org.sh` — one-time-per-org call to cascade Anthropic FTU approval to every member account
 - `terraform validate` — run from `modules/*/infra/`; every directory at once, in parallel, is `bash .github/workflows/tf-validate-all.sh`, which `.github/workflows/terraform.yaml` runs on every pull request after `terraform fmt -check -recursive` (format with `terraform fmt -recursive`)
-- `terraform apply` — provision infrastructure
+- `terraform plan|apply` in a stack's dir — the debug surface behind `apply.sh`; which base profile each stack takes is `prod/AGENTS.md` § local apply
 
 ## the accounts
 

@@ -26,12 +26,9 @@ State bucket has versioning + AES256 + public-access-block, with a lifecycle rul
 This dir is the second apply, after `prod/platform/management/`:
 
 1. **Run `prod/platform/management/`** with local state. Creates the operator sub-account; outputs `operator_account_id`.
-2. **Run this dir** with local state, passing `operator_account_id`:
+2. **Run this dir** with local state, with the new account's id as `OPERATOR_ACCOUNT_ID` in `config.json`:
    ```bash
    cd prod/platform/operator/
-   cat > terraform.tfvars <<EOF
-   operator_account_id = "<operator-account-id-from-management-apply>"
-   EOF
    terraform init
    terraform apply
    ```
@@ -46,7 +43,7 @@ This dir is the second apply, after `prod/platform/management/`:
      encrypt        = true
    }
    ```
-   Then `terraform init -migrate-state` per dir. Subsequent applies are remote-backed and concurrent-safe.
+   Then `terraform init -migrate-state` per dir. Subsequent applies are remote-backed and concurrent-safe: `bash scripts/apply.sh --stack platform/operator` (this dir) and `--stack platform/management` (the laptop only: its `terraform.tfvars` and the management permission).
 
 ## plaid gateway creds — set out of band, never through tf
 

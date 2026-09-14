@@ -83,7 +83,7 @@ The clocks, measured on westwood (2026-09-04 to 06):
 | the destroy build (the export, then 511 resources) | 12 min; the export 20 s |
 | ready to the agent's first answer | at once |
 
-`stop` and `start` (`bash scripts/deploy.sh …`) are the stack clock alone, and the routine the
+A stop and the apply back (`bash scripts/apply.sh --stack per_customer --gerp <id> [--action stop]`) are the stack clock alone, and the routine the
 staging pair runs between sessions.
 
 bash equivalent at `.github/workflows/per-customer-apply.sh` — useful for ad-hoc provisioning + debugging.

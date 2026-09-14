@@ -18,7 +18,9 @@ which applies this stack with `hub_id`, the account and the region, state at
 `hubs/<hub_id>/terraform.tfstate`. The build prints the `HUBS.<hub_id>` entry for `config.json`
 (`account`, `region`, `bus_arn`, `manage_edges_arn`); a tower apply carries it to the provisioner
 and `close_account`, and a `per_customer` apply points a gerp of that region at the bus. No other
-hub is touched: a sender finds this hub through the directory row a vend writes. Locally: `terraform init -backend-config="key=hubs/<hub_id>/terraform.tfstate"` and
+hub is touched: a sender finds this hub through the directory row a vend writes. An existing hub
+re-applies with `bash scripts/apply.sh --stack hub --region <region>` (`--plan` for a plan build), the
+same `tower-hub` build a vend starts. Directly: `terraform init -backend-config="key=hubs/<hub_id>/terraform.tfstate"` and
 `TF_VAR_hub_id`, `TF_VAR_aws_account_id` under `AWS_PROFILE=operator-org`.
 
 ## an edge, by kind

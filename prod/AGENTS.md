@@ -49,7 +49,10 @@ SCPs at the customers OU level cap blast radius; every stack edit emits a journa
 
 ## local apply — which base profile
 
-The stacks don't share a base profile, because their assume-role chains differ:
+`bash scripts/apply.sh --stack <stack>` is the apply: it runs the operator stacks as `default` and
+starts `per_customer` and `hub` in CodeBuild with `operator-org`, the same on the laptop or a GitHub
+runner. A direct `terraform` run in a stack's dir is the debug surface, and the stacks don't share a
+base profile, because their assume-role chains differ:
 
 - **`per_customer/`** → `AWS_PROFILE=operator-org`. Its backend does no assume-role (the operator-owned state bucket expects you to already be an operator principal) and the provider hops operator→customer via `OperatorOrchestration`. Base must already be *inside* the operator account.
 - **`tower/`** (and the other operator-account stacks — `gradienterp_cloud/`, `api_openlyoperated/`, `openlyoperated_biz/`) → `AWS_PROFILE=default` (management). Their provider + backend assume `OrganizationAccountAccessRole` in the operator account, and that role trusts *management*, not operator — so `operator-org` (already that role's session in operator) can't re-assume it and 403s.

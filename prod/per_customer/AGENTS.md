@@ -61,7 +61,8 @@ Each domain module takes `schema_table_name = module.schemas.schema_table_name` 
 ## triggering paths
 
 - **production**: tower's `provision_customer` lambda → triggers `tower-per-customer` codebuild → runs this template
-- **bash equivalent**: `.github/workflows/per-customer-apply.sh` — same flow from a workstation (debug/ad-hoc)
+- **an existing gerp**: `bash scripts/apply.sh --stack per_customer --gerp <id>|all [--action stop] [--plan]` — the same `tower-per-customer` build, from the latest `upload.sh source`; `apply.yaml` runs it from GitHub
+- **bash equivalent of a vend**: `.github/workflows/per-customer-apply.sh` — the account and the apply from a workstation (debug/ad-hoc)
 - **direct local**: assume into operator, then `terraform apply` here directly. Fastest debug surface — codebuild round-trip is unnecessary for verifying the terraform itself
 
 ## when NOT to apply
