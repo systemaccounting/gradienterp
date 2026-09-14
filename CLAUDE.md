@@ -14,6 +14,10 @@ avoid words like "proper", "correct", "appropriate" and "valid" in your comments
 
 avoid hedging and filler
 
+## limits
+
+build a throttle or a cap where you expect a queue to form, and leave it off until measurements say what its value should be. off is unset, never 0: on AWS a 0 is a limit that rejects everything
+
 ## commits
 
 a subject names the one change in about 40 characters, so GitHub's file list shows it whole. detail goes in the body, after a blank line
