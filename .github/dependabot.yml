@@ -1,0 +1,8 @@
+# Version updates for the agent image's base. Security updates for every dependency are on in the
+# repository's settings and need no entry here.
+version: 2
+updates:
+  - package-ecosystem: docker
+    directory: /modules/agent/docker
+    schedule:
+      interval: weekly
