@@ -43,6 +43,7 @@ resource "aws_organizations_organization" "this" {
   # (Pre-launch CT check forbids config trusted access; CT enables it itself
   # once the landing zone exists.)
   aws_service_access_principals = [
+    "access-analyzer.amazonaws.com",
     "cloudtrail.amazonaws.com",
     "config.amazonaws.com",
     "controltower.amazonaws.com",
@@ -50,6 +51,15 @@ resource "aws_organizations_organization" "this" {
     "sso.amazonaws.com",
     "ram.amazonaws.com",
   ]
+}
+
+# IAM Access Analyzer's organization analyzers run in the operator account, beside the ops alert
+# topics their findings go to (prod/tower)
+resource "aws_organizations_delegated_administrator" "access_analyzer" {
+  account_id        = aws_organizations_account.operator.id
+  service_principal = "access-analyzer.amazonaws.com"
+
+  depends_on = [aws_organizations_organization.this]
 }
 
 ###############################################

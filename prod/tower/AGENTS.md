@@ -141,6 +141,13 @@ reads the row for the owner console; nothing pushes from the seller's rules.
   `FAILED`, `STOPPED`, `TIMED_OUT`; the message is a JSON object carrying the status, the build,
   the log link and the build's environment (`CUSTOMER_ID`, `TF_ACTION`), so it says which gerp
   and which action without a lookup
+- the agent image — Amazon Inspector's HIGH or CRITICAL finding on `agentcore`, with the image and
+  the finding
+- access from outside the organization — IAM Access Analyzer's organization analyzer
+  (`gerp-org-access`, the operator account its delegated administrator) in us-east-1, which also
+  reads IAM, and one per region in `region/` to that region's topic; the message names the
+  resource, its account, the outside principal and whether it is public. An intended grant is
+  archived on the analyzer
 - the lambdas — ONE alarm per account on a raise anywhere: `AWS/Lambda Errors` with no
   dimension is the account's sum across every function, so `gerp-operator-errors` here covers
   tower, the read api, the BFF, the optimizer, platform/operator and email, and

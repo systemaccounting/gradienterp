@@ -9,6 +9,14 @@
 locals {
   config  = jsondecode(file("${path.module}/../../../config.json"))
   regions = keys(local.config.REGIONS)
+  # the landing zone returns its governed regions in its own order, whatever order they were sent
+  # in, and a list in any other order plans as a change. The regions it already governs go in its
+  # order; a new region goes after them, and joins this list once the update shows where AWS put it
+  landing_zone_region_order = ["eu-west-1", "ap-southeast-2", "eu-central-1", "us-east-1", "ap-south-1", "ap-northeast-1", "ap-southeast-1", "eu-west-2"]
+  governed_regions = concat(
+    [for r in local.landing_zone_region_order : r if contains(local.regions, r)],
+    [for r in local.regions : r if !contains(local.landing_zone_region_order, r)],
+  )
   # the regions beyond the first, which main.tf's `customers` OU and `region_pin` already cover
   other_regions = [for r in local.regions : r if r != var.aws_region]
 }

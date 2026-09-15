@@ -122,15 +122,70 @@ resource "aws_sns_topic_policy" "ops_alerts" {
   arn = aws_sns_topic.ops_alerts.arn
   policy = jsonencode({
     Version = "2012-10-17"
-    Statement = [{
-      Sid       = "gerp-alarms"
-      Effect    = "Allow"
-      Principal = { Service = "cloudwatch.amazonaws.com" }
-      Action    = "sns:Publish"
-      Resource  = aws_sns_topic.ops_alerts.arn
-      Condition = { ArnLike = { "aws:SourceArn" = "arn:aws:cloudwatch:${var.region}:*:alarm:${var.stack_prefix}-*" } }
-    }]
+    Statement = [
+      {
+        Sid       = "gerp-alarms"
+        Effect    = "Allow"
+        Principal = { Service = "cloudwatch.amazonaws.com" }
+        Action    = "sns:Publish"
+        Resource  = aws_sns_topic.ops_alerts.arn
+        Condition = { ArnLike = { "aws:SourceArn" = "arn:aws:cloudwatch:${var.region}:*:alarm:${var.stack_prefix}-*" } }
+      },
+      {
+        Sid       = "access-findings"
+        Effect    = "Allow"
+        Principal = { Service = "events.amazonaws.com" }
+        Action    = "sns:Publish"
+        Resource  = aws_sns_topic.ops_alerts.arn
+        Condition = { ArnEquals = { "aws:SourceArn" = aws_cloudwatch_event_rule.access_finding.arn } }
+      },
+    ]
   })
+}
+
+# this region's resources granting access outside the organization, as tower's alerts.tf does for
+# us-east-1 and IAM
+resource "aws_accessanalyzer_analyzer" "org" {
+  analyzer_name = "${var.stack_prefix}-org-access"
+  type          = "ORGANIZATION"
+}
+
+resource "aws_cloudwatch_event_rule" "access_finding" {
+  name        = "${var.stack_prefix}-ops-access-finding"
+  description = "IAM Access Analyzer found access from outside the organization"
+  event_pattern = jsonencode({
+    source        = ["aws.access-analyzer"]
+    "detail-type" = ["Access Analyzer Finding"]
+    detail        = { status = ["ACTIVE"] }
+  })
+}
+
+resource "aws_cloudwatch_event_target" "access_finding" {
+  rule      = aws_cloudwatch_event_rule.access_finding.name
+  target_id = "ops-alerts"
+  arn       = aws_sns_topic.ops_alerts.arn
+
+  input_transformer {
+    input_paths = {
+      type      = "$.detail.resourceType"
+      resource  = "$.detail.resource"
+      account   = "$.detail.accountId"
+      principal = "$.detail.principal"
+      public    = "$.detail.isPublic"
+      finding   = "$.detail.id"
+    }
+    input_template = <<-EOT
+      {
+        "what": "access from outside the organization: <type> <resource>",
+        "region": "${var.region}",
+        "account": "<account>",
+        "principal": <principal>,
+        "public": <public>,
+        "finding": "<finding>",
+        "then": "remove the grant in terraform, or archive the finding on analyzer ${var.stack_prefix}-org-access when the access is intended"
+      }
+    EOT
+  }
 }
 
 resource "aws_sns_topic_subscription" "ops_alerts_collector" {

@@ -34,7 +34,7 @@ resource "aws_controltower_landing_zone" "this" {
     # every region a gerp can be built in (config.json REGIONS, regions.tf); a region added
     # here is a landing-zone update, tens of minutes, and Control Tower's baseline (Config
     # recording) lands in it for every enrolled account
-    governedRegions = local.regions
+    governedRegions = local.governed_regions
 
     # IAM Identity Center integration. Already enabled in this account
     # (manual one-shot per AGENTS.md); CT integrates with the existing

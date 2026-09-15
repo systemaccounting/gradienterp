@@ -7,6 +7,7 @@
 #     with the request and the error on the message
 #   the org at 80% of its account quota, the customers OU at 80% of its cap ──alarm──▶ gerp-ops-alerts
 #   a HIGH or CRITICAL vulnerability in the agent image ──rule──▶ gerp-ops-alerts
+#   a policy granting access to a principal outside the organization ──rule──▶ gerp-ops-alerts
 #
 # The vend is not retried: an async failure re-run by Lambda would call ProvisionProduct again
 # for the same purchase. One failure, one email, a person re-runs into the account that exists.
@@ -41,7 +42,7 @@ resource "aws_sns_topic_policy" "ops_alerts" {
         Principal = { Service = "events.amazonaws.com" }
         Action    = "sns:Publish"
         Resource  = aws_sns_topic.ops_alerts.arn
-        Condition = { ArnEquals = { "aws:SourceArn" = [aws_cloudwatch_event_rule.build_failed.arn, aws_cloudwatch_event_rule.image_vulnerability.arn] } }
+        Condition = { ArnEquals = { "aws:SourceArn" = [aws_cloudwatch_event_rule.build_failed.arn, aws_cloudwatch_event_rule.image_vulnerability.arn, aws_cloudwatch_event_rule.access_finding.arn] } }
       },
       {
         Sid       = "alarms"
@@ -154,6 +155,55 @@ resource "aws_cloudwatch_event_target" "image_vulnerability" {
         "image": "<image>",
         "finding": "<finding>",
         "then": "build and deploy an image without the package (deploy.sh image): 7 days for CRITICAL, 30 for HIGH (docs/SECURITY.md)"
+      }
+    EOT
+  }
+}
+
+# ─── access from outside the organization ───
+#
+# IAM Access Analyzer's organization analyzer reports every policy granting access to a principal
+# outside the org: a role's trust, a bucket, a key, a queue. The operator account is its delegated
+# administrator (platform/management). IAM is global and read here; the rest is regional, so each
+# region's module has an analyzer of its own (tower/region).
+
+resource "aws_accessanalyzer_analyzer" "org" {
+  analyzer_name = "gerp-org-access"
+  type          = "ORGANIZATION"
+}
+
+resource "aws_cloudwatch_event_rule" "access_finding" {
+  name        = "gerp-ops-access-finding"
+  description = "IAM Access Analyzer found access from outside the organization"
+  event_pattern = jsonencode({
+    source        = ["aws.access-analyzer"]
+    "detail-type" = ["Access Analyzer Finding"]
+    detail        = { status = ["ACTIVE"] }
+  })
+}
+
+resource "aws_cloudwatch_event_target" "access_finding" {
+  rule      = aws_cloudwatch_event_rule.access_finding.name
+  target_id = "ops-alerts"
+  arn       = aws_sns_topic.ops_alerts.arn
+
+  input_transformer {
+    input_paths = {
+      type      = "$.detail.resourceType"
+      resource  = "$.detail.resource"
+      account   = "$.detail.accountId"
+      principal = "$.detail.principal"
+      public    = "$.detail.isPublic"
+      finding   = "$.detail.id"
+    }
+    input_template = <<-EOT
+      {
+        "what": "access from outside the organization: <type> <resource>",
+        "account": "<account>",
+        "principal": <principal>,
+        "public": <public>,
+        "finding": "<finding>",
+        "then": "remove the grant in terraform, or archive the finding on analyzer gerp-org-access when the access is intended"
       }
     EOT
   }
