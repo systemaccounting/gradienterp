@@ -150,6 +150,32 @@ resource "aws_accessanalyzer_analyzer" "org" {
   type          = "ORGANIZATION"
 }
 
+# IAM is global and tower's us-east-1 analyzer reports it; here a role's finding is a copy
+resource "aws_accessanalyzer_archive_rule" "iam_in_us_east_1" {
+  analyzer_name = aws_accessanalyzer_analyzer.org.analyzer_name
+  rule_name     = "iam-reported-in-us-east-1"
+
+  filter {
+    criteria = "resourceType"
+    eq       = ["AWS::IAM::Role"]
+  }
+}
+
+# the public function urls that authenticate their own callers, as tower's alerts.tf archives them
+resource "aws_accessanalyzer_archive_rule" "function_urls" {
+  analyzer_name = aws_accessanalyzer_analyzer.org.analyzer_name
+  rule_name     = "self-authenticating-function-urls"
+
+  filter {
+    criteria = "resourceType"
+    eq       = ["AWS::Lambda::Function"]
+  }
+  filter {
+    criteria = "resource"
+    contains = ["-chat", "-ui"]
+  }
+}
+
 resource "aws_cloudwatch_event_rule" "access_finding" {
   name        = "${var.stack_prefix}-ops-access-finding"
   description = "IAM Access Analyzer found access from outside the organization"

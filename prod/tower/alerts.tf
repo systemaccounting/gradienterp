@@ -172,6 +172,38 @@ resource "aws_accessanalyzer_analyzer" "org" {
   type          = "ORGANIZATION"
 }
 
+# intended access from outside the organization, archived as it's found so only a new grant alerts:
+# Identity Center's roles, which trust its SAML provider
+resource "aws_accessanalyzer_archive_rule" "identity_center_roles" {
+  analyzer_name = aws_accessanalyzer_analyzer.org.analyzer_name
+  rule_name     = "identity-center-roles"
+
+  filter {
+    criteria = "resourceType"
+    eq       = ["AWS::IAM::Role"]
+  }
+  filter {
+    criteria = "resource"
+    contains = ["role/aws-reserved/sso.amazonaws.com/"]
+  }
+}
+
+# the public function urls that authenticate their own callers: a gerp's chat front door and storage
+# ui (a Cognito JWT), and the Plaid webhook (Plaid's signature)
+resource "aws_accessanalyzer_archive_rule" "function_urls" {
+  analyzer_name = aws_accessanalyzer_analyzer.org.analyzer_name
+  rule_name     = "self-authenticating-function-urls"
+
+  filter {
+    criteria = "resourceType"
+    eq       = ["AWS::Lambda::Function"]
+  }
+  filter {
+    criteria = "resource"
+    contains = ["-chat", "-ui", ":function:gerp-plaid-webhook"]
+  }
+}
+
 resource "aws_cloudwatch_event_rule" "access_finding" {
   name        = "gerp-ops-access-finding"
   description = "IAM Access Analyzer found access from outside the organization"
