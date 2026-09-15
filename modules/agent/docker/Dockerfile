@@ -8,7 +8,7 @@
 #
 # Deploy via scripts/docker.sh --build + --push.
 
-FROM --platform=linux/arm64 python:3.13-slim
+FROM --platform=linux/arm64 python:3.14-slim
 
 # Unbuffered stdout/stderr — block buffering under non-TTY would swallow
 # early prints (before uvicorn starts) and crash tracebacks.
