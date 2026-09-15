@@ -6,6 +6,7 @@
 #   an async invoke that fails (the vend, the daily bill) ──on_failure──▶ gerp-ops-alerts,
 #     with the request and the error on the message
 #   the org at 80% of its account quota, the customers OU at 80% of its cap ──alarm──▶ gerp-ops-alerts
+#   a HIGH or CRITICAL vulnerability in the agent image ──rule──▶ gerp-ops-alerts
 #
 # The vend is not retried: an async failure re-run by Lambda would call ProvisionProduct again
 # for the same purchase. One failure, one email, a person re-runs into the account that exists.
@@ -40,7 +41,7 @@ resource "aws_sns_topic_policy" "ops_alerts" {
         Principal = { Service = "events.amazonaws.com" }
         Action    = "sns:Publish"
         Resource  = aws_sns_topic.ops_alerts.arn
-        Condition = { ArnEquals = { "aws:SourceArn" = aws_cloudwatch_event_rule.build_failed.arn } }
+        Condition = { ArnEquals = { "aws:SourceArn" = [aws_cloudwatch_event_rule.build_failed.arn, aws_cloudwatch_event_rule.image_vulnerability.arn] } }
       },
       {
         Sid       = "alarms"
@@ -115,6 +116,44 @@ resource "aws_cloudwatch_event_target" "build_failed" {
         "environment (CUSTOMER_ID is the gerp, TF_ACTION the action)": <env>,
         "where": "the run's state is the gerp's row on gerp-customers (status, aws_account_id, gateway_url, closes_on); the reason is in the log",
         "then": "a failed apply is re-run into the same account with StartBuild; a failed destroy leaves the row closing and the stack half down"
+      }
+    EOT
+  }
+}
+
+# ─── the agent image ───
+
+resource "aws_cloudwatch_event_rule" "image_vulnerability" {
+  name        = "gerp-ops-image-vulnerability"
+  description = "Inspector found a HIGH or CRITICAL vulnerability in the agent image"
+  event_pattern = jsonencode({
+    source        = ["aws.inspector2"]
+    "detail-type" = ["Inspector2 Finding"]
+    detail = {
+      severity = ["HIGH", "CRITICAL"]
+      status   = ["ACTIVE"]
+    }
+  })
+}
+
+resource "aws_cloudwatch_event_target" "image_vulnerability" {
+  rule      = aws_cloudwatch_event_rule.image_vulnerability.name
+  target_id = "ops-alerts"
+  arn       = aws_sns_topic.ops_alerts.arn
+
+  input_transformer {
+    input_paths = {
+      severity = "$.detail.severity"
+      title    = "$.detail.title"
+      image    = "$.detail.resources[0].id"
+      finding  = "$.detail.findingArn"
+    }
+    input_template = <<-EOT
+      {
+        "what": "agent image <severity>: <title>",
+        "image": "<image>",
+        "finding": "<finding>",
+        "then": "build and deploy an image without the package (deploy.sh image): 7 days for CRITICAL, 30 for HIGH (docs/SECURITY.md)"
       }
     EOT
   }

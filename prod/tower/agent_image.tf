@@ -63,6 +63,28 @@ resource "aws_ecr_lifecycle_policy" "agent" {
   })
 }
 
+# Amazon Inspector scans the image for OS and package vulnerabilities on push, and again whenever a
+# new vulnerability is published against a package in it. us-east-1 alone: every other region holds
+# a replica of the same digests. A HIGH or CRITICAL finding reaches gerp-ops-alerts (alerts.tf).
+resource "aws_inspector2_enabler" "ecr" {
+  account_ids    = [data.aws_caller_identity.current.account_id]
+  resource_types = ["ECR"]
+}
+
+resource "aws_ecr_registry_scanning_configuration" "agent" {
+  scan_type = "ENHANCED"
+
+  rule {
+    scan_frequency = "CONTINUOUS_SCAN"
+    repository_filter {
+      filter      = aws_ecr_repository.agent.name
+      filter_type = "WILDCARD"
+    }
+  }
+
+  depends_on = [aws_inspector2_enabler.ecr]
+}
+
 # Org-scoped read policy. Any principal in the org (every customer's AgentCore
 # Runtime execution role) can pull. ECR's GetAuthorizationToken is account-
 # level (not resource-policied) so consumers also need that on their own role.
