@@ -56,7 +56,7 @@ AWS_PROFILE=operator-org aws ssm put-parameter --no-cli-pager \
   --name /gradienterp/operator/plaid/secret --type SecureString --overwrite --value <plaid_secret>
 ```
 
-Terraform's known value stays `"SET_ME"` forever (ignore_changes), so subsequent applies never clobber or read the real secret. `PLAID_ENV` is `sandbox` today (in `plaid_gateway.tf`); flip to `production` and re-set the params with prod creds at go-live. Local dev/tests bypass SSM via the `PLAID_CLIENT_ID`/`PLAID_SECRET` env branch in `_creds_pair()`.
+Terraform's known value stays `"SET_ME"` forever (ignore_changes), so subsequent applies never clobber or read the real secret. `PLAID_ENV` is `production` (in `plaid_gateway.tf`), with Plaid's production secret in the secret param; `client_id` is the same in every Plaid environment. Going back to `sandbox` means putting the sandbox secret back with it. Local dev/tests bypass SSM via the `PLAID_CLIENT_ID`/`PLAID_SECRET` env branch in `_creds_pair()`.
 
 ## bus topology
 

@@ -112,7 +112,7 @@ module "plaid_gateway" {
   src_dir          = "prod/platform/operator/lambdas/plaid_gateway"
   timeout          = 30
   env_vars = {
-    PLAID_ENV         = "sandbox" # flip to "production" at go-live
+    PLAID_ENV         = "production" # with the production secret in /gradienterp/operator/plaid/secret
     PLAID_SSM_PREFIX  = "/gradienterp/operator/plaid"
     STACK_PREFIX      = local.stack_prefix
     PLAID_ITEMS_TABLE = aws_dynamodb_table.plaid_items.name
