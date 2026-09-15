@@ -55,6 +55,11 @@ resource "aws_organizations_organization" "this" {
 
 # IAM Access Analyzer's organization analyzers run in the operator account, beside the ops alert
 # topics their findings go to (prod/tower)
+# an organization analyzer is refused (ConflictException) until the service's role exists here
+resource "aws_iam_service_linked_role" "access_analyzer" {
+  aws_service_name = "access-analyzer.amazonaws.com"
+}
+
 resource "aws_organizations_delegated_administrator" "access_analyzer" {
   account_id        = aws_organizations_account.operator.id
   service_principal = "access-analyzer.amazonaws.com"
