@@ -7,8 +7,9 @@ tmp/
 # only the doc-split set commits: README (why) / AGENTS (how) / TODO (open work), CLAUDE.md (the
 # project's instructions to a coding agent),
 # plus the load-bearing md classes: agent system prompts (container-baked), kb.md files (the
-# KB playbook sources scripts/sync_playbooks.sh harvests), and the legal documents under docs/
-# the app links as GitHub pages. everything else is interim scratch.
+# KB playbook sources scripts/sync_playbooks.sh harvests), the legal documents under docs/
+# the app links as GitHub pages, and the platform's practice notes under standards/ (tower uploads
+# them to the standards corpus). everything else is interim scratch.
 *.md
 !AGENTS.md
 !CLAUDE.md
@@ -17,6 +18,7 @@ tmp/
 !kb.md
 !modules/agent/prompts/**/*.md
 !docs/*.md
+!standards/**/*.md
 !.agents/skills/**/*.md
 
 # claude code: the shared settings and project skills commit; personal settings stay local
