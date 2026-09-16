@@ -229,3 +229,4 @@ change when built — it sits there asking when it'll be put in the game).
 | platform | `registry.extended` | LIVE |
 | platform | `bug.reported` / `feature.requested` (the self-heal intake) | LIVE |
 | platform | `module.published` (engineer×firm) | SPEC |
+| metrics | `<the firm's own names>` — a product event, the firm's own bus only (modules/metrics) | LIVE |
