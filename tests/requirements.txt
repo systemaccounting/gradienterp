@@ -8,3 +8,7 @@ moto[server]>=5.0
 # tests/server builds the three local stacks as FastAPI apps (tests/server/_image.py), and the
 # suites that exercise a route import it
 fastapi
+
+# modules/metrics reads run on duckdb locally, over the same Parquet the cabinet holds; the
+# deployed function runs Athena and never imports it
+duckdb

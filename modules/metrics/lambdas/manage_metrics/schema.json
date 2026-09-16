@@ -1,0 +1,62 @@
+{
+  "type": "object",
+  "description": "The firm's product record. publish_source gives an app a url and bearer to POST events; record writes one; count, distinct, funnel, retention and query (SQL) read it on the firm's own calendar.",
+  "required": ["op"],
+  "properties": {
+    "op": {
+      "type": "string",
+      "enum": ["publish_source", "unpublish_source", "list_sources", "record", "query", "count", "distinct", "funnel", "retention"],
+      "description": "publish_source | unpublish_source | list_sources: the apps that may POST. record: one event now. count | distinct | funnel | retention: the fixed reads. query: SQL over the table `metrics`."
+    },
+    "caller": {
+      "type": "string",
+      "description": "publish_source / unpublish_source: who the bearer is for, e.g. 'website' or 'pos'. Publishing again for the same caller rotates the token."
+    },
+    "event": {
+      "type": "string",
+      "description": "record, count, distinct, retention: the event name, <resource>.<action_past>, e.g. member.checked_in."
+    },
+    "subject_id": {
+      "type": "string",
+      "description": "record: who or what took the step — a contact_id, a device, an account. The firm's own id."
+    },
+    "at": {
+      "type": "string",
+      "description": "record: when, ISO 8601. Omit for now."
+    },
+    "properties": {
+      "type": "object",
+      "description": "record: flat scalars that ride along, e.g. {\"plan\": \"monthly\", \"location\": \"pier\"}."
+    },
+    "events": {
+      "type": "array",
+      "items": {"type": "string"},
+      "description": "funnel: the steps in order, e.g. [\"lead.captured\", \"member.joined\", \"member.checked_in\"]."
+    },
+    "window": {
+      "type": "string",
+      "description": "Reads: today | this_week | this_month | last_month | this_year | last_7_days | last_30_days | last_90_days, on the firm's calendar. Default this_month. Or set start and end."
+    },
+    "start": {
+      "type": "string",
+      "description": "Reads: window start, ISO date or datetime in the firm's zone. With end, replaces window."
+    },
+    "end": {
+      "type": "string",
+      "description": "Reads: window end, exclusive, ISO date or datetime in the firm's zone."
+    },
+    "grain": {
+      "type": "string",
+      "enum": ["day", "week", "month"],
+      "description": "count, distinct, retention: the period size. Default day. distinct at day/week/month is DAU/WAU/MAU."
+    },
+    "by": {
+      "type": "string",
+      "description": "count: a property to group by as well, e.g. 'plan'."
+    },
+    "sql": {
+      "type": "string",
+      "description": "query: SQL over the table `metrics` (event, subject_id, ts, via, properties map). Athena (Trino) syntax."
+    }
+  }
+}
