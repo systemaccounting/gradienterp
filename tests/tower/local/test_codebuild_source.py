@@ -131,6 +131,23 @@ def test_post_build_never_exits_early_and_the_applys_ending_is_one_guarded_comma
 
 
 
+def test_every_lock_file_carries_a_mac_and_a_linux_hash():
+    """The runner's plugin cache hands init an unpacked package, which init checks against the lock
+    file's h1: for its platform. A lock file written on a mac alone carries the mac's, and 32 of 46
+    directories then failed (2026-09-16). `terraform providers lock -platform=darwin_amd64
+    -platform=linux_amd64` writes both."""
+    import re as _re
+    short = []
+    for lock in REPO.glob("**/.terraform.lock.hcl"):
+        if ".terraform/" in str(lock) or ".venv" in str(lock):
+            continue
+        for block in _re.split(r'^provider "', lock.read_text(), flags=_re.M)[1:]:
+            name = block.split('"', 1)[0]
+            if block.count("h1:") < 2:
+                short.append(f"{lock.relative_to(REPO)}: {name}")
+    assert not short, "one platform's h1 only:\n  " + "\n  ".join(sorted(short))
+
+
 def test_no_module_reads_the_agent_through_ssm_at_plan():
     """A module learns the gateway from module.agent's outputs, threaded by per_customer — the
     graph terraform builds for free. An SSM data source on `/agent/*` reads a parameter the agent

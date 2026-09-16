@@ -2,10 +2,9 @@
 # tf-provider-mirror.sh — every provider version the lock files name, as the zip for one platform,
 # in a local filesystem mirror.
 #
-# The lock files are written on macs, so their h1: checksums are the macs' own. init checks a zip
-# from a filesystem mirror against the zh: checksums, which cover every platform, so a linux runner
-# installs each version from one download and the lock files stay as they are. A zip no lock file
-# names any more is removed, so a mirror restored from an older cache doesn't grow.
+# init checks a zip from a filesystem mirror against the zh: checksums, which cover every platform,
+# so a linux runner installs each version from one download. A zip no lock file names any more is
+# removed, so a mirror restored from an older cache doesn't grow.
 #
 #   bash .github/workflows/tf-provider-mirror.sh <mirror dir> [platform]   # platform default linux_amd64
 #
