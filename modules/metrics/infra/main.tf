@@ -486,12 +486,12 @@ resource "aws_iam_role_policy" "manage" {
         ]
       },
       {
+        # Athena verifies the results bucket as the caller before it starts a query: a location
+        # read and a list with no prefix, so neither takes a prefix condition. Key names of the
+        # firm's own cabinet, read by the firm's own tool; the objects stay under the two prefixes
         Effect   = "Allow"
-        Action   = ["s3:GetBucketLocation", "s3:ListBucket"]
+        Action   = ["s3:GetBucketLocation", "s3:ListBucket", "s3:ListBucketMultipartUploads"]
         Resource = local.bucket_arn
-        Condition = {
-          StringLike = { "s3:prefix" = ["${local.store_prefix}*", "${local.results_prefix}*"] }
-        }
       },
       {
         Effect   = "Allow"
