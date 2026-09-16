@@ -33,6 +33,7 @@ from decimal import Decimal
 import rules           # the engine (run_instances/lineitems) — modules/rules/rules.py
 import instances       # the rule-instance store — modules/rules/instances.py
 import payroll_rules   # labor's rules (wage_accrual, …) — modules/labor/payroll_rules.py
+import metric_rules   # modules/metrics: record_metric — a moment as a product event, by a row
 
 import journal
 from aws import client as _aws, table as _table, log, stream_batch
@@ -149,7 +150,8 @@ def _accrue(entry: dict) -> dict:
     if not matched:
         return {"entry_id": entry_id, "skipped": f"no shift rules match {worker_id}"}
 
-    effects = rules.run_instances({"hours": hours, "rate": rate}, matched, modules=[payroll_rules])
+    effects = rules.run_instances({"hours": hours, "rate": rate, "worker_id": worker_id, "entry_id": entry_id},
+                                  matched, modules=[payroll_rules, metric_rules])
     if not effects:
         return {"entry_id": entry_id, "skipped": "the matched shift rules produced nothing"}
 

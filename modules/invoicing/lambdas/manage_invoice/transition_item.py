@@ -26,6 +26,7 @@ import json
 
 import rules
 import transition_rules
+import metric_rules   # modules/metrics: record_metric — a moment as a product event, by a row
 from _helpers import (
     get_invoice, append_transition, read_transitions, fold_items,
     post_journal_entry, new_transition_id, now_iso, ok, err, INVOICE_LEVEL,
@@ -104,7 +105,7 @@ def handler(event, context):
         effects = rules.run_instances(
             ctx,
             transition_rules.money_instances(ctx["accountType"], state),
-            modules=[transition_rules],
+            modules=[transition_rules, metric_rules],
         )
         legs = effects
 

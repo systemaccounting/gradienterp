@@ -46,7 +46,7 @@ def test_pay_run_resolves_general_rules_deliberately():
     # noqa: D400
     """`rate_posting` is the general engine for any payroll rate — its own params name
     PAYROLL_TAX_EXPENSE and FUTA_PAYABLE — so general_rules there is intended, not over-scope."""
-    assert C.libs_for_key("PAY_RUN#w1") == {"payroll_rules", "general_rules"}
+    assert C.libs_for_key("PAY_RUN#w1") == {"payroll_rules", "general_rules", "metric_rules"}
 
 
 def test_an_items_three_moments_are_three_keys():
@@ -56,7 +56,7 @@ def test_an_items_three_moments_are_three_keys():
     assert [c.name for c in C.for_key("STOCK_SOLD#doppio")] == ["stock_sold"]
     assert [c.name for c in C.for_key("REORDER#doppio")] == ["reorder"]
     assert C.libs_for_key("INVOICE_LINE#doppio") == {"general_rules"}
-    assert C.libs_for_key("STOCK_SOLD#doppio") == {"stock_rules"}
+    assert C.libs_for_key("STOCK_SOLD#doppio") == {"stock_rules", "metric_rules"}
 
 
 def test_every_key_names_exactly_one_callsite():

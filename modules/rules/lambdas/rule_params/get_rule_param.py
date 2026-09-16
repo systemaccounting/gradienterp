@@ -67,6 +67,12 @@ except ImportError:
     pass
 
 try:
+    import metric_rules as _metric           # metrics': record_metric — a moment as a product event
+    _RULE_LIBS.append(_metric)
+except ImportError:
+    pass
+
+try:
     import agreement_rules as _agreement     # what a firm answers without a turn: accept_within, accept_in_stock, auto_order
     _RULE_LIBS.append(_agreement)
 except ImportError:

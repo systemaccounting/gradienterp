@@ -80,3 +80,13 @@ variable "ops_alerts_topic_arn" {
   type        = string
   default     = ""
 }
+
+variable "internal_bus_name" {
+  description = "The firm's own event bus (modules/events/infra). A record_metric row on this module's callsites announces a product event here."
+  type        = string
+}
+
+variable "internal_bus_arn" {
+  description = "The same bus, for the events:PutEvents grant."
+  type        = string
+}

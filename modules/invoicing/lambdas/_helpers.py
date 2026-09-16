@@ -9,6 +9,7 @@ from boto3.dynamodb.conditions import Key as _Key
 
 import collection_rules
 import dispatch_rules
+import metric_rules   # modules/metrics: record_metric — a moment as a product event, by a row
 import status_rules
 from status_rules import STATUSES, next_statuses
 import instances
@@ -640,7 +641,7 @@ def _run_transition_rules(inv: dict, to: str, was: str) -> list:
     }
     try:
         return rules.run_instances(
-            ctx, instances.for_key(instances.key(instances.INVOICE_STATUS, to)), modules=[collection_rules, dispatch_rules])
+            ctx, instances.for_key(instances.key(instances.INVOICE_STATUS, to)), modules=[collection_rules, dispatch_rules, metric_rules])
     except Exception as e:  # noqa: BLE001
         alog.exception("invoice status rules failed after the transition", invoice_id=inv["invoice_id"], status=to)
         print(json.dumps({"event": "transition_rules_failed", "incident": "fail",
@@ -728,7 +729,7 @@ def run_tag_rules(invoice_id: str, tag: str, applied: bool) -> list:
     key = instances.key(instances.INVOICE_TAG, tag if applied else f"{tag}#removed")
     try:
         return rules.run_instances({"invoice_id": invoice_id, "tag": tag},
-                                   instances.for_key(key), modules=[collection_rules, dispatch_rules])
+                                   instances.for_key(key), modules=[collection_rules, dispatch_rules, metric_rules])
     except Exception as e:  # noqa: BLE001
         alog.exception("invoice tag rules failed after the tag", invoice_id=invoice_id, key=key)
         print(json.dumps({"event": "tag_rules_failed", "incident": "fail",

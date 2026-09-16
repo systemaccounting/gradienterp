@@ -236,6 +236,7 @@ locals {
     RULE_INSTANCES_TABLE  = var.rule_instances_table_name # the catalog rules keyed `ITEM_CREATED#*`
     POST_JOURNAL_ENTRY_FN = var.post_journal_entry_fn_name
     CUSTOMER_ID           = var.gerp_id
+    INTERNAL_BUS_NAME     = var.internal_bus_name # a record_metric row announces a product event here (modules/metrics)
     # an `auto_order` row on REORDER#<item> turns a gap into a PO through the shared agreements
     # request service, by CONSTRUCTED name (the inbox-router convention): agreements reads this
     # module's items table, so a module ref here would cycle
@@ -424,4 +425,29 @@ variable "gateway_role_arn" {
   description = "The role the gateway invokes tools as — module.agent.gateway_role_arn; the principal on each tool lambda's invoke permission."
   type        = string
   default     = ""
+}
+
+variable "internal_bus_name" {
+  description = "The firm's own event bus (modules/events/infra). A record_metric row on this module's callsites announces a product event here."
+  type        = string
+}
+
+variable "internal_bus_arn" {
+  description = "The same bus, for the events:PutEvents grant."
+  type        = string
+}
+
+# a firm's record_metric row on this module's callsites announces on the firm's OWN bus
+# (modules/metrics)
+resource "aws_iam_role_policy" "internal-bus" {
+  name = "${local.prefix}-internal-bus"
+  role = aws_iam_role.lambda.id
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect   = "Allow"
+      Action   = "events:PutEvents"
+      Resource = var.internal_bus_arn
+    }]
+  })
 }

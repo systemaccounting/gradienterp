@@ -65,17 +65,17 @@ CALLSITES = [
     # general_rules is deliberate here, not sloppy: `rate_posting` is the general engine for any
     # payroll rate (its params name PAYROLL_TAX_EXPENSE, FUTA_PAYABLE, 'gross'), and payroll_rules
     # holds the named ones built on it.
-    Callsite("pay_run", instances.PAY_RUN, ["payroll_rules", "general_rules"],
+    Callsite("pay_run", instances.PAY_RUN, ["payroll_rules", "general_rules", "metric_rules"],
              "a worker's pay run — withholdings and employer taxes"),
-    Callsite("close_shift", instances.CLOSE_SHIFT, ["payroll_rules"],
+    Callsite("close_shift", instances.CLOSE_SHIFT, ["payroll_rules", "metric_rules"],
              "a shift closing — the wage accrual"),
     Callsite("invoice_line", instances.INVOICE_LINE, ["general_rules"],
              "a line being added to an invoice — taxes, tips, fees on what is sold"),
-    Callsite("invoice_status", instances.INVOICE_STATUS, ["collection_rules", "dispatch_rules"],
+    Callsite("invoice_status", instances.INVOICE_STATUS, ["collection_rules", "dispatch_rules", "metric_rules"],
              "an invoice entering a status — what should happen when it is issued or paid"),
-    Callsite("invoice_tag", instances.INVOICE_TAG, ["collection_rules", "dispatch_rules"],
+    Callsite("invoice_tag", instances.INVOICE_TAG, ["collection_rules", "dispatch_rules", "metric_rules"],
              "a tag applied to or removed from an invoice — the firm's own automation"),
-    Callsite("item_transition", instances.ITEM_TRANSITION, ["transition_rules"],
+    Callsite("item_transition", instances.ITEM_TRANSITION, ["transition_rules", "metric_rules"],
              "an invoice ITEM entering a state — what it posts",
              # What collecting cash means, and that money held for someone else is never earned.
              # Every OTHER state reads the table, which is how a firm's own move posts: a hotel
@@ -102,11 +102,11 @@ CALLSITES = [
              "a template expanding into an item set"),
     Callsite("item_created", instances.ITEM_CREATED, ["catalog_rules"],
              "an inventory item being created — the defaults stamped onto it"),
-    Callsite("stock_sold", instances.STOCK_SOLD, ["stock_rules"],
+    Callsite("stock_sold", instances.STOCK_SOLD, ["stock_rules", "metric_rules"],
              "stock moving on a sale — the made-to-order backflush"),
-    Callsite("stock_adjusted", instances.STOCK_ADJUSTED, ["stock_rules"],
+    Callsite("stock_adjusted", instances.STOCK_ADJUSTED, ["stock_rules", "metric_rules"],
              "a count adjustment landing — how the variance is valued"),
-    Callsite("reorder", instances.REORDER, ["stock_rules", "agreement_rules"],
+    Callsite("reorder", instances.REORDER, ["stock_rules", "agreement_rules", "metric_rules"],
              "the reorder loop reading a par level — and, with `auto_order`, issuing the PO itself"),
     # A counterparty's proposal, the moment it is stamped on this firm's mirror. What a firm can
     # say as a policy — take offers from X up to N, answer a PO from the shelf — runs here with no
