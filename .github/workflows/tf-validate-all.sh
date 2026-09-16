@@ -8,8 +8,9 @@
 #
 # The directories run in parallel, one per core (TF_VALIDATE_JOBS overrides): each one's output is
 # held and printed in directory order, so the log reads the same as a serial run. Workers share no
-# write — a root's .terraform and its alias-provider file are its own, and the provider mirror the
-# workflow points init at is only read.
+# write but one: the plugin cache the workflow configures, which two inits of one provider version
+# would fill at once. So the inits take turns (flock, where it exists) and the validates run
+# together; after the first init of a version the rest link to the cache in about a second.
 
 set -uo pipefail
 
@@ -28,6 +29,12 @@ ALIAS_FILE="zz_validate_providers.tf"
 OUT="$(mktemp -d)"
 trap 'for d in "${tf_dirs[@]}"; do rm -f "$d/$ALIAS_FILE"; done; rm -rf "$OUT"' EXIT
 
+# inits one at a time where flock exists (linux; the runner); a mac has no flock and no plugin cache
+init_locked() {
+  if command -v flock >/dev/null 2>&1; then flock "$OUT/init.lock" terraform init -backend=false -input=false -no-color
+  else terraform init -backend=false -input=false -no-color; fi
+}
+
 # one directory: its log to $OUT/<i>.out, and what failed (init | validate | nothing) to $OUT/<i>.rc
 validate_one() {
   local i=$1 tf_dir=$2 rel="${2#$REPO_ROOT/}" init_out aliases a
@@ -35,8 +42,8 @@ validate_one() {
     echo "=== ${rel} ==="
     cd "$tf_dir" || { echo init >"$OUT/$i.rc"; return; }
     # one retry: a provider download that drops is not a broken directory
-    if ! init_out="$(terraform init -backend=false -input=false -no-color 2>&1)" &&
-       ! init_out="$(terraform init -backend=false -input=false -no-color 2>&1)"; then
+    if ! init_out="$(init_locked 2>&1)" &&
+       ! init_out="$(init_locked 2>&1)"; then
       echo "    init failed"
       printf '%s\n' "$init_out" | grep -A8 '^Error' | sed 's/^/    /'
       echo init >"$OUT/$i.rc"
