@@ -424,6 +424,8 @@ module "notes" {
 module "inventory" {
   source = "../../modules/inventory/infra"
 
+  internal_bus_name          = module.events.internal_bus_name # a record_metric row on a callsite here announces a product event (modules/metrics)
+  internal_bus_arn           = module.events.internal_bus_arn
   gerp_id                    = var.gerp_id
   stack_prefix               = local.stack_prefix
   log_retention_days         = local.log_retention_days
@@ -468,6 +470,8 @@ module "rules" {
 module "labor" {
   source = "../../modules/labor/infra"
 
+  internal_bus_name          = module.events.internal_bus_name # a record_metric row on a callsite here announces a product event (modules/metrics)
+  internal_bus_arn           = module.events.internal_bus_arn
   log_retention_days         = local.log_retention_days
   ops_alerts_topic_arn       = local.ops_alerts_topic_arn
   gerp_id                    = var.gerp_id
@@ -819,6 +823,30 @@ module "automation" {
   # filter attaches to it by name and fails the apply if it is not there yet. tasks is a
   # runtime callee (constructed name), not an apply-time attachment — no edge.
   depends_on = [module.agent, module.payments]
+}
+
+# metrics — the firm's product record (modules/metrics): POST /metrics for an app with a bearer,
+# a record_metric row on any callsite, the agent's own `record`; every event through the firm's
+# bus into Parquet under the cabinet, read back on the gerp's own Athena workgroup.
+module "metrics" {
+  source = "../../modules/metrics/infra"
+
+  log_retention_days       = local.log_retention_days
+  gerp_id                  = var.gerp_id
+  stack_prefix             = local.stack_prefix
+  timezone                 = var.timezone
+  internal_bus_name        = module.events.internal_bus_name
+  internal_bus_arn         = module.events.internal_bus_arn
+  server_api_id            = module.server.api_id
+  server_api_execution_arn = module.server.api_execution_arn
+  server_api_endpoint      = module.server.api_endpoint
+  storage_bucket           = data.aws_s3_bucket.uploads.bucket
+  storage_kms_key_arn      = data.aws_kms_key.uploads.arn
+  register_with_agent      = true
+  gateway_id               = module.agent.gateway_id # the graph, not an SSM read: a fresh account has no parameter yet
+  gateway_role_arn         = module.agent.gateway_role_arn
+
+  depends_on = [module.agent]
 }
 
 # ─── the approved-automations prefix, closed at the BUCKET ───

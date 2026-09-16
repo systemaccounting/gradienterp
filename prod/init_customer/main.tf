@@ -98,6 +98,18 @@ resource "aws_s3_bucket_lifecycle_configuration" "uploads" {
     }
   }
 
+  # Athena result sets (modules/metrics): a read's answer, returned to the caller the same second
+  rule {
+    id     = "expire-metrics-results"
+    status = "Enabled"
+    filter {
+      prefix = "metrics/results/"
+    }
+    expiration {
+      days = 1
+    }
+  }
+
   # Build scrap expires; owner content never does. A cmd-tool layer build (modules/cmd) drops a
   # ~15MB zip under layers/ on every run, and Lambda COPIES the content at PublishLayerVersion — so
   # once the layer version exists the zip is scrap, and nothing but a rule ever removes it.
