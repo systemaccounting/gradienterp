@@ -2,7 +2,7 @@
 # upload.sh — every put a deploy makes, from what zip.sh or docker.sh --build made. Operator
 # credentials (operator-org, or --profile).
 #
-#   bash scripts/upload.sh source [--release]            # .build/source.zip → source.zip; --release, a committed tree → release/source.zip
+#   bash scripts/upload.sh source [--release]            # .build/source.zip → source.zip, refused when it is not this tree; --release, a committed tree → release/source.zip
 #   bash scripts/upload.sh lambda <src-dir>… [--notes …] # .build/lambdas/<src-dir>.zip → the artifact bucket, when it changed
 #   bash scripts/upload.sh bff [--notes …]               # .build/bff.zip → prod/gradienterp_cloud/bff.zip
 #   bash scripts/upload.sh assets                        # prod/gradienterp_cloud/assets/ → the assets bucket, then a CloudFront invalidation

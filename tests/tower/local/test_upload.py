@@ -108,6 +108,58 @@ def test_any_tree_goes_to_source_zip_and_an_unchanged_one_puts_nothing():
         assert deploy.upload_source(s3, release=False) == first and len(s3.puts) == 1
 
 
+def _git_repo():
+    """A scratch git repo with zip.sh in it, so `zip.sh source` builds a real source.zip there."""
+    import subprocess
+    root = Path(tempfile.mkdtemp())
+    (root / "scripts").mkdir()
+    shutil.copy(REPO / "scripts" / "zip.sh", root / "scripts" / "zip.sh")
+    (root / "a.txt").write_text("a")
+    (root / ".gitignore").write_text(".build/\n")
+    g = lambda *a: subprocess.run(["git", "-C", str(root), *a], capture_output=True, text=True, check=True)  # noqa: E731
+    g("init", "-q"); g("add", "-A"); g("-c", "user.email=t@t", "-c", "user.name=t", "commit", "-qm", "first")
+    return root, g
+
+
+def _zip_there(root):
+    import subprocess
+    subprocess.run(["bash", str(root / "scripts" / "zip.sh"), "source"], capture_output=True, text=True, check=True)
+
+
+def test_a_source_zip_that_is_not_this_tree_is_refused():
+    """The live case (2026-09-15): a `.build/source.zip` from the last session was put and called
+    unchanged, and the apply built the old tree. The zip names its commit and whether the tree was
+    dirty; a tree that moved on is refused before any put, however it moved."""
+    root, g = _git_repo()
+    saved = deploy.REPO
+    deploy.REPO = str(root)
+    try:
+        _zip_there(root)
+        s3 = S3()
+        assert deploy.upload_source(s3, release=False) and len(s3.puts) == 1, "the tree it was built from goes"
+
+        (root / "b.txt").write_text("b")                                  # a change since: dirty now, was clean
+        assert "uncommitted changes" in _refused(lambda: deploy.upload_source(s3, release=False))
+        _zip_there(root)
+        deploy.upload_source(s3, release=False)
+        (root / "b.txt").write_text("bb")                                 # still dirty, different bytes
+        assert "changed since" in _refused(lambda: deploy.upload_source(s3, release=False))
+        _zip_there(root)
+        g("add", "-A"); g("-c", "user.email=t@t", "-c", "user.name=t", "commit", "-qm", "second")
+        assert "was built at" in _refused(lambda: deploy.upload_source(s3, release=False))   # another commit
+        assert len(s3.puts) == 2, "nothing was put by a refusal"
+    finally:
+        deploy.REPO = saved
+        shutil.rmtree(root)
+
+
+def test_a_tree_with_no_git_takes_the_zip_as_it_is():
+    """A runner works in an unzipped source.zip, no .git: the zip IS the tree, nothing to compare."""
+    assert deploy.stale_source({"commit": "x", "dirty": True}, None, None) is None
+    assert "was built at" in deploy.stale_source({"commit": "x", "dirty": False}, "y", False)
+    assert "clean tree" in deploy.stale_source({"commit": "x", "dirty": False}, "x", True)
+
+
 def test_a_lambda_puts_once_with_its_provenance_and_then_is_current():
     with _repo():
         src = "modules/x/lambdas/y"

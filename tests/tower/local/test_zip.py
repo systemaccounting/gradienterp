@@ -54,6 +54,18 @@ def _zip_source(root, *args):
                           capture_output=True, text=True, timeout=60)
 
 
+def test_out_builds_the_same_bytes_elsewhere():
+    """`--out` is what upload.sh rebuilds to compare against, so it has to be byte-identical."""
+    root = _scratch()
+    try:
+        assert _zip_source(root).returncode == 0
+        out = _zip_source(root, "--out", str(root / "elsewhere" / "s.zip"))
+        assert out.returncode == 0, out.stderr
+        assert (root / "elsewhere" / "s.zip").read_bytes() == (root / ".build" / "source.zip").read_bytes()
+    finally:
+        shutil.rmtree(root)
+
+
 def test_the_source_zip_is_the_tree_git_sees():
     root = _scratch()
     try:
