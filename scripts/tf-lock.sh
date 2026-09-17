@@ -52,15 +52,18 @@ seen = {}   # source → {constraint: [files]}
 for d in dirs:
     for tf in sorted(glob.glob(os.path.join(d, "*.tf"))):
         text = open(tf).read()
-        for block in re.finditer(r"required_providers\s*\{(.*?)\n\s*\}", text, re.S):
-            for entry in re.finditer(r'(\w+)\s*=\s*\{([^}]*)\}', block.group(1)):
-                body = entry.group(2)
-                src = re.search(r'source\s*=\s*"([^"]+)"', body)
-                ver = re.search(r'version\s*=\s*"([^"]+)"', body)
-                if not src:
-                    continue
-                source = src.group(1) if "/" in src.group(1) else "hashicorp/" + src.group(1)
-                seen.setdefault(source, {}).setdefault(ver.group(1) if ver else "", []).append(os.path.relpath(tf))
+        if "required_providers" not in text:
+            continue
+        # an entry is `name = { source = "…", version = "…" }`, one line or several; the only
+        # `source =` inside braces in a .tf file is a required_providers entry
+        for entry in re.finditer(r'(\w+)\s*=\s*\{([^{}]*)\}', text):
+            body = entry.group(2)
+            src = re.search(r'source\s*=\s*"([^"]+)"', body)
+            ver = re.search(r'version\s*=\s*"([^"]+)"', body)
+            if not src or not re.fullmatch(r"([a-z0-9-]+/)?[a-z0-9-]+", src.group(1)):
+                continue   # a `source = "$.detail…"` in an input_paths map is not a provider
+            source = src.group(1) if "/" in src.group(1) else "hashicorp/" + src.group(1)
+            seen.setdefault(source, {}).setdefault(ver.group(1) if ver else "", []).append(os.path.relpath(tf))
 bad = {s: c for s, c in seen.items() if len([k for k in c if k]) > 1}
 if bad:
     for s, c in sorted(bad.items()):

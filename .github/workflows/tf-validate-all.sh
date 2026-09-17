@@ -8,9 +8,10 @@
 #
 # The directories run in parallel, one per core (TF_VALIDATE_JOBS overrides): each one's output is
 # held and printed in directory order, so the log reads the same as a serial run. Workers share no
-# write but one: the plugin cache the workflow configures, which two inits of one provider version
-# would fill at once. So the inits take turns (flock, where it exists) and the validates run
-# together; after the first init of a version the rest link to the cache in about a second.
+# write but one: the plugin cache the workflow configures (TF_PLUGIN_CACHE_DIR), which two inits
+# of one provider version would fill at once. So an init whose lock file names a version the cache
+# does not hold yet takes a turn (flock, where it exists); every other init runs at once, linking
+# what the cache holds and hashing it against the lock file, a second or two each.
 
 set -uo pipefail
 
@@ -29,9 +30,21 @@ ALIAS_FILE="zz_validate_providers.tf"
 OUT="$(mktemp -d)"
 trap 'for d in "${tf_dirs[@]}"; do rm -f "$d/$ALIAS_FILE"; done; rm -rf "$OUT"' EXIT
 
-# inits one at a time where flock exists (linux; the runner); a mac has no flock and no plugin cache
+# this machine's provider platform, the way terraform names it
+PLATFORM="$(uname -s | tr '[:upper:]' '[:lower:]')_$(uname -m | sed 's/x86_64/amd64/; s/aarch64/arm64/')"
+
+# whether every provider version the directory's lock file names is already in the plugin cache
+cached() {
+  local addr ver
+  [[ -n "${TF_PLUGIN_CACHE_DIR:-}" && -f .terraform.lock.hcl ]] || return 1
+  while read -r addr ver; do
+    [[ -d "$TF_PLUGIN_CACHE_DIR/$addr/$ver/$PLATFORM" ]] || return 1
+  done < <(awk '/^provider "/ { gsub(/"/, "", $2); p = $2 } /^  version / { gsub(/"/, "", $3); print p, $3 }' .terraform.lock.hcl)
+}
+
+# an init that would fill the cache takes a turn (flock: linux, the runner); the rest run at once
 init_locked() {
-  if command -v flock >/dev/null 2>&1; then flock "$OUT/init.lock" terraform init -backend=false -input=false -no-color
+  if ! cached && command -v flock >/dev/null 2>&1; then flock "$OUT/init.lock" terraform init -backend=false -input=false -no-color
   else terraform init -backend=false -input=false -no-color; fi
 }
 
