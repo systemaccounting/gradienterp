@@ -34,7 +34,7 @@ jobs:
           terraform_wrapper: false
 
       - name: the lock files
-        run: bash scripts/tf-lock.sh --mirror "$RUNNER_TEMP/tf-mirror"
+        run: bash scripts/tf-version.sh --mirror "$RUNNER_TEMP/tf-mirror"
 
       - name: validate against them, from the plugin cache
         run: |
@@ -51,5 +51,5 @@ jobs:
           if git diff --cached --quiet; then echo "the lock files are as they were"; exit 0; fi
           git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
             commit -q -m "lock files: one version per provider, both platforms" \
-            -m "Written by tf-lock.yaml on a runner: scripts/tf-lock.sh mirrored each provider once for darwin_amd64 and linux_amd64 and locked every directory from that mirror, then every directory validated from the plugin cache against them."
+            -m "Written by tf-lock.yaml on a runner: scripts/tf-version.sh mirrored each provider once for darwin_amd64 and linux_amd64 and locked every directory from that mirror, then every directory validated from the plugin cache against them."
           git push origin "HEAD:$REF"
