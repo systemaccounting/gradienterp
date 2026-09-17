@@ -135,7 +135,7 @@ def test_every_directory_has_a_lock_file_with_a_mac_and_a_linux_hash():
     """The runner's plugin cache hands init an unpacked package, which init checks against the lock
     file's h1: for its platform. A lock file written on a mac alone carries the mac's, and 32 of 46
     directories then failed (2026-09-16); a directory with no lock file picks a version on the fly
-    and failed the same way. `scripts/tf-lock.sh` writes every directory's, both platforms."""
+    and failed the same way. `scripts/tf-version.sh` writes every directory's, both platforms."""
     import re as _re
     skip = (".terraform/", ".venv", "node_modules", "terraform.tfstate.d")
     dirs = sorted({tf.parent for tf in REPO.glob("**/*.tf") if not any(s in str(tf) for s in skip)})

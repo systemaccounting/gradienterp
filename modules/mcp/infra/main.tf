@@ -16,6 +16,7 @@ terraform {
     aws = {
       source                = "hashicorp/aws"
       configuration_aliases = [aws.operator]
+      version               = "~> 6.65"
     }
   }
 }
