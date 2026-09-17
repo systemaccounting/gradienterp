@@ -25,14 +25,12 @@ closure's destroy (`closure/begin.py`, after the export and the approval) and a 
 
 import argparse
 import concurrent.futures as cf
-import io
 import os
 import re
 import subprocess
 import sys
 import tempfile
 import time
-from contextlib import redirect_stdout
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import deploy  # noqa: E402
@@ -183,10 +181,17 @@ def cmd_per_customer(args):
     gerps = [r["gerp_id"] for r in deploy._active_rows(op)]
 
     def one(g):
-        buf = io.StringIO()
-        with redirect_stdout(buf):
-            ok = apply_gerp(op, g, action, args.source_version)
-        return g, ok, buf.getvalue()
+        """One gerp's build in its own process, so its lines are its own. `redirect_stdout` swaps
+        the process's stdout, not a thread's: three builds at once through it lost two logs
+        (2026-09-16), and a third run showed one of three."""
+        argv = [sys.executable, os.path.abspath(__file__), "--stack", "per_customer", "--gerp", g,
+                "--action", args.action, "--operator-profile", args.operator_profile]
+        if args.plan:
+            argv.append("--plan")
+        if args.source_version:
+            argv += ["--source-version", args.source_version]
+        proc = subprocess.run(argv, capture_output=True, text=True)
+        return g, proc.returncode == 0, proc.stdout + proc.stderr
 
     # every gerp's build at once, each one's log printed whole as it finishes
     failed = []
