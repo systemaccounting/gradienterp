@@ -88,7 +88,9 @@ echo "==> mirroring for ${PLATFORMS} into ${MIRROR#$REPO_ROOT/}"
 lock_one() {
   local d="$1" rel="${1#$REPO_ROOT/}" out
   rm -f "$d/.terraform.lock.hcl"
-  if out="$(cd "$d" && terraform providers lock -fs-mirror="$MIRROR" "${platform_args[@]}" 2>&1)"; then
+  # a directory's provider requirements include its child modules' (`module "fn"`), which have to
+  # be installed to be read: `get` fetches the local ones and touches no provider and no backend
+  if out="$(cd "$d" && terraform get -no-color 2>&1 && terraform providers lock -fs-mirror="$MIRROR" "${platform_args[@]}" 2>&1)"; then
     echo "    $rel: $(awk '/^provider/ { gsub(/"|registry.terraform.io\/hashicorp\//, "", $2); p = $2 } /^  version/ { gsub(/"/, "", $3); printf "%s %s  ", p, $3 }' "$d/.terraform.lock.hcl")"
   else
     echo "    $rel: FAILED"; printf '%s\n' "$out" | grep -E "Error|version|constraint" | sed 's/^/        /'
