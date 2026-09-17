@@ -181,12 +181,9 @@ Four reads a session starts from. The profiles are `bash scripts/awsacct.sh --al
   --namespace gerp/agent --metric-name InputTokens --dimensions Name=gerp_id,Value=<gerp_id>
   --statistics Sum --period 86400 --start-time $(date -u -v-7d +%Y-%m-%dT00:00:00Z) --end-time $(date -u +%Y-%m-%dT%H:%M:%SZ)`
   (`date -d '7 days ago'` on linux)
-- **this month's AWS cost per gerp** — Cost Explorer in the management account, by linked
-  account, matched to gerps with `bash scripts/awsacct.sh --list`:
-
-      aws ce get-cost-and-usage --profile default --granularity MONTHLY --metrics UnblendedCost \
-        --time-period Start=$(date -u +%Y-%m-01),End=$(date -u +%Y-%m-%d) \
-        --group-by Type=DIMENSION,Key=LINKED_ACCOUNT
+- **this month's AWS cost per account** — `bash scripts/current-spend.sh` (`2026-08` for a whole
+  month): the total and the run rate, then each account by name with its services. Cost Explorer
+  in the management account, so the default profile; the figures lag usage by up to a day
 
 ## what's deferred
 
