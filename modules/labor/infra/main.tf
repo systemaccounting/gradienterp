@@ -174,6 +174,7 @@ locals {
     SCHEMA_TABLE          = var.schema_table_name
     POST_JOURNAL_ENTRY_FN = var.post_journal_entry_fn_name
     CUSTOMER_ID           = var.gerp_id
+    INTERNAL_BUS_NAME     = var.internal_bus_name # a record_metric row announces a product event here (modules/metrics)
     # the delete op removes a worker_legal row's referenced doc blobs from here first.
     UPLOADS_BUCKET = local.uploads_bucket
     # The business's clock — `clock.py` places a naive shift time ("7am") in THIS zone instead of
@@ -317,3 +318,18 @@ resource "aws_lambda_permission" "gateway_invoke" {
 
 # latest artifact version per function — the apply-time read that makes terraform deploy
 # BUCKET truth (always current via scripts/deploy.sh push) instead of the applier's tree.
+
+# a firm's record_metric row on this module's callsites announces on the firm's OWN bus
+# (modules/metrics)
+resource "aws_iam_role_policy" "internal-bus" {
+  name = "${local.prefix}-internal-bus"
+  role = aws_iam_role.lambda.id
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect   = "Allow"
+      Action   = "events:PutEvents"
+      Resource = var.internal_bus_arn
+    }]
+  })
+}

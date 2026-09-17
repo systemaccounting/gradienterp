@@ -106,6 +106,7 @@ module "close_handler" {
     RULE_INSTANCES_TABLE  = var.rule_instances_table_name
     POST_JOURNAL_ENTRY_FN = var.post_journal_entry_fn_name
     CUSTOMER_ID           = var.gerp_id
+    INTERNAL_BUS_NAME     = var.internal_bus_name # a record_metric row announces a product event here (modules/metrics)
   }
   log_retention_days = var.log_retention_days
 }
@@ -152,3 +153,18 @@ output "close_handler_fn_arn" {
 
 # latest artifact version per function — the apply-time read that makes terraform deploy
 # BUCKET truth (always current via scripts/deploy.sh push) instead of the applier's tree.
+
+# a firm's record_metric row on this module's callsites announces on the firm's OWN bus
+# (modules/metrics)
+resource "aws_iam_role_policy" "close-handler-internal-bus" {
+  name = "${local.prefix}-close-handler-internal-bus"
+  role = aws_iam_role.close_handler.id
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect   = "Allow"
+      Action   = "events:PutEvents"
+      Resource = var.internal_bus_arn
+    }]
+  })
+}

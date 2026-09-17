@@ -12,6 +12,7 @@ import journal
 import movements  # bundled at the zip root (module-root shared lib)
 import rules
 import stock_rules
+import metric_rules   # modules/metrics: record_metric — a moment as a product event, by a row
 from _helpers import (
     table, local_get_item,
     to_ddb, post_journal_entry,
@@ -191,7 +192,7 @@ def handler(event, context):
         # the STOCK_ADJUSTED#* instances value the count variance — canonically to COGS (consumed), a firm
         # row on the same key re-points it — so INVENTORY dollars track the physical meter
         ctx = {"item_id": item_id, "movement_type": "ADJUSTED", "delta": delta, "unit_cost": unit_cost}
-        line_items = rules.run_instances(ctx, stock_rules.adjustment_instances(), modules=[stock_rules])
+        line_items = rules.run_instances(ctx, stock_rules.adjustment_instances(), modules=[stock_rules, metric_rules])
         if line_items:
             payload = {
                 "lineItems": line_items,
@@ -308,7 +309,7 @@ def _auto_order(item_id, item, reorder):
         return None
     ctx = {"item_id": item_id, "order_qty": float(reorder["order_qty"]),
            "description": (item or {}).get("name") or item_id}
-    permitted = [p["order"] for p in rules.run_instances(ctx, insts, modules=[agreement_rules]) if p.get("order")]
+    permitted = [p["order"] for p in rules.run_instances(ctx, insts, modules=[agreement_rules, metric_rules]) if p.get("order")]
     if not permitted:
         return None
     o = permitted[0]
@@ -355,7 +356,7 @@ def _run_sale_rules(item_id, quantity, source, entry_id):
     if not insts:
         return None
     ctx = {"item_id": item_id, "quantity": quantity, "movement_type": "SOLD"}
-    effects = rules.run_instances(ctx, insts, modules=[stock_rules])
+    effects = rules.run_instances(ctx, insts, modules=[stock_rules, metric_rules])
     for p in stock_rules.produces(effects):
         resp = _produce(p["item_id"], p["quantity"], source,
                         f"{entry_id}#bf" if entry_id else None)

@@ -106,6 +106,7 @@ module "pay_run" {
     RULES_PARAMS_TABLE    = var.rules_params_table_name
     POST_JOURNAL_ENTRY_FN = var.post_journal_entry_fn_name
     CUSTOMER_ID           = var.gerp_id
+    INTERNAL_BUS_NAME     = var.internal_bus_name # a record_metric row on PAY_RUN# announces a product event here (modules/metrics)
   }
   log_retention_days = var.log_retention_days
 }
@@ -199,3 +200,17 @@ output "pay_run_fn_arn" {
 
 # latest artifact version per function — the apply-time read that makes terraform deploy
 # BUCKET truth (always current via scripts/deploy.sh push) instead of the applier's tree.
+
+# a firm's record_metric row on PAY_RUN#<worker> announces on the firm's OWN bus (modules/metrics)
+resource "aws_iam_role_policy" "pay_run_internal_bus" {
+  name = "${local.prefix}-pay-run-internal-bus"
+  role = aws_iam_role.pay_run.id
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect   = "Allow"
+      Action   = "events:PutEvents"
+      Resource = var.internal_bus_arn
+    }]
+  })
+}

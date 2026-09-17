@@ -103,6 +103,7 @@ coordination (see AGENTS.md).
 | `contract.offered` (blanket / outline agreement) | `peers WHERE purchase_history(item) fires monthly` — the graduation path for a pool that wants a standing agreement, not a monthly auction |
 | `lot.recalled` | `firms WHERE movement_log ∋ lot_id` — inverted match (urgency flows downstream), cross-firm lot traceability conventional ERP can't do because the chain crosses firm boundaries |
 | `asset.listed` (signal: retiring a fixed asset) | `open purchase_requests ∪ capacity needs for the asset class` |
+| `metric.published` (signal: an openly operated firm names a product count — members checked in, loaves sold — as a `detail.counters` entry; modules/metrics) | the public dashboard carries usage beside the P&L; `demand_forecast.published`'s neighbour — a supplier reads a customer's sell-through as its own order book |
 | `job_opening.created` (permanent placement) | `workers/candidates across firms` — open books make cross-firm wage + utilization data unusually good hiring signal |
 
 finance rows from the 2026-07-17 research pass. the organizing idea: **cash is inventory** — so

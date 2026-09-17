@@ -131,6 +131,27 @@ def test_post_build_never_exits_early_and_the_applys_ending_is_one_guarded_comma
 
 
 
+def test_every_directory_has_a_lock_file_with_a_mac_and_a_linux_hash():
+    """The runner's plugin cache hands init an unpacked package, which init checks against the lock
+    file's h1: for its platform. A lock file written on a mac alone carries the mac's, and 32 of 46
+    directories then failed (2026-09-16); a directory with no lock file picks a version on the fly
+    and failed the same way. `scripts/tf-version.sh` writes every directory's, both platforms."""
+    import re as _re
+    skip = (".terraform/", ".venv", "node_modules", "terraform.tfstate.d")
+    dirs = sorted({tf.parent for tf in REPO.glob("**/*.tf") if not any(s in str(tf) for s in skip)})
+    short = []
+    for d in dirs:
+        lock = d / ".terraform.lock.hcl"
+        if not lock.is_file():
+            short.append(f"{d.relative_to(REPO)}: no lock file")
+            continue
+        for block in _re.split(r'^provider "', lock.read_text(), flags=_re.M)[1:]:
+            name = block.split('"', 1)[0]
+            if block.count("h1:") < 2:
+                short.append(f"{lock.relative_to(REPO)}: {name} has one platform's h1 only")
+    assert not short, "\n  ".join(["every directory, both platforms:"] + sorted(short))
+
+
 def test_no_module_reads_the_agent_through_ssm_at_plan():
     """A module learns the gateway from module.agent's outputs, threaded by per_customer — the
     graph terraform builds for free. An SSM data source on `/agent/*` reads a parameter the agent

@@ -860,10 +860,52 @@ SOURCE_KEY = "source.zip"            # every upload, whatever the tree: what the
 RELEASE_KEY = "release/source.zip"   # a committed tree only: the projects' own location, what a signup builds from
 
 
+def tree_state():
+    """(HEAD, dirty) of the tree deploy runs in, or (None, None) outside a git work tree — an
+    unzipped source.zip on a runner has no .git, and the zip it came from is the tree."""
+    import subprocess
+    try:
+        head = subprocess.run(["git", "-C", REPO, "rev-parse", "HEAD"], capture_output=True, text=True,
+                              check=True).stdout.strip()
+        dirty = bool(subprocess.run(["git", "-C", REPO, "status", "--porcelain"], capture_output=True,
+                                    text=True, check=True).stdout.strip())
+    except Exception:  # noqa: BLE001 — no git, no work tree: nothing to compare against
+        return None, None
+    return head, dirty
+
+
+def stale_source(meta, head, dirty):
+    """Why `.build/source.zip` is not this tree, or None. The zip records the commit it was built at
+    and whether the tree had uncommitted changes; a tree that moved on since is a different tree,
+    and "unchanged" said of its zip would mean the last session's."""
+    if head is None:
+        return None
+    if meta.get("commit") != head:
+        return f"it was built at {(meta.get('commit') or '')[:12]} and the tree is at {head[:12]}"
+    if bool(meta.get("dirty")) != dirty:
+        return ("it was built from a tree with uncommitted changes and this one is clean" if meta.get("dirty")
+                else "it was built from a clean tree and this one has uncommitted changes")
+    return None
+
+
+def _rebuilt_source(body):
+    """Whether `zip.sh source` builds this tree to `body` now. Two dirty trees at one commit tell
+    apart only by their bytes, and the zip is deterministic, so the bytes decide."""
+    import subprocess
+    import tempfile
+    out = os.path.join(tempfile.mkdtemp(prefix="source-"), "source.zip")
+    subprocess.run(["bash", os.path.join(REPO, "scripts", "zip.sh"), "source", "--out", out],
+                   capture_output=True, text=True, check=True)
+    same = open(out, "rb").read() == body
+    os.remove(out)
+    return same
+
+
 def upload_source(s3, release):
     """Put `.build/source.zip` at `source.zip`, or with `release` at `release/source.zip` — refused
-    when its `source.json` says the tree had uncommitted changes. An unchanged zip puts nothing.
-    Returns the key's version id."""
+    when its `source.json` says the tree had uncommitted changes. Refused whenever the zip is not
+    this tree: another commit, a change since, so a stale `.build` cannot be put and called
+    unchanged. An unchanged zip puts nothing. Returns the key's version id."""
     import hashlib as _hl
     import urllib.parse
     path = os.path.join(REPO, ".build", "source.zip")
@@ -871,6 +913,12 @@ def upload_source(s3, release):
         sys.exit("no .build/source.zip: run `bash scripts/zip.sh source` first")
     body = open(path, "rb").read()
     meta = json.loads(zipfile.ZipFile(io.BytesIO(body)).read("source.json"))
+    head, dirty = tree_state()
+    why = stale_source(meta, head, dirty)
+    if why is None and head is not None and dirty and meta.get("dirty") and not _rebuilt_source(body):
+        why = "the tree changed since it was built"
+    if why:
+        sys.exit(f"refused: .build/source.zip is not this tree — {why}. Run `bash scripts/zip.sh source` first")
     if release and meta.get("dirty"):
         sys.exit("refused: this zip's tree had uncommitted changes, and release/source.zip is what a signup, "
                  "a hub vend and a closure build from. Commit, `zip.sh source`, then `upload.sh source --release`")

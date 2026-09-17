@@ -1,13 +1,16 @@
 """Every terraform apply the operator starts, with the same result on whichever machine runs it.
 
-    bash scripts/apply.sh --stack per_customer --gerp <gerp_id>|all [--action apply|stop] [--source-version V] [--plan]
-    bash scripts/apply.sh --stack hub --region <region> [--source-version V] [--plan]
+    bash scripts/apply.sh --stack per_customer --gerp <gerp_id>|all [--action apply|stop] [--source-version V | --build] [--plan]
+    bash scripts/apply.sh --stack hub --region <region> [--source-version V | --build] [--plan]
     bash scripts/apply.sh --stack <operator stack> [--plan]
 
 `per_customer` and `hub` run in CodeBuild (`tower-per-customer`, `tower-hub`), from `source.zip`, the
-latest `upload.sh source` of any tree, unless `--source-version` names another of its versions. The
-projects' own location is `release/source.zip`, what a signup, a hub vend and a closure build from, so
-nothing started here moves them.
+latest `upload.sh source` of any tree, unless `--source-version` names another of its versions or
+`--build` zips and uploads this tree first and builds from that version. The upload is the act of
+choosing what the fleet builds from — one version serves every apply until the next — so the default
+takes what was uploaded and `--build` is the laptop's shortcut, typed. The projects' own location is
+`release/source.zip`, what a signup, a hub vend and a closure build from, so nothing started here
+moves them.
 
 The operator stacks run terraform in their own dir of the tree this script sits in: init, a plan to a
 file, then the apply of that file. The log carries the resource addresses, the `Plan:` line and any
@@ -158,9 +161,21 @@ def apply_gerp(op, gerp_id, action, source_version):
     return status == "SUCCEEDED" and row.get("status") == want
 
 
+def build_source(op, args):
+    """`--build`: zip this tree, upload it, and name that version for the build — the two steps the
+    laptop otherwise types, and the version pinned so a concurrent upload cannot slip in between."""
+    if not args.build:
+        return args.source_version
+    if args.source_version:
+        sys.exit("--build and --source-version name two different trees; pass one")
+    subprocess.run(["bash", os.path.join(REPO, "scripts", "zip.sh"), "source"], check=True)
+    return deploy.upload_source(op.client("s3"), release=False)
+
+
 def cmd_per_customer(args):
     op = _boto(args.operator_profile)
     action = "plan" if args.plan else args.action
+    args.source_version = build_source(op, args)
     if not args.gerp:
         sys.exit("--stack per_customer takes --gerp <gerp_id> or --gerp all")
     if args.gerp != "all":
@@ -190,6 +205,7 @@ def cmd_hub(args):
         sys.exit(f"--stack hub takes --region, one of config.json HUBS: {', '.join(CONFIG['HUBS'])}")
     op = _boto(args.operator_profile)
     action = "plan" if args.plan else "apply"
+    args.source_version = build_source(op, args)
     status = start_build(op, "tower-hub", {"HUB_ID": args.region, "HUB_ACCOUNT_ID": hub["account"],
                                            "HUB_REGION": hub["region"], "TF_ACTION": action},
                          f"{action} hub {args.region} ({hub['account']})", source_version=args.source_version)
@@ -251,6 +267,8 @@ def main():
                     help="per_customer: apply (a stopped row's is the start) or stop")
     ap.add_argument("--region", help="hub: the hub's region, a key of config.json HUBS")
     ap.add_argument("--source-version", help="per_customer, hub: a version of source.zip (default: its latest)")
+    ap.add_argument("--build", action="store_true",
+                    help="per_customer, hub: zip and upload this tree first, then build from that version")
     ap.add_argument("--operator-profile", default="operator-org")
     args = ap.parse_args()
     if args.stack == "per_customer":

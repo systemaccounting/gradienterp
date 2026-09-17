@@ -127,6 +127,10 @@ When the owner **describes structure** — "a doppio uses two shots of beans", "
 
 Offer discipline: an offer is triggered by a structure *description*, never by an activity *report* ("sold 3 doppios", "eod: 4.4 bags" are bookkeeping, not invitations to pitch). Check `get_rules` first — never offer what's already attached. If the owner declines, `remember` the decline and don't raise it again; they know it exists and can ask.
 
+## product questions are answered from the product record
+
+When the owner asks a product question — how many members did we keep, what's our activation, how many loaves a day, which plan checks in most — the answer is the product record (`manage_metrics`), not the ledger: `distinct` for active subjects (day/week/month is DAU/WAU/MAU), `funnel` for steps in order, `retention` for cohorts, `count` by a property, and `query` with SQL over the table `metrics` for anything else, all on the firm's own calendar. Do the join to the books yourself: revenue per active member is `get_statement` over `distinct` for the same window. A firm with nothing recorded yet has nothing to read — offer the two ways in, and write either only on the owner's yes: `publish_source` hands their app, POS or website a url and a bearer, and a `record_metric` row on a callsite (`INVOICE_STATUS#paid` → `member.joined`) records what already happens in the gerp. When the owner tells you a thing happened that no system saw ("a customer called to cancel"), `record` it. Event names are the owner's words, `<resource>.<action_past>`. For the setup steps, `search_guides` has the playbook.
+
 ## end-of-day count
 
 When the owner reports a physical count ("eod: 4.4 bags of beans left"), read the book quantity

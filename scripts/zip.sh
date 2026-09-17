@@ -2,7 +2,7 @@
 # zip.sh — every zip a deploy makes. It builds and touches no AWS; putting a zip anywhere is the
 # upload's job.
 #
-#   bash scripts/zip.sh source [--dirs <src-dir>…]   # .build/source.zip: the working tree, for CodeBuild and the workflows
+#   bash scripts/zip.sh source [--dirs <src-dir>…] [--out <path>]   # .build/source.zip: the working tree, for CodeBuild and the workflows
 #   bash scripts/zip.sh lambda <src-dir>…            # .build/lambdas/<src-dir>.zip: the bytes deploy.sh pushes
 #   bash scripts/zip.sh bff                          # .build/bff.zip: the owner web app's bundle
 #
@@ -30,6 +30,7 @@ zip_source() {
   while (( $# )); do
     case "$1" in
       --dirs) shift; while (( $# )) && [[ "$1" != --* ]]; do dirs+=("$1"); shift; done ;;
+      --out) out="$2"; shift 2 ;;   # elsewhere than .build: what upload.sh rebuilds to compare against
       *) usage ;;
     esac
   done
@@ -44,7 +45,7 @@ zip_source() {
   cd "$REPO_ROOT"
   commit="$(git rev-parse HEAD 2>/dev/null || echo "")"
   [[ -n "$(git status --porcelain)" ]] && dirty=true
-  mkdir -p "$BUILD"
+  mkdir -p "$BUILD" "$(dirname "$out")"
   rm -f "$out"
   stage="$(mktemp -d)"
   "$PY" -c 'import json, sys; print(json.dumps({"commit": sys.argv[1], "dirty": sys.argv[2] == "true", "dirs": sys.argv[3:]}, indent=1))' \
@@ -62,7 +63,7 @@ zip_source() {
   (cd "$stage" && zip -q -X "$out" source.json deploy-dirs.txt)
   rm -rf "$stage"
 
-  echo "==> .build/source.zip: $(du -h "$out" | cut -f1), $(( $(unzip -Z1 "$out" | wc -l) )) files, commit ${commit:0:12}$([[ $dirty == true ]] && echo ", uncommitted changes")"
+  echo "==> ${out#"$REPO_ROOT/"}: $(du -h "$out" | cut -f1), $(( $(unzip -Z1 "$out" | wc -l) )) files, commit ${commit:0:12}$([[ $dirty == true ]] && echo ", uncommitted changes")"
 }
 
 case "${1:-}" in

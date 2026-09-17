@@ -22,7 +22,7 @@ each business runs its own instance: a gerp, short for ∇ERP
 
 it works as a complete ERP for one business. tell the agent you deposited a check against an invoice and it closes the invoice. when the business on the other side is here too, their purchase request becomes your sale on its own
 
-a single starting user may pay ~$13-31/mo (~$150-370/year)
+a single starting user may pay \~$13-31/mo (~$150-370/year)
 
 but as the business scales, a 10-person business typically pays:
 - ~$115/mo to intuit.com for accounting
@@ -48,7 +48,7 @@ and the billion dollar ui c-suite executives depend on is replaced with a bedroc
 
 ### invert the firm
 
-> transparency reverses the C[A-Z]O -> ai -> engineer displacement when treated as more **profitable** than [radical](https://en.wiktionary.org/wiki/calypsis)
+transparency reverses the C[A-Z]O -> ai -> engineer displacement when treated as more **profitable** than [radical](https://en.wiktionary.org/wiki/calypsis)
 
 prices are rising while jobs and investments are disappearing
 

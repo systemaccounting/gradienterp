@@ -21,28 +21,39 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      - id: cfg
+        run: echo "tf=$(jq -r .TF_VERSION config.json)" >> "$GITHUB_OUTPUT"
+
       - uses: hashicorp/setup-terraform@v4
         with:
-          terraform_version: "1.10.5"
+          terraform_version: ${{ steps.cfg.outputs.tf }}
           terraform_wrapper: false
 
       # formatting first: a file terraform fmt would change fails here, with the diff
       - run: terraform fmt -check -recursive -diff
 
-      # The provider zips, one per version the lock files name, downloaded once and cached. The lock
-      # files carry the macs' h1: checksums, and init checks a mirrored zip against their zh:
-      # checksums, which cover linux, so nothing here writes a lock file back.
+      # The provider zips, one per version the lock files name, downloaded once and cached. Init
+      # checks a mirrored zip against the lock file's zh: checksums, which cover every platform.
       - uses: actions/cache@v6
         with:
           path: ${{ runner.temp }}/terraform-providers
           key: terraform-providers-linux_amd64-${{ hashFiles('**/.terraform.lock.hcl') }}
           restore-keys: terraform-providers-linux_amd64-
 
-      - name: the provider mirror
+      # The mirror holds the zips. Without a plugin cache, init unpacks the aws provider (~840 MB)
+      # into every one of the 46 directories, ~39 GB of writes and four minutes; with one, the
+      # first init of a version unpacks it into the cache and every later init links to it. A
+      # package taken from the cache is checked against the lock file's h1: for this platform, so
+      # every lock file carries linux_amd64's beside the mac's (scripts/tf-version.sh writes them;
+      # tests/tower checks each directory has one with both). The cache dir goes in the env as
+      # well, so tf-validate-all.sh can see which versions it already holds.
+      - name: the provider mirror and the plugin cache
         run: |
           bash .github/workflows/tf-provider-mirror.sh "$RUNNER_TEMP/terraform-providers"
-          printf 'provider_installation {\n  filesystem_mirror {\n    path = "%s"\n  }\n  direct {}\n}\n' \
-            "$RUNNER_TEMP/terraform-providers" > "$RUNNER_TEMP/terraform.rc"
+          mkdir -p "$RUNNER_TEMP/terraform-plugin-cache"
+          printf 'plugin_cache_dir = "%s"\nprovider_installation {\n  filesystem_mirror {\n    path = "%s"\n  }\n  direct {}\n}\n' \
+            "$RUNNER_TEMP/terraform-plugin-cache" "$RUNNER_TEMP/terraform-providers" > "$RUNNER_TEMP/terraform.rc"
           echo "TF_CLI_CONFIG_FILE=$RUNNER_TEMP/terraform.rc" >> "$GITHUB_ENV"
+          echo "TF_PLUGIN_CACHE_DIR=$RUNNER_TEMP/terraform-plugin-cache" >> "$GITHUB_ENV"
 
       - run: bash .github/workflows/tf-validate-all.sh

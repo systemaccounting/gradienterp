@@ -1,7 +1,7 @@
 terraform {
   required_version = ">= 1.6"
   required_providers {
-    aws = { source = "hashicorp/aws", version = "~> 6.42" }
+    aws = { source = "hashicorp/aws", version = "~> 6.65" }
   }
 
   # State in the operator account's org state bucket (same as the other stacks).

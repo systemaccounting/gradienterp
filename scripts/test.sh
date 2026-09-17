@@ -54,7 +54,7 @@ fi
 # by walking the import graph across modules/*/ and bundles them into the zip; locally nothing does
 # that, so the harness puts them on the path. Without this a lambda that grew an `import clock`
 # passes its own module's tests and fails every other module's.
-export PYTHONPATH="$REPO_ROOT/modules:$REPO_ROOT/modules/clock:$REPO_ROOT/modules/agreements:$REPO_ROOT/modules/schemas:$REPO_ROOT/modules/aws:$REPO_ROOT/modules/events:$REPO_ROOT/modules/payments:$REPO_ROOT/modules/rules:$REPO_ROOT/modules/invoicing:$REPO_ROOT/modules/journal:$REPO_ROOT/modules/mcp${PYTHONPATH:+:$PYTHONPATH}"
+export PYTHONPATH="$REPO_ROOT/modules:$REPO_ROOT/modules/clock:$REPO_ROOT/modules/metrics:$REPO_ROOT/modules/agreements:$REPO_ROOT/modules/schemas:$REPO_ROOT/modules/aws:$REPO_ROOT/modules/events:$REPO_ROOT/modules/payments:$REPO_ROOT/modules/rules:$REPO_ROOT/modules/invoicing:$REPO_ROOT/modules/journal:$REPO_ROOT/modules/mcp${PYTHONPATH:+:$PYTHONPATH}"
 
 # ── how many workers ─────────────────────────────────────────────────────────
 # Test files are independent — every table, bucket and queue a test makes carries a unique name —

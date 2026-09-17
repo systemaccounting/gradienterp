@@ -177,6 +177,17 @@ documents are stored with SSNs masked
 - ask: "add Alice Chen as a W-2 barista at $20/hr" · "clock Alice out" · "run Alice's June payroll"
 - not yet: state payroll taxes outside California, W-2, 941 and 1099 forms, overtime and meal/rest premiums, salaried pay
 
+### product record — `modules/metrics`
+
+records each step a customer or a thing takes with what the business sells — a lead captured, a member
+checked in, a loaf sold — in the business's own words, and answers product questions from it: how many
+active members this week, what share of leads join, who keeps coming back, all on the business's own
+calendar. an app, a website or a device posts events to a url with its own token; a rule records a moment
+that already happens in the books (an invoice paid → a member joined); the owner tells the agent the rest
+
+- ask: "how many members checked in this week" · "of the leads we got in july, how many joined" · "give my website a url to post signups to" · "when an invoice is paid, count it as a member joining"
+- not yet: sharing a product count on openlyoperated.biz beside the books
+
 ### vendor connections — `modules/mcp`
 
 connects the business's own accounts at other software vendors so the agent works in them with each

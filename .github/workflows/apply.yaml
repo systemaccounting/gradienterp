@@ -1,5 +1,5 @@
 # Applies a stack from an uploaded working tree: a version of source.zip, through that tree's own
-# `scripts/apply.sh`. On the laptop: `bash scripts/zip.sh source`, `bash scripts/upload.sh source`, then
+# `scripts/apply.sh`. On the laptop: `bash scripts/zip.sh source`, `bash scripts/upload.sh source` (or `apply.sh --build` for both), then
 # dispatch — by hand, or `bash scripts/workflow.sh run apply.yaml -f stack=<stack> …`, which waits on the
 # run. `per_customer` and `hub` build in CodeBuild from the same version; the operator stacks run
 # terraform here. `platform/management` isn't a choice: it applies from the laptop, with its own
@@ -77,13 +77,6 @@ jobs:
           cache-dependency-path: tests/requirements.txt
       - run: pip install -r tests/requirements.txt
 
-      # the operator stacks' state was written by 1.10.5, the laptop's; per_customer and hub build on
-      # CodeBuild's own
-      - uses: hashicorp/setup-terraform@v4
-        with:
-          terraform_version: "1.10.5"
-          terraform_wrapper: false
-
       - uses: ./.github/actions/aws
         with:
           role: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
@@ -92,6 +85,17 @@ jobs:
         uses: ./.github/actions/source
         with:
           version: ${{ inputs.source_version }}
+
+      # the one terraform version, the applied tree's config.json; per_customer and hub build on
+      # CodeBuild's own read of the same value
+      - id: cfg
+        working-directory: ${{ steps.source.outputs.tree }}
+        run: echo "tf=$(jq -r .TF_VERSION config.json)" >> "$GITHUB_OUTPUT"
+
+      - uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_version: ${{ steps.cfg.outputs.tf }}
+          terraform_wrapper: false
 
       - name: apply
         working-directory: ${{ steps.source.outputs.tree }}

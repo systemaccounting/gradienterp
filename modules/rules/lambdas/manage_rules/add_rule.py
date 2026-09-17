@@ -43,13 +43,14 @@ import callsites as _callsites
 import automation_rules  # the script-facing library: retry_order, retry_decision
 import dispatch_rules  # run_automation — a callsite handing off to firm code
 import collection_rules   # payments': charge_saved_card (attached to an invoice transition)
+import metric_rules       # metrics': record_metric — a moment as a product event
 import state_rules        # what a value may become: next_possible_values
 import transition_rules  # invoicing's: what an item POSTS when it enters a state
 import agreement_rules   # what a firm answers without a turn: accept_within, accept_in_stock, auto_order
 import rules
 
 RULE_LIBS = [general_rules, payroll_rules, stock_rules, collection_rules, automation_rules,
-             dispatch_rules, state_rules, transition_rules, agreement_rules]
+             dispatch_rules, state_rules, transition_rules, agreement_rules, metric_rules]
 OFFERED = rules.offered_rules(RULE_LIBS)
 
 

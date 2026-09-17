@@ -229,6 +229,7 @@ locals {
     "cloudfront:*",
     "route53:*",
     "support:*",
+    "support-console:*", # the Support Center console's own api (drafts, health banners), enforced from 2026-11-16
     "sts:*",
     "tag:*",
     "globalaccelerator:*",

@@ -11,17 +11,17 @@ terraform {
   required_providers {
     aws = {
       source  = "hashicorp/aws"
-      version = "~> 6.63"
+      version = "~> 6.65"
     }
     # the web-chat lambda (chat.tf) is packaged via archive_file
     archive = {
       source  = "hashicorp/archive"
-      version = "~> 2.4"
+      version = "~> 2.8"
     }
     # the wait between the browser recording role's policy and the browser that tests it
     time = {
       source  = "hashicorp/time"
-      version = "~> 0.13"
+      version = "~> 0.14"
     }
   }
 }

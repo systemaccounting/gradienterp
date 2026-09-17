@@ -10,15 +10,13 @@ version: 0.2
 
 env:
   variables:
-    TF_VERSION: "1.10.3"
     TF_IN_AUTOMATION: "1"
 
 phases:
   install:
     commands:
-      - echo "==> installing terraform ${TF_VERSION}"
-      - curl -fsSL -o /tmp/tf.zip "https://releases.hashicorp.com/terraform/${TF_VERSION}/terraform_${TF_VERSION}_linux_amd64.zip"
-      - unzip -q /tmp/tf.zip -d /usr/local/bin/
+      # the one terraform version, config.json's — the workflows and the laptop read the same value
+      - TF_VERSION="$(jq -r .TF_VERSION config.json)" && echo "==> installing terraform ${TF_VERSION}" && curl -fsSL -o /tmp/tf.zip "https://releases.hashicorp.com/terraform/${TF_VERSION}/terraform_${TF_VERSION}_linux_amd64.zip" && unzip -q /tmp/tf.zip -d /usr/local/bin/
       - terraform version
 
   pre_build:

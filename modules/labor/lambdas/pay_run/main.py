@@ -48,13 +48,14 @@ import instances       # the rule-instance store — modules/rules/instances.py
 import params          # the platform store (GENERAL rows) — modules/rules/params.py
 import general_rules   # rate_posting — the general rules, owned by nobody
 import payroll_rules   # labor's rules (wage_accrual, us_federal, ca_pit)
+import metric_rules   # modules/metrics: record_metric — a moment as a product event, by a row
 
 from boto3.dynamodb.conditions import Key
 
 import journal
 from aws import client as _aws, table as _table, log
 
-RULE_LIBS = [general_rules, payroll_rules]
+RULE_LIBS = [general_rules, payroll_rules, metric_rules]
 
 POST_JOURNAL_ENTRY_FN = os.environ.get("POST_JOURNAL_ENTRY_FN", "")
 
@@ -257,7 +258,8 @@ def _run_one(worker_id: str, period: str) -> dict:
         resolved.append({**inst, "param": p})
     matched = resolved
 
-    ctx = {"gross": gross, "ytd": {"gross_wages": _ytd_gross_wages(worker_id, period)}}
+    ctx = {"gross": gross, "ytd": {"gross_wages": _ytd_gross_wages(worker_id, period)},
+           "worker_id": worker_id, "period": period}
     effects = rules.run_instances(ctx, matched, modules=RULE_LIBS)
     if not effects:
         return {"worker_id": worker_id, "period": period, "gross": gross,
