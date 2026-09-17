@@ -1,0 +1,55 @@
+# Writes every terraform directory's lock file on a runner — one version per provider, darwin_amd64
+# and linux_amd64 — validates every directory against them the way terraform.yaml does (a filesystem
+# mirror and a plugin cache), and pushes the lock files back to the branch. The downloads never
+# touch a laptop. Dispatched by hand or `gh workflow run tf-lock.yaml -f ref=<branch>`; the job's
+# push starts no other workflow, so the next push to the branch is what runs terraform.yaml on them.
+name: tf-lock
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: the branch to lock and push to
+        required: true
+        default: main
+
+permissions:
+  contents: write
+
+jobs:
+  lock:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.ref }}
+
+      - id: cfg
+        run: echo "tf=$(jq -r '.TF_VERSION // "1.10.5"' config.json)" >> "$GITHUB_OUTPUT"
+
+      - uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_version: ${{ steps.cfg.outputs.tf }}
+          terraform_wrapper: false
+
+      - name: the lock files
+        run: bash scripts/tf-lock.sh --mirror "$RUNNER_TEMP/tf-mirror"
+
+      - name: validate against them, from the plugin cache
+        run: |
+          mkdir -p "$RUNNER_TEMP/terraform-plugin-cache"
+          printf 'plugin_cache_dir = "%s"\nprovider_installation {\n  filesystem_mirror {\n    path = "%s"\n  }\n  direct {}\n}\n' \
+            "$RUNNER_TEMP/terraform-plugin-cache" "$RUNNER_TEMP/tf-mirror" > "$RUNNER_TEMP/terraform.rc"
+          TF_CLI_CONFIG_FILE="$RUNNER_TEMP/terraform.rc" bash .github/workflows/tf-validate-all.sh
+
+      - name: push them
+        env:
+          REF: ${{ inputs.ref }}
+        run: |
+          git add -A -- '**/.terraform.lock.hcl'
+          if git diff --cached --quiet; then echo "the lock files are as they were"; exit 0; fi
+          git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+            commit -q -m "lock files: one version per provider, both platforms" \
+            -m "Written by tf-lock.yaml on a runner: scripts/tf-lock.sh mirrored each provider once for darwin_amd64 and linux_amd64 and locked every directory from that mirror, then every directory validated from the plugin cache against them."
+          git push origin "HEAD:$REF"
