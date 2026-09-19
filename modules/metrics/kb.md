@@ -88,7 +88,9 @@ defaults to day.
 A question none of these answers: `read_schema {source: local, registry: metric_queries}` lists
 this firm's own rows; `search_guides` finds a canonical one by what it answers. None fits: write
 the SQL over the table `metrics` (`event, subject_id, ts` as a UTC ISO string, `via`,
-`properties` a map: `element_at(properties, 'plan')`; Athena syntax, `?` for each parameter),
+`properties` a map: `element_at(properties, 'plan')`; Athena syntax, `?` for each parameter
+where an expression goes — a function argument, a comparison; the zone through
+`at_timezone(from_iso8601_timestamp(ts), ?)`, never `AT TIME ZONE ?`),
 save it, then call it:
 
     write_schema op=extend registry=metric_queries bucket=athena name=joined_by_plan

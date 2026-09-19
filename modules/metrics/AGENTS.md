@@ -54,8 +54,9 @@ and joined to the books. Why in `README.md`.
   (`modules/schemas`), bucket the engine, name the query: a description, the SQL with `?` markers,
   the ordered typed params. `rows.py` reads a name from the table, or from the canonical file
   (`metric_queries.json`, the operator's canonical bucket; `modules/schemas/data` locally) and
-  copies it into the table as a canonical row on that first use; a name in neither is a 404 that
-  says how to list, search and save. The canonical set: `active`, `count`, `count_by`,
+  copies it into the table as a canonical row on that first use, and refreshes a canonical row
+  from the file on a later call when the file changed; a name in neither is a 404 that says how
+  to list, search and save. The canonical set: `active`, `count`, `count_by`,
   `funnel_3`, `retention`. A gerp's own row is one the agent saved with `write_schema op=extend`;
   the registry is listed and readable but never seeded (`NOT_SEEDED` in the schemas module)
 - **the binding** — Athena substitutes `ExecutionParameters` into the SQL as text before planning,
@@ -74,7 +75,10 @@ and joined to the books. Why in `README.md`.
   in the (moto) bucket, pulls the Parquet, substitutes the literals into the `?` markers the way
   Athena does, and runs the SQL over `read_parquet(…, hive_partitioning = true)` with macros for
   the Trino functions the canonical rows use (`from_iso8601_timestamp`, `date_format`,
-  `element_at`); a gerp's own row outside that set may not run locally. duckdb is a test
+  `element_at`, `at_timezone`); a gerp's own row outside that set may not run locally. Athena
+  parses a query before it substitutes the parameters, so a marker is taken where an expression
+  is (a function argument, a comparison) and not after `AT TIME ZONE`, which takes a literal:
+  the canonical rows shift the zone with `at_timezone(ts, ?)` (found on the first integ run). duckdb is a test
   dependency imported by name (`importlib.import_module`), so the deploy walk never bundles it. `tests/metrics/_helpers.py`
   seeds the bucket with the same partitioned Parquet Firehose writes
 
