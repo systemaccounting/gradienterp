@@ -24,7 +24,7 @@ verbs (run via `bash scripts/deploy.sh …`):
       the bucket. `--all` pushes every active gerp through its gerp-<id> profile,
       the BFF once.
 
-  image [--gerp G | --all] [--no-build [--tag vNN]]
+  image [--gerp G | --all] [--no-build [--tag vNN] | --tag pr-<n>-<sha>]
       build, `upload image`, then each gerp's runtimes onto the digest from its
       own region's copy of the image, named endpoints re-pinned.
 
@@ -52,6 +52,7 @@ import hashlib
 import io
 import json
 import os
+import re
 import sys
 import time
 import zipfile
@@ -735,9 +736,10 @@ def _docker(argv, profile):
         sys.exit(f"{' '.join(cmd)} failed:\n{r.stderr[-1500:]}")
 
 
-def upload_image(ecr, profile):
-    """Push the image `docker.sh --build` made under the next immutable `vNN` tag; (tag, digest)."""
-    tag = f"v{latest_image_tag(ecr) + 1}"
+def upload_image(ecr, profile, tag=None):
+    """Push the image `docker.sh --build` made under the next immutable `vNN` tag, or under `tag`
+    (a pull request's `pr-<n>-<sha>`, outside the vNN line); (tag, digest)."""
+    tag = tag or f"v{latest_image_tag(ecr) + 1}"
     print(f"==> pushing {tag}")
     _docker(["--push", f"{CONFIG['OPERATOR_ACCOUNT_ID']}.dkr.ecr.us-east-1.amazonaws.com/{IMAGE_REPO}:{tag}"], profile)
     return tag, image_digest(ecr, tag)
@@ -755,8 +757,9 @@ def cmd_image(args):
     named gerps onto the image already at the top of ECR."""
     op = _boto(args.operator_profile)
     ecr = op.client("ecr")
-    if args.tag and not args.no_build:
-        sys.exit("--tag names an image already pushed, so it goes with --no-build")
+    if args.tag and not args.no_build and re.fullmatch(r"v\d+", args.tag):
+        sys.exit("--tag vNN names an image already pushed, so it goes with --no-build; "
+                 "--tag with a build is a pull request's pr-<n>-<sha>, outside the vNN line")
     if args.no_build:
         # a named tag holds still; the top of ECR moves with the next push
         tag = args.tag or f"v{latest_image_tag(ecr)}"
@@ -765,7 +768,7 @@ def cmd_image(args):
     else:
         print("==> building")
         _docker(["--build"], args.operator_profile)
-        tag, digest = upload_image(ecr, args.operator_profile)
+        tag, digest = upload_image(ecr, args.operator_profile, args.tag)
     print(f"==> {tag} = {digest}")
 
     walked = 0
@@ -1025,7 +1028,8 @@ def main():
     im.add_argument("--gerp", default="gradienterp", help="the gerp whose runtime takes the image (default: the operator's own)")
     im.add_argument("--all", action="store_true", help="every active gerp — said, never implied")
     im.add_argument("--no-build", action="store_true", help="no build: move the named gerps onto the image already at the top of ECR")
-    im.add_argument("--tag", help="with --no-build: the pushed vNN to move onto, rather than the top of ECR")
+    im.add_argument("--tag", help="with --no-build: the pushed vNN to move onto, rather than the top of ECR; "
+                                  "with a build: push under this tag instead of the next vNN (a pull request's pr-<n>-<sha>)")
     im.add_argument("--operator-profile", default="operator-org")
     im.set_defaults(fn=cmd_image)
     up = sub.add_parser("upload", help="put what zip.sh or docker.sh --build made (upload.sh)")

@@ -2,8 +2,8 @@
 # resolves them: the role's credentials are `[default]`, and `scripts/awsacct.sh --all` writes every
 # profile that chains from it (operator-org, hub-<region>, gerp-<id>).
 #
-# The job has to be in the `prod` environment (the role trusts nothing else) with `id-token: write`,
-# and pass the environment's secret:
+# The job has to be in the `prod` environment, or `image-check` for a pull request's image on westwood
+# (the role trusts those two subjects), with `id-token: write`, and pass the environment's secret:
 #
 #   - uses: ./.github/actions/aws
 #     with:
@@ -12,7 +12,7 @@ name: aws
 description: take gerp-github-deploy as [default] and write the profiles that chain from it
 inputs:
   role:
-    description: the role's arn (the prod environment's AWS_DEPLOY_ROLE_ARN)
+    description: the role's arn (the environment's AWS_DEPLOY_ROLE_ARN)
     required: true
 runs:
   using: composite

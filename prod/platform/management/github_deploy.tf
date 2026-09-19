@@ -35,7 +35,12 @@ resource "aws_iam_role" "github_deploy" {
       Condition = {
         StringEquals = {
           "token.actions.githubusercontent.com:aud" = "sts.amazonaws.com"
-          "token.actions.githubusercontent.com:sub" = "repo:systemaccounting@12200511/gradienterp@1368357735:environment:prod"
+          # prod: every apply and deploy. image-check: a pull request's image on westwood, a job
+          # that runs only after the environment's reviewer approves that run (image-check.yaml)
+          "token.actions.githubusercontent.com:sub" = [
+            "repo:systemaccounting@12200511/gradienterp@1368357735:environment:prod",
+            "repo:systemaccounting@12200511/gradienterp@1368357735:environment:image-check",
+          ]
         }
       }
     }]

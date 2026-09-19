@@ -200,6 +200,27 @@ def test_an_image_deploy_with_a_tag_moves_onto_that_tag_and_not_the_top_of_ecr()
             raise AssertionError("--tag without --no-build names a build it won't make")
 
 
+
+def test_a_pull_requests_image_is_pushed_under_its_own_tag_and_westwood_moves_onto_it():
+    """image-check.yaml: a pull request's image goes to ECR as pr-<n>-<sha>, outside the vNN line, and
+    the named gerp's runtime moves onto that digest — the vNN counter never advances for it."""
+    class ECR:
+        def describe_images(self, repositoryName, imageIds=None, **kw):
+            if imageIds:
+                return {"imageDetails": [{"imageDigest": f"sha256:{imageIds[0]['imageTag']}"}]}
+            raise AssertionError("a named tag never reads the vNN line")
+
+    moved, docker = [], []
+    with _patched(_boto=lambda p: Session({"ecr": ECR()}),
+                  _docker=lambda args, profile: docker.append(args),
+                  _gerp_sessions=lambda op, only=None: iter([("westwood", "2", "us-east-1", Session({"bedrock-agentcore-control": None}))]),
+                  image_replicated=lambda op, region, digest: True,
+                  _update_runtimes=lambda ctl, digest, label, region: moved.append(digest)):
+        deploy.cmd_image(Namespace(operator_profile="op", no_build=False, tag="pr-20-abcdef0", all=False, gerp="westwood"))
+    assert docker[0] == ["--build"]
+    assert docker[1][0] == "--push" and docker[1][1].endswith(":pr-20-abcdef0")
+    assert moved == ["sha256:pr-20-abcdef0"]
+
 if __name__ == "__main__":
     for _name, _fn in sorted(globals().items()):
         if _name.startswith("test_") and callable(_fn):

@@ -161,6 +161,15 @@ Tenant metadata at `/gradienterp/customers/<customer_id>` is seeded by tower's `
 
 Invoking the deployed runtime has silent-failure modes — `--content-type application/json`, base64 payload, ≥33-char session id — collected under "AgentCore gotchas → Invoke contract".
 
+### a base-image bump
+
+Dependabot opens the pull request (`.github/dependabot.yml`, `modules/agent/docker`). None of the
+usual checks start the container, so `image-check.yaml` does: the build on an arm64 runner, always;
+then, once the `image-check` environment's reviewer approves the run, the image pushed as
+`pr-<n>-<sha>`, westwood's runtime moved onto it, one tool-calling turn through `scripts/chat.sh`,
+and the answer posted on the pull request. Read the answer, merge, then `bash scripts/deploy.sh
+image --all` from main moves the fleet onto the next `vNN`.
+
 ## tearing down
 
 `terraform destroy` from `prod/per_customer/` orders the modules automatically. Things to know:
