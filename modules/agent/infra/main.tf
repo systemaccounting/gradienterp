@@ -172,12 +172,14 @@ data "aws_iam_policy_document" "agent_execution" {
   }
 
   # Read per-customer registry DDB at boot — entrypoint.py builds the prompt's
-  # registry section from these rows. Table arn constructed deterministically
-  # to avoid a cross-module data dependency on registries/infra outputs.
+  # registry section from these rows — and the pinned metric queries every turn; the metrics
+  # usage table for the queries this firm ran last. Table arns constructed deterministically
+  # to avoid a cross-module data dependency on module outputs.
   statement {
     actions = ["dynamodb:Query"]
     resources = [
       "arn:aws:dynamodb:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:table/${var.stack_prefix}-schema-${replace(var.gerp_id, "_", "-")}",
+      "arn:aws:dynamodb:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:table/${var.stack_prefix}-metrics-${replace(var.gerp_id, "_", "-")}-usage",
     ]
   }
 
@@ -524,6 +526,10 @@ resource "aws_bedrockagentcore_agent_runtime" "this" {
     # section. Table name is deterministic — same construction as
     # modules/schemas/infra creates it.
     SCHEMA_TABLE = "${var.stack_prefix}-schema-${replace(var.gerp_id, "_", "-")}"
+
+    # the prompt's dynamic tail carries the metric queries this firm pinned (registry rows) and
+    # the ones it ran last (modules/metrics' usage table). Name constructed like SCHEMA_TABLE.
+    USAGE_TABLE = "${var.stack_prefix}-metrics-${replace(var.gerp_id, "_", "-")}-usage"
 
     # entrypoint's search_guides tool retrieves how-to playbooks from this
     # gerp's Bedrock Knowledge Base at turn-time. WEBHOOK_BASE_URL fills the

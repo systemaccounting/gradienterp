@@ -20,6 +20,9 @@ import os
 from aws import client as _aws_client, resource as _aws_resource
 
 NOT_REGISTRIES = {"rule_params", "profile_fields"}
+# listed and readable, never seeded: the canonical set can grow past what any gerp uses, and a
+# row lands in a gerp's table on first use (modules/metrics, manage_metrics op=query)
+NOT_SEEDED = {"metric_queries"}
 
 _cache = {}
 

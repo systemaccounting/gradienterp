@@ -83,6 +83,12 @@ variable "storage_kms_key_arn" {
   type        = string
 }
 
+variable "canonical_bucket" {
+  description = "The operator's canonical registry bucket (modules/schemas): manage_metrics reads metric_queries.json from it to copy a canonical query into the gerp's table on first use. Deliberate literal default, the schemas module's."
+  type        = string
+  default     = "gerp-canonical-185369506315"
+}
+
 variable "register_with_agent" {
   description = "Register manage_metrics as a tool on the customer's agent gateway."
   type        = bool
@@ -110,6 +116,7 @@ locals {
   database       = replace("${var.stack_prefix}_metrics_${var.gerp_id}", "-", "_")
   table          = "metrics"
   settings_table = "${var.stack_prefix}-settings-${local.gerp}"
+  schema_table   = "${var.stack_prefix}-schema-${local.gerp}" # the registry table (modules/schemas), where metric_queries rows live
   bucket_arn     = "arn:aws:s3:::${var.storage_bucket}"
   account_id     = data.aws_caller_identity.current.account_id
   region         = data.aws_region.current.region
@@ -521,6 +528,19 @@ resource "aws_iam_role_policy" "manage" {
         Resource = "arn:aws:dynamodb:${local.region}:${local.account_id}:table/${local.settings_table}"
       },
       {
+        # a query is a metric_queries row in the registry table: read by name, and a canonical one
+        # written on first use
+        Effect   = "Allow"
+        Action   = ["dynamodb:Query", "dynamodb:PutItem"]
+        Resource = "arn:aws:dynamodb:${local.region}:${local.account_id}:table/${local.schema_table}"
+      },
+      {
+        # the canonical query file, for the copy on first use
+        Effect   = "Allow"
+        Action   = "s3:GetObject"
+        Resource = "arn:aws:s3:::${var.canonical_bucket}/metric_queries.json"
+      },
+      {
         Effect   = "Allow"
         Action   = ["logs:CreateLogGroup", "logs:CreateLogStream", "logs:PutLogEvents"]
         Resource = "arn:aws:logs:${local.region}:${local.account_id}:*"
@@ -543,6 +563,8 @@ locals {
     GLUE_TABLE        = aws_glue_catalog_table.metrics.name
     GERP_TIMEZONE     = var.timezone
     SETTINGS_TABLE    = local.settings_table
+    SCHEMA_TABLE      = local.schema_table
+    CANONICAL_BUCKET  = var.canonical_bucket
   }
   functions = {
     record         = { role = aws_iam_role.record.arn, timeout = 30 }

@@ -25,8 +25,8 @@ and joined to the books. Why in `README.md`.
 - **`manage_metrics`** (the gateway tool) — `publish_source {caller}` writes the token (256 bits
   from the OS, SecureString) and returns it once with the url; the same caller again rotates.
   `unpublish_source` deletes it. `list_sources` names callers (DescribeParameters, no values).
-  `record` writes one event from the conversation. `count {event, grain, by?}`, `distinct {event,
-  grain}`, `funnel {events}`, `retention {event, grain}` and `query {sql}` are the reads
+  `record` writes one event from the conversation. `query {name, params, window|start+end}` is
+  the read: a `metric_queries` registry row run by name (below). There is no inline SQL
 - **`record_metric`** (`metric_rules.py`) — params `{event, subject: <ctx field>, properties:
   {name: <ctx field>}}`. Reads the subject and the properties off the callsite's ctx, sends with
   `via: rule` and the exec id, returns `[]` so a callsite that folds returns into postings is
@@ -50,21 +50,32 @@ and joined to the books. Why in `README.md`.
   `metrics/results/metrics/` (SSE-KMS, expired after a day by the cabinet's lifecycle rule in
   `prod/init_customer`). The tool role reaches this workgroup, this database and these two
   prefixes and nothing else, so the agent's SQL reads the firm's own record only
-- **the reads** — `queries.py` builds each fixed read from one template and a two-entry dialect
-  (how an ISO string becomes a local timestamp, how a timestamp prints); everything else is SQL
-  both Athena and duckdb share. Bins are cut in the firm's zone (`modules/clock`): a 06:30 UTC
-  event is the day before in Los Angeles. Windows: `today | this_week | this_month | last_month |
-  this_year | last_7_days | last_30_days | last_90_days`, or `start` + `end` (ISO in the firm's
-  zone, end exclusive); default this_month. A funnel counts a subject at step i only when every
-  earlier step's first time precedes it. Retention folds cohorts by first period × offset
-- **the usage row** — after every read, `{payer: gerp, sk: <ts>#<query_id>, query_id, ts, op,
+- **the reads are registry rows** — `metric_queries` in the gerp's registry table
+  (`modules/schemas`), bucket the engine, name the query: a description, the SQL with `?` markers,
+  the ordered typed params. `rows.py` reads a name from the table, or from the canonical file
+  (`metric_queries.json`, the operator's canonical bucket; `modules/schemas/data` locally) and
+  copies it into the table as a canonical row on that first use; a name in neither is a 404 that
+  says how to list, search and save. The canonical set: `active`, `count`, `count_by`,
+  `funnel_3`, `retention`. A gerp's own row is one the agent saved with `write_schema op=extend`;
+  the registry is listed and readable but never seeded (`NOT_SEEDED` in the schemas module)
+- **the binding** — Athena substitutes `ExecutionParameters` into the SQL as text before planning,
+  so the declared type is the boundary: a `string` becomes a single-quoted literal with quotes
+  doubled, a `number` only if it parses, a `timestamp` in the store's format
+  (`YYYY-MM-DDTHH:MM:SS.mmmZ`) so a comparison against `ts` holds at the window's edges. Four
+  names are reserved and filled when the call omits them: `start` and `end` from a named window
+  (`today | this_week | this_month | last_month | this_year | last_7_days | last_30_days |
+  last_90_days`, or explicit dates in the firm's zone, end exclusive) through `modules/clock`,
+  `zone` the firm's zone, `grain` `day`. A parameter the row does not declare is refused by name
+- **the usage row** — after every read, `{payer: gerp, sk: <ts>#<query_id>, query_id, ts, name,
   engine, bytes_scanned}` on `<prefix>-usage`, from Athena's `DataScannedInBytes` (locally the
   bytes of the files read). The firm's own record of what its analytics cost it, and the row
   shape a metered reader's query will write (#4)
 - **local mode** — no `AWS_LAMBDA_FUNCTION_NAME` means duckdb: the engine lists the store prefix
-  in the (moto) bucket, pulls the Parquet, runs the same SQL over `read_parquet(…,
-  hive_partitioning = true)`. duckdb is a test dependency imported by name
-  (`importlib.import_module`), so the deploy walk never bundles it. `tests/metrics/_helpers.py`
+  in the (moto) bucket, pulls the Parquet, substitutes the literals into the `?` markers the way
+  Athena does, and runs the SQL over `read_parquet(…, hive_partitioning = true)` with macros for
+  the Trino functions the canonical rows use (`from_iso8601_timestamp`, `date_format`,
+  `element_at`); a gerp's own row outside that set may not run locally. duckdb is a test
+  dependency imported by name (`importlib.import_module`), so the deploy walk never bundles it. `tests/metrics/_helpers.py`
   seeds the bucket with the same partitioned Parquet Firehose writes
 
 ## the row, end to end
@@ -74,7 +85,8 @@ POST /metrics  {"event": "member.checked_in", "subject_id": "c_8812", "propertie
   → bus: source metrics, detail-type member.checked_in, detail {subject_id, ts, properties, via: door, caller: pos}
   → Firehose row: {"event": "member.checked_in", "subject_id": "c_8812", "ts": "2026-09-15T21:02:00.000Z", "via": "door", "properties": {"location": "pier"}}
   → s3://<cabinet>/metrics/year=2026/month=09/day=15/<file>.parquet
-  → SELECT count(DISTINCT subject_id) FROM metrics WHERE event = 'member.checked_in' AND ts >= '…' AND ts < '…'
+  → manage_metrics {op: query, name: active, params: {event: member.checked_in, grain: week}, window: this_month}
+  → the `active` row's SQL with its `?` markers filled: count(DISTINCT subject_id) per week, cut in the firm's zone
 ```
 
 ## gotchas

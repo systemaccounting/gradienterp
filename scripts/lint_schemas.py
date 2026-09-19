@@ -23,6 +23,7 @@
 Run standalone or via scripts/test.sh.
 """
 import glob
+import re
 import json
 import sys
 
@@ -151,10 +152,42 @@ for path in registries:
             else:
                 bad.append((path, f"`{bucket}.{name}` must be an entry object or a type string"))
 
+# the two metric registries: a vocabulary of event names, and queries with typed positional params
+PARAM_TYPES = {"string", "number", "timestamp"}
+n_metric = 0
+for path in ("modules/schemas/data/metric_events.json", "modules/schemas/data/metric_queries.json"):
+    try:
+        doc = json.load(open(path))
+    except Exception as e:  # noqa: BLE001
+        bad.append((path, f"unparseable ({e})"))
+        continue
+    for bucket, entries in doc.items():
+        if not isinstance(entries, dict):
+            bad.append((path, f"bucket `{bucket}` must be an object of entries"))
+            continue
+        for name, entry in entries.items():
+            n_metric += 1
+            if not isinstance(entry, dict) or not str(entry.get("description", "")).strip():
+                bad.append((path, f"`{bucket}.{name}` needs a description"))
+                continue
+            if path.endswith("metric_events.json"):
+                if not re.fullmatch(r"[a-z0-9_]+(\.[a-z0-9_]+)+", name):
+                    bad.append((path, f"`{bucket}.{name}` is not <resource>.<action_past>"))
+                if not isinstance(entry.get("properties", []), list):
+                    bad.append((path, f"`{bucket}.{name}` properties must be a list"))
+            else:
+                params, sql = entry.get("params"), entry.get("sql")
+                if not isinstance(params, list) or any(not isinstance(q, dict) or not q.get("name") or q.get("type") not in PARAM_TYPES for q in params):
+                    bad.append((path, f"`{bucket}.{name}` params must be a list of {{name, type}} with type in {sorted(PARAM_TYPES)}"))
+                if not isinstance(sql, str) or not sql.strip():
+                    bad.append((path, f"`{bucket}.{name}` needs sql"))
+                elif isinstance(params, list) and sql.count("?") != len(params):
+                    bad.append((path, f"`{bucket}.{name}` has {sql.count('?')} `?` markers and {len(params)} params"))
+
 if bad:
     print(f"schema lint: {len(bad)} problem(s)")
     for f, why in bad:
         print(f"  {f}: {why}")
     sys.exit(1)
 print(f"schema lint: {n_tools} gateway descriptions <= {CAP} bytes ✓ · "
-      f"{n_fields} registry fields across {len(registries)} registries ✓")
+      f"{n_fields} registry fields across {len(registries)} registries ✓ · {n_metric} metric entries ✓")

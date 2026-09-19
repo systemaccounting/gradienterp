@@ -34,7 +34,7 @@ import os
 import time
 from decimal import Decimal
 
-from _registries import registries
+from _registries import NOT_SEEDED, registries
 
 from boto3.dynamodb.conditions import Key
 
@@ -194,6 +194,8 @@ def handler(event, context):
         seeded = {}
         table = schema_table()
         for registry_name in registries():
+            if registry_name in NOT_SEEDED:
+                continue
             canonical = _load_canonical(registry_name)
             if canonical is None:
                 log.warning(f"seed_schema: {registry_name}.json not found, skipping")
