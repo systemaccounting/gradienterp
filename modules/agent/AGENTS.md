@@ -167,8 +167,10 @@ Dependabot opens the pull request (`.github/dependabot.yml`, `modules/agent/dock
 usual checks start the container, so `image-check.yaml` does: the build on an arm64 runner, always;
 then, once the `image-check` environment's reviewer approves the run, the image pushed as
 `pr-<n>-<sha>`, westwood's runtime moved onto it, one tool-calling turn through `scripts/chat.sh`,
-and the answer posted on the pull request. Read the answer, merge, then `bash scripts/deploy.sh
-image --all` from main moves the fleet onto the next `vNN`.
+and the answer posted on the pull request; then westwood back onto the latest `vNN` and the `pr-`
+tag deleted, since the runtime's terraform pins the newest image in ECR and a `pr-` tag must never
+be it. Read the answer, merge, then `bash scripts/deploy.sh image --all` from main moves the fleet
+onto the next `vNN`.
 
 ## tearing down
 

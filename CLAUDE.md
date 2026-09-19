@@ -20,6 +20,9 @@ build a throttle or a cap where you expect a queue to form, and leave it off unt
 
 ## commits
 
+no "generated with" line on a pull request description, an issue or a comment. the commit trailer
+is where authorship lives, and github already shows the contributor
+
 a subject names the one change in about 40 characters, so GitHub's file list shows it whole. detail goes in the body, after a blank line
 
 a change pushed to find out what it does — a value timed on a CI runner, a workflow tried on GitHub — goes on a branch with a pull request open, since the workflows run on pull requests. it merges to main once the result says to keep it. a workflow run by `workflow_dispatch` is the exception: GitHub dispatches only a workflow file already on the default branch, so it goes to main and is tried there

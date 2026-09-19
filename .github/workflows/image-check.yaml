@@ -2,8 +2,10 @@
 # among them). Two jobs: the build, always, with no credential; then the image on westwood answering
 # a turn, a job on the `image-check` environment that waits for the environment's reviewer to approve
 # the run and only then holds the deploy role — a Dependabot or fork pull request runs unreviewed
-# code, and the approval is the review. The turn's answer is posted on the pull request. After the
-# merge, `deploy.sh image --all` from main moves every runtime onto the next vNN tag as usual.
+# code, and the approval is the review. The turn's answer is posted on the pull request. The pr- image
+# lives only for the run: the runtime's terraform pins the newest image in ECR with no tag filter, so
+# the run ends by moving westwood back onto the latest vNN and deleting the pr- tag, whatever the turn
+# said. After the merge, `deploy.sh image --all` from main moves every runtime onto the next vNN.
 name: image-check
 
 on:
@@ -51,7 +53,8 @@ jobs:
 
       # the tag is outside the vNN line: it names the pull request and its head, and an immutable
       # repository takes each once
-      - name: the image on westwood
+      - id: image
+        name: the image on westwood
         env:
           TAG: pr-${{ github.event.pull_request.number }}-${{ github.event.pull_request.head.sha }}
         run: bash scripts/deploy.sh image --gerp westwood-c40fd8 --tag "${TAG:0:16}" | tee "$RUNNER_TEMP/image.out"
@@ -74,3 +77,16 @@ jobs:
         run: |
           { echo "image-check on westwood: $(grep '^==> pr-' "$RUNNER_TEMP/image.out" || echo 'no image')"; echo; echo '```'; cat "$RUNNER_TEMP/answer.txt" 2>/dev/null || echo "(no answer)"; echo '```'; } > "$RUNNER_TEMP/comment.md"
           gh pr comment "$PR" --repo "$GITHUB_REPOSITORY" --body-file "$RUNNER_TEMP/comment.md"
+
+      # westwood back onto the latest vNN, then the pr- tag out of ECR, so the newest image is a vNN
+      # again for any gerp's next apply. Runs whatever the turn said, once the image step ran
+      - name: westwood back, the pr image gone
+        if: always() && steps.image.conclusion != 'skipped'
+        env:
+          TAG: pr-${{ github.event.pull_request.number }}-${{ github.event.pull_request.head.sha }}
+        run: |
+          latest="$(aws ecr describe-images --repository-name agentcore --profile operator-org --no-cli-pager \
+            --query 'imageDetails[].imageTags[]' --output text | tr '\t' '\n' | grep -E '^v[0-9]+$' | sort -V | tail -1)"
+          bash scripts/deploy.sh image --gerp westwood-c40fd8 --no-build --tag "$latest"
+          aws ecr batch-delete-image --repository-name agentcore --profile operator-org --no-cli-pager \
+            --image-ids imageTag="${TAG:0:16}" --query 'imageIds[].imageTag' --output text
