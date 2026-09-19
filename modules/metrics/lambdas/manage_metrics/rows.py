@@ -4,7 +4,8 @@ The row holds the SQL with `?` markers and the ordered, typed parameters. Readin
 own registry table first (`gerp-schema-<gerp>`, the table every registry lives in); a name not
 there is looked up in the canonical file (`metric_queries.json`, the operator's canonical bucket in
 Lambda, `modules/schemas/data` locally) and copied into the table as a canonical row on that
-first use, the shape `seed_schema` writes. A name in neither is the error the agent acts on.
+first use, the shape `seed_schema` writes, and refreshed from the file on a later call when the
+file changed. A name in neither is the error the agent acts on.
 
 Binding: Athena substitutes `ExecutionParameters` into the SQL as text before planning, so the
 declared type is the boundary — a string becomes a single-quoted literal with its quotes doubled,
@@ -86,21 +87,35 @@ def read(name: str) -> dict:
     for row in resp.get("Items", []):
         if row.get("name") == name:
             schema = _from_ddb(row.get("schema") or {})
-            return {"name": name, "engine": row.get("bucket"), "description": schema.get("description", ""),
+            engine = row.get("bucket")
+            if row.get("origin") == "canonical":
+                # a canonical row follows the file: a fix to the canonical SQL reaches a gerp on its
+                # next call, ahead of the weekly pull. The gerp's own rows are its own
+                entry = (_canonical().get(engine) or {}).get(name)
+                if entry and _to_ddb(entry) != row.get("schema"):
+                    _copy(engine, name, entry, row.get("pinned"))
+                    schema = entry
+            return {"name": name, "engine": engine, "description": schema.get("description", ""),
                     "params": schema.get("params") or [], "sql": schema.get("sql") or "",
                     "origin": row.get("origin"), "pinned": bool(row.get("pinned"))}
     for engine, entries in _canonical().items():
         if name in entries:
             entry = entries[name]
-            _table().put_item(Item={
-                "registry": REGISTRY, "bucket_name": f"{engine}#{name}", "bucket": engine, "name": name,
-                "schema": _to_ddb(entry), "origin": "canonical",
-                "created_at": int(time.time() * 1000), "created_by": "first use",
-            })
+            _copy(engine, name, entry, False)
             return {"name": name, "engine": engine, "description": entry.get("description", ""),
                     "params": entry.get("params") or [], "sql": entry.get("sql") or "", "origin": "canonical",
                     "pinned": False}
     raise NoSuchQuery(name)
+
+
+def _copy(engine: str, name: str, entry: dict, pinned) -> None:
+    """The canonical entry as a row of the gerp's table, the shape `seed_schema` writes."""
+    item = {"registry": REGISTRY, "bucket_name": f"{engine}#{name}", "bucket": engine, "name": name,
+            "schema": _to_ddb(entry), "origin": "canonical",
+            "created_at": int(time.time() * 1000), "created_by": "first use"}
+    if pinned:
+        item["pinned"] = True
+    _table().put_item(Item=item)
 
 
 # ─── the window, on the firm's calendar ───

@@ -26,6 +26,11 @@ MACROS = (
     "CREATE MACRO from_iso8601_timestamp(s) AS CAST(s AS TIMESTAMPTZ)",
     "CREATE MACRO date_format(t, f) AS strftime(t, f)",
     "CREATE MACRO element_at(m, k) AS m[k]",
+    # Trino's at_timezone(ts, zone) is the zone-shifted timestamp; duckdb's AT TIME ZONE on a
+    # timestamptz is the same instant as a local wall clock, and date_trunc/strftime read it alike.
+    # A parameter marker is taken as a function argument and not after AT TIME ZONE (Athena parses
+    # before it substitutes), which is why the canonical rows use the function
+    "CREATE MACRO at_timezone(t, z) AS (t AT TIME ZONE z)",
 )
 
 

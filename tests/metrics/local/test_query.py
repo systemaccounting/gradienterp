@@ -109,6 +109,27 @@ def test_a_canonical_row_is_in_the_table_after_first_use_and_a_saved_row_runs_ba
         assert sorted(u["name"] for u in used) == ["count", "joined_by_plan"] and all(int(u["bytes_scanned"]) > 0 for u in used)
 
 
+def test_a_canonical_row_follows_the_file_and_a_saved_row_is_left_alone():
+    """A canonical fix (the at_timezone one, 2026-09-19) reaches a gerp that already copied the row
+    on its next call; the gerp's own rows are its own."""
+    with scratch_env():
+        seed_store(ROWS)
+        tool = load_lambda("manage_metrics")
+        save_query("count", "SELECT 1 AS stale", [], engine="athena")   # a copy from an older file
+        from aws import resource
+        t = resource("dynamodb").Table(__import__("os").environ["SCHEMA_TABLE"])
+        t.update_item(Key={"registry": "metric_queries", "bucket_name": "athena#count"},
+                      UpdateExpression="SET origin = :o, pinned = :p", ExpressionAttributeValues={":o": "canonical", ":p": True})
+        code, body = _q(tool, "count", params={"event": "member.joined"}, **SEPT)
+        assert code == 200 and body["rows"][0]["n"] == 1, "the file's SQL ran, not the stale copy"
+        row = query_rows()["count"]
+        assert "at_timezone" in row["schema"]["M"]["sql"]["S"] and row["pinned"]["BOOL"] is True, "refreshed, the pin kept"
+
+        save_query("mine", "SELECT 2 AS mine", [])
+        code, body = _q(tool, "mine")
+        assert body["rows"] == [{"mine": 2}], "an extension row is never touched"
+
+
 def test_a_missing_name_fails_naming_it_and_there_is_no_inline_sql():
     with scratch_env():
         tool = load_lambda("manage_metrics")

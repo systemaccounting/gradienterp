@@ -24,7 +24,7 @@
           "type": "timestamp"
         }
       ],
-      "sql": "SELECT date_format(date_trunc(?, from_iso8601_timestamp(ts) AT TIME ZONE ?), '%Y-%m-%d') AS period, count(DISTINCT subject_id) AS subjects FROM metrics WHERE event = ? AND ts >= ? AND ts < ? GROUP BY 1 ORDER BY 1"
+      "sql": "SELECT date_format(date_trunc(?, at_timezone(from_iso8601_timestamp(ts), ?)), '%Y-%m-%d') AS period, count(DISTINCT subject_id) AS subjects FROM metrics WHERE event = ? AND ts >= ? AND ts < ? GROUP BY 1 ORDER BY 1"
     },
     "count": {
       "description": "events per period for one event",
@@ -50,7 +50,7 @@
           "type": "timestamp"
         }
       ],
-      "sql": "SELECT date_format(date_trunc(?, from_iso8601_timestamp(ts) AT TIME ZONE ?), '%Y-%m-%d') AS period, count(*) AS n FROM metrics WHERE event = ? AND ts >= ? AND ts < ? GROUP BY 1 ORDER BY 1"
+      "sql": "SELECT date_format(date_trunc(?, at_timezone(from_iso8601_timestamp(ts), ?)), '%Y-%m-%d') AS period, count(*) AS n FROM metrics WHERE event = ? AND ts >= ? AND ts < ? GROUP BY 1 ORDER BY 1"
     },
     "count_by": {
       "description": "events per period for one event, split by one property (a row per value; no value is NULL)",
@@ -80,7 +80,7 @@
           "type": "timestamp"
         }
       ],
-      "sql": "SELECT date_format(date_trunc(?, from_iso8601_timestamp(ts) AT TIME ZONE ?), '%Y-%m-%d') AS period, element_at(properties, ?) AS by_value, count(*) AS n FROM metrics WHERE event = ? AND ts >= ? AND ts < ? GROUP BY 1, 2 ORDER BY 1, 2"
+      "sql": "SELECT date_format(date_trunc(?, at_timezone(from_iso8601_timestamp(ts), ?)), '%Y-%m-%d') AS period, element_at(properties, ?) AS by_value, count(*) AS n FROM metrics WHERE event = ? AND ts >= ? AND ts < ? GROUP BY 1, 2 ORDER BY 1, 2"
     },
     "funnel_3": {
       "description": "subjects reaching each of three steps in order, in the window: a subject counts at a step only when its first time at every earlier step came before",
@@ -156,7 +156,7 @@
           "type": "string"
         }
       ],
-      "sql": "WITH firsts AS (SELECT subject_id, min(date_trunc(?, from_iso8601_timestamp(ts) AT TIME ZONE ?)) AS cohort FROM metrics WHERE event = ? AND ts >= ? AND ts < ? GROUP BY 1), seen AS (SELECT DISTINCT subject_id, date_trunc(?, from_iso8601_timestamp(ts) AT TIME ZONE ?) AS period FROM metrics WHERE event = ? AND ts >= ? AND ts < ?) SELECT date_format(f.cohort, '%Y-%m-%d') AS cohort, date_diff(?, f.cohort, s.period) AS offset_n, count(DISTINCT s.subject_id) AS n FROM firsts f JOIN seen s ON f.subject_id = s.subject_id GROUP BY 1, 2 ORDER BY 1, 2"
+      "sql": "WITH firsts AS (SELECT subject_id, min(date_trunc(?, at_timezone(from_iso8601_timestamp(ts), ?))) AS cohort FROM metrics WHERE event = ? AND ts >= ? AND ts < ? GROUP BY 1), seen AS (SELECT DISTINCT subject_id, date_trunc(?, at_timezone(from_iso8601_timestamp(ts), ?)) AS period FROM metrics WHERE event = ? AND ts >= ? AND ts < ?) SELECT date_format(f.cohort, '%Y-%m-%d') AS cohort, date_diff(?, f.cohort, s.period) AS offset_n, count(DISTINCT s.subject_id) AS n FROM firsts f JOIN seen s ON f.subject_id = s.subject_id GROUP BY 1, 2 ORDER BY 1, 2"
     }
   }
 }
