@@ -86,6 +86,15 @@ def test_run_takes_the_uploaded_tree_and_waits_on_the_new_run():
     assert out.stdout.splitlines()[:2] == ["run 101", "https://github.com/o/r/actions/runs/101"]
 
 
+def test_run_splits_a_dirs_or_f_value_that_arrived_as_one_word():
+    """zsh does not split `$dirs`, so `--dirs $dirs` arrives as one word holding three, and
+    `${V:+-f k=$V}` as one word holding the flag and its value (2026-09-19, twice). The script takes
+    the words apart, so a caller from any shell means the same thing."""
+    out, state = _workflow("run", "deploy.yaml", "--dirs", "modules/a/lambdas/x modules/b/lambdas/y", "-f gerp=westwood-c40fd8")
+    assert state["zipped"] == "source --dirs modules/a/lambdas/x modules/b/lambdas/y"
+    assert "-f gerp=westwood-c40fd8" in state["dispatched"]
+
+
 def test_run_with_a_named_source_version_zips_and_uploads_nothing():
     out, state = _workflow("run", "apply.yaml", "-f", "stack=dns", "-f", "source_version=V-earlier")
     assert out.returncode == 0, out.stderr

@@ -107,7 +107,10 @@ run_workflow() {
   shift
   while (( $# )); do
     case "$1" in
-      --dirs)    shift; while (( $# )) && [[ "$1" != -* ]]; do dirs+=("$1"); shift; done ;;
+      # a value that arrived as one word holding several ("a b c", zsh's unsplit $var) is split here,
+      # so a caller from any shell means the same thing
+      "--dirs "*|"-f "*) set -- $1 "${@:2}" ;;
+      --dirs)    shift; while (( $# )) && [[ "$1" != -* ]]; do for w in $1; do dirs+=("$w"); done; shift; done ;;
       --no-wait) no_wait=1; shift ;;
       -f)        fields+=(-f "$2")
                  case "$2" in source_version=*) version="${2#source_version=}" ;; image=*) image="${2#image=}" ;; esac

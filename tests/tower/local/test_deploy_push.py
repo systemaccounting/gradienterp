@@ -201,6 +201,13 @@ def test_an_image_deploy_with_a_tag_moves_onto_that_tag_and_not_the_top_of_ecr()
 
 
 
+def test_a_dirs_value_that_arrived_as_one_word_is_its_words():
+    """`push --dirs "a b"` (zsh's unsplit $var) is two dirs; `--dirs a b` is the same two."""
+    assert deploy._flat([deploy._words("modules/a/lambdas/x modules/b/lambdas/y")]) == ["modules/a/lambdas/x", "modules/b/lambdas/y"]
+    assert deploy._flat([deploy._words("modules/a/lambdas/x"), deploy._words("modules/b/lambdas/y")]) == ["modules/a/lambdas/x", "modules/b/lambdas/y"]
+    assert deploy._flat(["positional", "strings"]) == ["positional", "strings"] and deploy._flat([]) is None
+
+
 def test_a_pull_requests_image_is_pushed_under_its_own_tag_and_westwood_moves_onto_it():
     """image-check.yaml: a pull request's image goes to ECR as pr-<n>-<sha>, outside the vNN line, and
     the named gerp's runtime moves onto that digest — the vNN counter never advances for it."""

@@ -54,6 +54,18 @@ def _zip_source(root, *args):
                           capture_output=True, text=True, timeout=60)
 
 
+def test_a_dirs_value_that_arrived_as_one_word_is_its_words():
+    """`--dirs "a b"` (zsh's unsplit $var) names two dirs, the same as `--dirs a b`."""
+    root = _scratch()
+    try:
+        out = _zip_source(root, "--dirs", "prod/tower prod/per_customer")
+        assert out.returncode == 0, out.stderr
+        with zipfile.ZipFile(root / ".build" / "source.zip") as z:
+            assert json.loads(z.read("source.json"))["dirs"] == ["prod/tower", "prod/per_customer"]
+    finally:
+        shutil.rmtree(root)
+
+
 def test_out_builds_the_same_bytes_elsewhere():
     """`--out` is what upload.sh rebuilds to compare against, so it has to be byte-identical."""
     root = _scratch()

@@ -1004,6 +1004,15 @@ def cmd_upload(args):
         print(f"==> {tag} = {digest}")
 
 
+def _words(value):
+    """A --dirs value that arrived as one word holding several (zsh's unsplit $var), as its words."""
+    return value.split()
+
+
+def _flat(dirs):
+    return [d for group in (dirs or []) for d in (group if isinstance(group, list) else [group])] or None
+
+
 def main():
     ap = argparse.ArgumentParser()
     sub = ap.add_subparsers(dest="verb", required=True)
@@ -1015,7 +1024,7 @@ def main():
     st.add_argument("--all", action="store_true", help="print in-sync rows too")
     st.set_defaults(fn=cmd_status)
     ps = sub.add_parser("push")
-    ps.add_argument("--dirs", nargs="*", help="src dirs to push (default: whole fleet)")
+    ps.add_argument("--dirs", nargs="*", type=_words, help="src dirs to push (default: whole fleet)")
     ps.add_argument("--notes", default="", help="agent-readable release annotation")
     ps.add_argument("--deploy", action="store_true",
                     help="no build: point the live functions at the bucket's current artifacts (build + put alone is zip.sh then upload.sh)")
@@ -1046,6 +1055,8 @@ def main():
     bld.add_argument("dirs", nargs="*", help="src dirs, for lambda")
     bld.set_defaults(fn=cmd_build)
     args = ap.parse_args()
+    if getattr(args, "dirs", None):
+        args.dirs = _flat(args.dirs)
     args.fn(args)
 
 
