@@ -1,12 +1,12 @@
 # metrics — the firm's product record.
 #
 #   an app ──POST /metrics, bearer──▶ record ──emit──▶ the firm's own bus ──rule──▶ Firehose ──Parquet──▶ the cabinet
-#   a callsite row (record_metric) ──emit──▶ the same bus                                          metrics/year=/month=/day=/
+#   a callsite row (record_metric) ──emit──▶ the same bus                                          metrics/dt=YYYY-MM-DD/
 #   the agent ──manage_metrics op=record──▶ the same bus
 #   the agent ──manage_metrics op=count|distinct|funnel|retention|query──▶ Athena, the gerp's workgroup, over one Glue table
 #
 # The store is the cabinet bucket (module.agent's, SSE-KMS), the catalog one Glue database with
-# one table (partition projection on the date, no crawler), the query engine one Athena workgroup
+# one table (one partition, the day, projected; no crawler), the query engine one Athena workgroup
 # whose results land under the cabinet and expire by the bucket's lifecycle rule
 # (prod/init_customer). Every read writes a usage row: who paid, which query, how many bytes.
 
@@ -156,30 +156,23 @@ resource "aws_glue_catalog_table" "metrics" {
   database_name = aws_glue_catalog_database.metrics.name
   table_type    = "EXTERNAL_TABLE"
 
+  # one partition, the ingestion day, projected as a date from the store's first day to today:
+  # Athena enumerates the days that exist (tens now, hundreds a year on) and lists each once. Three
+  # integer keys (year 2026..2100, month, day) enumerated ~28,000 partitions per query and took
+  # 35 to 48 s of engine time to scan nothing (measured 2026-09-19)
   parameters = {
-    "classification"            = "parquet"
-    "projection.enabled"        = "true"
-    "projection.year.type"      = "integer"
-    "projection.year.range"     = "2026,2100"
-    "projection.month.type"     = "integer"
-    "projection.month.range"    = "1,12"
-    "projection.month.digits"   = "2"
-    "projection.day.type"       = "integer"
-    "projection.day.range"      = "1,31"
-    "projection.day.digits"     = "2"
-    "storage.location.template" = "s3://${var.storage_bucket}/${local.store_prefix}year=$${year}/month=$${month}/day=$${day}/"
+    "classification"              = "parquet"
+    "projection.enabled"          = "true"
+    "projection.dt.type"          = "date"
+    "projection.dt.range"         = "2026-09-01,NOW"
+    "projection.dt.format"        = "yyyy-MM-dd"
+    "projection.dt.interval"      = "1"
+    "projection.dt.interval.unit" = "DAYS"
+    "storage.location.template"   = "s3://${var.storage_bucket}/${local.store_prefix}dt=$${dt}/"
   }
 
   partition_keys {
-    name = "year"
-    type = "string"
-  }
-  partition_keys {
-    name = "month"
-    type = "string"
-  }
-  partition_keys {
-    name = "day"
+    name = "dt"
     type = "string"
   }
 
@@ -289,8 +282,8 @@ resource "aws_kinesis_firehose_delivery_stream" "store" {
     bucket_arn = local.bucket_arn
     # the date is Firehose's ingestion time. `ts` in the row is the event's own instant, and every
     # read filters on it; the partition bounds what a read lists
-    prefix              = "${local.store_prefix}year=!{timestamp:yyyy}/month=!{timestamp:MM}/day=!{timestamp:dd}/"
-    error_output_prefix = "${local.store_prefix}errors/!{firehose:error-output-type}/year=!{timestamp:yyyy}/month=!{timestamp:MM}/day=!{timestamp:dd}/"
+    prefix              = "${local.store_prefix}dt=!{timestamp:yyyy-MM-dd}/"
+    error_output_prefix = "${local.store_prefix}errors/!{firehose:error-output-type}/dt=!{timestamp:yyyy-MM-dd}/"
     kms_key_arn         = var.storage_kms_key_arn
     # format conversion needs a buffer of at least 64 MiB; the interval is what delivers a quiet
     # firm's events, about a minute after they happen

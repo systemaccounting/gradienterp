@@ -38,12 +38,14 @@ and joined to the books. Why in `README.md`.
 - **the store** — a rule on the firm's bus (`source: metrics`) targets a Firehose stream through
   an input transformer that flattens the envelope to the row; Firehose converts to Parquet with
   the Glue table's schema and writes under the cabinet at
-  `metrics/year=/month=/day=/` (64 MiB or 60 s, whichever first, so a quiet firm's event is
+  `metrics/dt=YYYY-MM-DD/` (64 MiB or 60 s, whichever first, so a quiet firm's event is
   queryable about a minute later). The partition is Firehose's ingestion day; `ts` is the event's
   own instant and every read filters on `ts`
 - **the catalog** — one Glue database `<prefix>_metrics_<gerp>` with one table `metrics`: columns
-  `event, subject_id, ts, via` (string) and `properties map<string,string>`, partition keys
-  `year, month, day` projected (no crawler). `event` is a column, not a partition: an injected
+  `event, subject_id, ts, via` (string) and `properties map<string,string>`, one partition `dt`
+  projected as a date from the store's first day to today (no crawler). One key, because Athena
+  lists every projected partition a query does not exclude, and the reads filter on `ts`: three
+  integer keys enumerated ~28,000 partitions and took 35 to 48 s to scan nothing. `event` is a column, not a partition: an injected
   partition would refuse any query that does not name the event, and a firm's record is small
   enough that Parquet column pruning is the saving that matters
 - **the engine** — one Athena workgroup per gerp, tagged `payer = gerp`, results under
@@ -88,7 +90,7 @@ and joined to the books. Why in `README.md`.
 POST /metrics  {"event": "member.checked_in", "subject_id": "c_8812", "properties": {"location": "pier"}}
   → bus: source metrics, detail-type member.checked_in, detail {subject_id, ts, properties, via: door, caller: pos}
   → Firehose row: {"event": "member.checked_in", "subject_id": "c_8812", "ts": "2026-09-15T21:02:00.000Z", "via": "door", "properties": {"location": "pier"}}
-  → s3://<cabinet>/metrics/year=2026/month=09/day=15/<file>.parquet
+  → s3://<cabinet>/metrics/dt=2026-09-15/<file>.parquet
   → manage_metrics {op: query, name: active, params: {event: member.checked_in, grain: week}, window: this_month}
   → the `active` row's SQL with its `?` markers filled: count(DISTINCT subject_id) per week, cut in the firm's zone
 ```
