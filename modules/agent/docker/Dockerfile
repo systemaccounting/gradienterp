@@ -8,6 +8,8 @@
 #
 # Deploy via scripts/docker.sh --build + --push.
 
+# the base. a bump here, Dependabot's or anyone's, runs .github/workflows/image-check.yaml: the build,
+# then on approval the image on westwood answering a turn
 FROM --platform=linux/arm64 python:3.13-slim
 
 # Unbuffered stdout/stderr — block buffering under non-TTY would swallow
