@@ -20,7 +20,7 @@ from aws import client as _aws
 
 TABLE = "metrics"
 STORE_COLUMNS = ("event VARCHAR, subject_id VARCHAR, ts VARCHAR, via VARCHAR, "
-                 "properties MAP(VARCHAR, VARCHAR), year INTEGER, month VARCHAR, day INTEGER")
+                 "properties MAP(VARCHAR, VARCHAR), dt VARCHAR")
 # the Trino functions the canonical rows use, as duckdb sees them
 MACROS = (
     "CREATE MACRO from_iso8601_timestamp(s) AS CAST(s AS TIMESTAMPTZ)",

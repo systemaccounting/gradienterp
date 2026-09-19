@@ -119,8 +119,8 @@ def drained(expected=1):
 
 def seed_store(rows):
     """Write `rows` (`{event, subject_id, ts, via?, properties?}`) as the Parquet the cabinet
-    holds: one file per day under `metrics/year=/month=/day=/`, the columns the Glue table
-    declares. The date is the partition; `event` is a column."""
+    holds: one file per day under `metrics/dt=YYYY-MM-DD/`, the columns the Glue table declares.
+    The day is the partition; `event` is a column."""
     duckdb = importlib.import_module("duckdb")
     from aws import client
     s3, bucket, prefix = client("s3"), os.environ["STORE_BUCKET"], os.environ["STORE_PREFIX"]
@@ -140,7 +140,7 @@ def seed_store(rows):
         path = os.path.join(root, f"{y}-{m}-{d}.parquet")
         con.execute(f"COPY t TO '{path}' (FORMAT parquet)")
         with open(path, "rb") as fh:
-            s3.put_object(Bucket=bucket, Key=f"{prefix}year={y}/month={m}/day={d}/{y}{m}{d}.parquet", Body=fh.read())
+            s3.put_object(Bucket=bucket, Key=f"{prefix}dt={y}-{m}-{d}/{y}{m}{d}.parquet", Body=fh.read())
 
 
 def usage_rows():
