@@ -4,15 +4,12 @@
     op: unpublish_source  the bearer stops admitting
     op: list_sources      who may POST
     op: record            one event now, from the conversation
-    op: count             events per period, optionally by a property
-    op: distinct          subjects per period — DAU / WAU / MAU at day / week / month
-    op: funnel            subjects reaching each step, in order
-    op: retention         cohorts by first period × periods since
-    op: query             SQL over the table `metrics`
+    op: query             a read by name: a `metric_queries` registry row, its parameters bound
 
-Reads run on the gerp's own Athena workgroup (duckdb locally, `engines.py`) and every one leaves a
-usage row: who paid, which query, how many bytes. Windows are cut on the firm's own calendar
-(modules/clock).
+A query is a registry row (`rows.py`): the gerp's own, or a canonical one copied in on first use.
+There is no inline SQL; a query the agent writes is saved as a row (`write_schema op=extend`) and
+run by name. Reads run on the row's engine (`engines.py`: the gerp's Athena workgroup, duckdb
+locally) and every one leaves a usage row: the query's name, the engine, the bytes scanned.
 """
 
 import datetime as dt
@@ -24,10 +21,9 @@ import secrets
 from botocore.exceptions import ClientError
 
 from aws import client as _aws, json_default as _json_default, log as alog
-import clock
 import engines
 import metrics
-import queries
+import rows
 
 ENV_PATH = os.environ.get("METRICS_ENV_PATH", "")
 BASE_URL = os.environ.get("METRICS_BASE_URL", "")
@@ -35,8 +31,7 @@ USAGE_TABLE = os.environ.get("USAGE_TABLE", "")
 TOKEN_PREFIX = "METRICS_TOKEN_"
 CALLER_RE = re.compile(r"^[a-z0-9][a-z0-9_-]*$")
 
-OPS = ("publish_source", "unpublish_source", "list_sources", "record",
-       "query", "count", "distinct", "funnel", "retention")
+OPS = ("publish_source", "unpublish_source", "list_sources", "record", "query")
 
 
 def ok(body, code=200):
@@ -55,8 +50,12 @@ def handler(event, context):
         return err(f"op is required: {' | '.join(OPS)}")
     try:
         return fn(body)
-    except (metrics.Invalid, queries.Bad) as e:
+    except (metrics.Invalid, rows.Bad) as e:
         return err(str(e))
+    except rows.NoSuchQuery as e:
+        return err(f"no query named {e}. read_schema {{source: local, registry: metric_queries}} lists this "
+                   f"firm's; search_guides finds the canonical ones; write_schema {{op: extend, registry: "
+                   f"metric_queries}} saves one you wrote, then call it by name", 404)
     except engines.QueryFailed as e:
         return err(f"the query failed: {e}", 422)
 
@@ -120,10 +119,10 @@ def _record(body):
          "properties": body.get("properties")}, via="agent")})
 
 
-# ─── reads ───
+# ─── the read ───
 
-def _usage(op: str, result: dict) -> None:
-    """One row per query: who paid, what ran, how many bytes. The gerp is its own payer here."""
+def _usage(name: str, engine: str, result: dict) -> None:
+    """One row per query: who paid, which query, how many bytes. The gerp is its own payer here."""
     if not USAGE_TABLE:
         return
     now = dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
@@ -132,60 +131,18 @@ def _usage(op: str, result: dict) -> None:
         "sk":            {"S": f"{now}#{result['query_id']}"},
         "query_id":      {"S": result["query_id"]},
         "ts":            {"S": now},
-        "op":            {"S": op},
-        "engine":        {"S": engines.dialect()},
+        "name":          {"S": name},
+        "engine":        {"S": engine},
         "bytes_scanned": {"N": str(int(result.get("bytes_scanned") or 0))},
     })
 
 
-def _run(op: str, sql: str) -> dict:
-    result = engines.run(sql)
-    _usage(op, result)
-    return result
-
-
-def _window(body) -> dict:
-    return queries.window(body.get("window"), body.get("start"), body.get("end"))
-
-
 def _query(body):
-    sql = (body.get("sql") or "").strip()
-    if not sql:
-        return err("sql is required: SQL over the table `metrics` (event, subject_id, ts, via, properties)")
-    r = _run("query", sql)
-    return ok({"columns": r["columns"], "rows": r["rows"], "row_count": len(r["rows"]),
-               "query_id": r["query_id"], "bytes_scanned": r["bytes_scanned"]})
-
-
-def _count(body):
-    w, grain = _window(body), body.get("grain") or "day"
-    sql = queries.count(engines.dialect(), body.get("event"), w, grain, body.get("by"), clock.zone_name())
-    r = _run("count", sql)
-    return ok({"event": body.get("event"), "window": w, "grain": grain, "by": body.get("by"),
-               "rows": r["rows"], "query_id": r["query_id"], "bytes_scanned": r["bytes_scanned"]})
-
-
-def _distinct(body):
-    w, grain = _window(body), body.get("grain") or "day"
-    sql = queries.distinct(engines.dialect(), body.get("event"), w, grain, clock.zone_name())
-    r = _run("distinct", sql)
-    return ok({"event": body.get("event"), "window": w, "grain": grain,
-               "rows": r["rows"], "query_id": r["query_id"], "bytes_scanned": r["bytes_scanned"]})
-
-
-def _funnel(body):
-    w, events = _window(body), body.get("events")
-    sql = queries.funnel(engines.dialect(), events, w)
-    r = _run("funnel", sql)
-    row = r["rows"][0] if r["rows"] else {}
-    return ok({"events": events, "window": w, "steps": queries.fold_funnel(events, row),
-               "query_id": r["query_id"], "bytes_scanned": r["bytes_scanned"]})
-
-
-def _retention(body):
-    w, grain = _window(body), body.get("grain") or "week"
-    sql = queries.retention(engines.dialect(), body.get("event"), w, grain, clock.zone_name())
-    r = _run("retention", sql)
-    return ok({"event": body.get("event"), "window": w, "grain": grain,
-               "cohorts": queries.fold_retention(r["rows"]),
-               "query_id": r["query_id"], "bytes_scanned": r["bytes_scanned"]})
+    name = body.get("name")
+    row = rows.read(name)
+    literals, w = rows.bind(row, body.get("params"), body.get("window"), body.get("start"), body.get("end"))
+    result = engines.run(row["engine"], row["sql"], literals)
+    _usage(name, row["engine"], result)
+    return ok({"name": name, "engine": row["engine"], "window": w, "columns": result["columns"],
+               "rows": result["rows"], "row_count": len(result["rows"]),
+               "query_id": result["query_id"], "bytes_scanned": result["bytes_scanned"]})

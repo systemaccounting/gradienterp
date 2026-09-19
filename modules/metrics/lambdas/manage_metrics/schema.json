@@ -1,12 +1,20 @@
 {
   "type": "object",
-  "description": "The firm's product record. publish_source gives an app a url and bearer to POST events; record writes one; count, distinct, funnel, retention and query (SQL) read it on the firm's own calendar.",
-  "required": ["op"],
+  "description": "The firm's product record. publish_source gives an app a url and bearer to POST events; record writes one; query runs a read by name (a metric_queries row) with its params on the firm's calendar.",
+  "required": [
+    "op"
+  ],
   "properties": {
     "op": {
       "type": "string",
-      "enum": ["publish_source", "unpublish_source", "list_sources", "record", "query", "count", "distinct", "funnel", "retention"],
-      "description": "publish_source | unpublish_source | list_sources: the apps that may POST. record: one event now. count | distinct | funnel | retention: the fixed reads. query: SQL over the table `metrics`."
+      "enum": [
+        "publish_source",
+        "unpublish_source",
+        "list_sources",
+        "record",
+        "query"
+      ],
+      "description": "publish_source | unpublish_source | list_sources: the apps that may POST. record: one event now. query: a read by name."
     },
     "caller": {
       "type": "string",
@@ -14,11 +22,11 @@
     },
     "event": {
       "type": "string",
-      "description": "record, count, distinct, retention: the event name, <resource>.<action_past>, e.g. member.checked_in."
+      "description": "record: the event name, <resource>.<action_past>, e.g. member.checked_in. Read metric_events for the vocabulary before naming a new one."
     },
     "subject_id": {
       "type": "string",
-      "description": "record: who or what took the step — a contact_id, a device, an account. The firm's own id."
+      "description": "record: who or what took the step \u2014 a contact_id, a device, an account. The firm's own id."
     },
     "at": {
       "type": "string",
@@ -28,35 +36,25 @@
       "type": "object",
       "description": "record: flat scalars that ride along, e.g. {\"plan\": \"monthly\", \"location\": \"pier\"}."
     },
-    "events": {
-      "type": "array",
-      "items": {"type": "string"},
-      "description": "funnel: the steps in order, e.g. [\"lead.captured\", \"member.joined\", \"member.checked_in\"]."
+    "name": {
+      "type": "string",
+      "description": "query: the query's name \u2014 a metric_queries row of this firm's, or a canonical one (active, count, count_by, funnel_3, retention), copied in on first use. No inline SQL: save one with write_schema op=extend, then call it."
+    },
+    "params": {
+      "type": "object",
+      "description": "query: the row's parameters by name, e.g. {\"event\": \"member.checked_in\", \"grain\": \"week\"}. start, end, zone and grain are filled from the window when omitted."
     },
     "window": {
       "type": "string",
-      "description": "Reads: today | this_week | this_month | last_month | this_year | last_7_days | last_30_days | last_90_days, on the firm's calendar. Default this_month. Or set start and end."
+      "description": "query: today | this_week | this_month | last_month | this_year | last_7_days | last_30_days | last_90_days, on the firm's calendar. Default this_month. Or set start and end."
     },
     "start": {
       "type": "string",
-      "description": "Reads: window start, ISO date or datetime in the firm's zone. With end, replaces window."
+      "description": "query: window start, ISO date or datetime in the firm's zone. With end, replaces window."
     },
     "end": {
       "type": "string",
-      "description": "Reads: window end, exclusive, ISO date or datetime in the firm's zone."
-    },
-    "grain": {
-      "type": "string",
-      "enum": ["day", "week", "month"],
-      "description": "count, distinct, retention: the period size. Default day. distinct at day/week/month is DAU/WAU/MAU."
-    },
-    "by": {
-      "type": "string",
-      "description": "count: a property to group by as well, e.g. 'plan'."
-    },
-    "sql": {
-      "type": "string",
-      "description": "query: SQL over the table `metrics` (event, subject_id, ts, via, properties map). Athena (Trino) syntax."
+      "description": "query: window end, exclusive, ISO date or datetime in the firm's zone."
     }
   }
 }

@@ -1,0 +1,158 @@
+"""The read: a query is a registry row run by name, its parameters bound by type.
+
+The store is the Parquet the cabinet holds (seeded by `seed_store`, date-partitioned) and the
+engine is duckdb locally, the same SQL Athena runs, with macros for the Trino functions the
+canonical rows use. What is worth pinning: each canonical row answers from the rows a window
+admits, on the firm's days; a name in neither the table nor the canonical file fails naming it;
+a canonical row is in the table after first use; a saved row runs back; a parameter renders by
+its declared type and a bad one is refused; the usage row names the query.
+"""
+
+import json
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from _helpers import load_lambda, query_rows, save_query, scratch_env, seed_store, usage_rows
+
+SEP = "2026-09-"
+ROWS = [
+    {"event": "lead.captured",     "subject_id": "c_1", "ts": f"{SEP}01T15:00:00.000Z", "properties": {"plan": "monthly"}},
+    {"event": "member.joined",     "subject_id": "c_1", "ts": f"{SEP}01T16:00:00.000Z", "properties": {"plan": "monthly"}},
+    {"event": "member.checked_in", "subject_id": "c_1", "ts": f"{SEP}02T06:30:00.000Z", "properties": {"location": "pier"}},   # 09-01 in LA
+    {"event": "member.checked_in", "subject_id": "c_1", "ts": f"{SEP}08T18:00:00.000Z", "properties": {"location": "pier"}},
+    {"event": "member.checked_in", "subject_id": "c_1", "ts": f"{SEP}15T18:00:00.000Z", "properties": {"location": "main"}},
+    {"event": "lead.captured",     "subject_id": "c_2", "ts": f"{SEP}07T15:00:00.000Z", "properties": {"plan": "annual"}},
+    {"event": "member.joined",     "subject_id": "c_2", "ts": f"{SEP}08T15:00:00.000Z", "properties": {"plan": "annual"}},
+    {"event": "member.checked_in", "subject_id": "c_2", "ts": f"{SEP}09T18:00:00.000Z", "properties": {"location": "main"}},
+    {"event": "lead.captured",     "subject_id": "c_3", "ts": f"{SEP}10T15:00:00.000Z", "properties": {"plan": "monthly"}},
+    # c_4 checks in before joining: out of order, so the funnel must not count the join step
+    {"event": "member.checked_in", "subject_id": "c_4", "ts": f"{SEP}03T18:00:00.000Z"},
+    {"event": "member.joined",     "subject_id": "c_4", "ts": f"{SEP}04T18:00:00.000Z"},
+    {"event": "lead.captured",     "subject_id": "c_4", "ts": f"{SEP}05T18:00:00.000Z"},
+]
+SEPT = {"start": "2026-09-01", "end": "2026-10-01"}
+
+
+def _q(tool, name, **body):
+    r = tool.handler({"body": json.dumps({"op": "query", "name": name, **body})}, None)
+    return r["statusCode"], json.loads(r["body"])
+
+
+def test_count_bins_on_the_firms_own_days_and_count_by_splits_on_a_property():
+    with scratch_env():
+        seed_store(ROWS)
+        tool = load_lambda("manage_metrics")
+        code, body = _q(tool, "count", params={"event": "member.checked_in"}, **SEPT)
+        assert code == 200, body
+        assert body["rows"] == [{"period": "2026-09-01", "n": 1}, {"period": "2026-09-03", "n": 1},
+                                {"period": "2026-09-08", "n": 1}, {"period": "2026-09-09", "n": 1},
+                                {"period": "2026-09-15", "n": 1}], "06:30Z on the 2nd is the 1st in Los Angeles"
+        assert body["window"]["start"] == "2026-09-01T07:00:00.000Z", "the window edge is the firm's midnight, in the store's format"
+
+        code, body = _q(tool, "count_by", params={"event": "lead.captured", "grain": "month", "property": "plan"}, **SEPT)
+        assert code == 200, body
+        assert body["rows"] == [{"period": "2026-09-01", "by_value": "annual", "n": 1},
+                                {"period": "2026-09-01", "by_value": "monthly", "n": 2},
+                                {"period": "2026-09-01", "by_value": None, "n": 1}]
+
+
+def test_active_is_subjects_per_period():
+    with scratch_env():
+        seed_store(ROWS)
+        tool = load_lambda("manage_metrics")
+        code, body = _q(tool, "active", params={"event": "member.checked_in", "grain": "month"}, **SEPT)
+        assert body["rows"] == [{"period": "2026-09-01", "subjects": 3}]
+        code, body = _q(tool, "active", params={"event": "member.checked_in", "grain": "week"}, **SEPT)
+        assert [r["subjects"] for r in body["rows"]] == [2, 2, 1], "weeks of 08-31, 09-07, 09-14"
+
+
+def test_funnel_counts_a_subject_only_in_order():
+    with scratch_env():
+        seed_store(ROWS)
+        tool = load_lambda("manage_metrics")
+        code, body = _q(tool, "funnel_3", params={"e1": "lead.captured", "e2": "member.joined", "e3": "member.checked_in"}, **SEPT)
+        assert code == 200, body
+        assert body["rows"] == [{"step_1": 4, "step_2": 2, "step_3": 2}], "c_4 joined before its lead"
+
+
+def test_retention_is_cohorts_by_first_period():
+    with scratch_env():
+        seed_store(ROWS)
+        tool = load_lambda("manage_metrics")
+        code, body = _q(tool, "retention", params={"event": "member.checked_in", "grain": "week"}, **SEPT)
+        assert code == 200, body
+        assert body["rows"] == [
+            {"cohort": "2026-08-31", "offset_n": 0, "n": 2}, {"cohort": "2026-08-31", "offset_n": 1, "n": 1},
+            {"cohort": "2026-08-31", "offset_n": 2, "n": 1}, {"cohort": "2026-09-07", "offset_n": 0, "n": 1},
+        ]
+
+
+def test_a_canonical_row_is_in_the_table_after_first_use_and_a_saved_row_runs_back():
+    with scratch_env():
+        seed_store(ROWS)
+        tool = load_lambda("manage_metrics")
+        assert query_rows() == {}, "nothing seeded"
+        code, body = _q(tool, "count", params={"event": "member.joined"}, **SEPT)
+        assert code == 200
+        rows = query_rows()
+        assert set(rows) == {"count"} and rows["count"]["origin"]["S"] == "canonical" and rows["count"]["bucket"]["S"] == "athena"
+
+        save_query("joined_by_plan", "SELECT element_at(properties, ?) AS plan, count(*) AS n FROM metrics WHERE event = ? GROUP BY 1 ORDER BY 1",
+                   [{"name": "property", "type": "string"}, {"name": "event", "type": "string"}])
+        code, body = _q(tool, "joined_by_plan", params={"property": "plan", "event": "member.joined"})
+        assert code == 200, body
+        assert body["rows"] == [{"plan": "annual", "n": 1}, {"plan": "monthly", "n": 1}, {"plan": None, "n": 1}]
+        assert body["engine"] == "athena"
+
+        used = usage_rows()
+        assert sorted(u["name"] for u in used) == ["count", "joined_by_plan"] and all(int(u["bytes_scanned"]) > 0 for u in used)
+
+
+def test_a_missing_name_fails_naming_it_and_there_is_no_inline_sql():
+    with scratch_env():
+        tool = load_lambda("manage_metrics")
+        code, body = _q(tool, "members_lost")
+        assert code == 404 and "members_lost" in body["error"] and "write_schema" in body["error"]
+        r = tool.handler({"body": json.dumps({"op": "query", "sql": "SELECT 1"})}, None)
+        assert r["statusCode"] == 400 and "name" in json.loads(r["body"])["error"]
+
+
+def test_a_parameter_renders_by_its_type_and_a_bad_one_is_refused():
+    with scratch_env():
+        seed_store([{"event": "note.left", "subject_id": "o'brien", "ts": f"{SEP}02T00:00:00.000Z", "properties": {"n": "1"}}])
+        tool = load_lambda("manage_metrics")
+        save_query("by_subject", "SELECT count(*) AS n FROM metrics WHERE subject_id = ? AND ts >= ? AND ts < ? AND CAST(element_at(properties, 'n') AS INTEGER) = ?",
+                   [{"name": "subject", "type": "string"}, {"name": "start", "type": "timestamp"},
+                    {"name": "end", "type": "timestamp"}, {"name": "n", "type": "number"}])
+        code, body = _q(tool, "by_subject", params={"subject": "o'brien", "n": 1}, **SEPT)
+        assert code == 200, body
+        assert body["rows"] == [{"n": 1}], "a quote in a string is escaped, a number is a number"
+        code, body = _q(tool, "by_subject", params={"subject": "o'brien", "n": "one"}, **SEPT)
+        assert code == 400 and "n: a number" in body["error"]
+        code, body = _q(tool, "by_subject", params={"subject": "o'brien", "n": 1, "start": "2026-09-02T00:00:00.000Z", "end": "2026-09-02T00:00:01.000Z"})
+        assert code == 200 and body["rows"] == [{"n": 1}], "a store-format timestamp is taken as it is; the event at 00:00:00.000Z is inside its own second"
+        code, body = _q(tool, "by_subject", params={"subject": "o'brien", "n": 1, "start": "2026-09-02T00:00:00.001Z", "end": "2026-09-02T00:00:01.000Z"})
+        assert code == 200 and body["rows"] == [{"n": 0}], "one millisecond later and the window's edge excludes it"
+
+
+def test_a_bad_argument_names_itself():
+    with scratch_env():
+        tool = load_lambda("manage_metrics")
+        for kwargs, expected in (
+            (dict(params={"event": "a.b", "grain": "hour"}), "grain:"),
+            (dict(params={"event": "a.b"}, window="yesterday"), "window:"),
+            (dict(params={"event": "a.b"}, start="2026-09-01"), "start and end"),
+            (dict(params={"event": "a.b", "colour": "red"}), "params ['colour'] are not the query's"),
+            (dict(params={}), "event is required"),
+        ):
+            code, body = _q(tool, "count", **kwargs)
+            assert code == 400 and body["error"].startswith(expected), (kwargs, body)
+
+
+if __name__ == "__main__":
+    import inspect
+    tests = [(n, f) for n, f in sorted(globals().items()) if n.startswith("test_") and inspect.isfunction(f)]
+    for name, fn in tests:
+        fn()
+        print(f"ok {name}")

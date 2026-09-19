@@ -27,7 +27,7 @@ for p in (MODULE, REPO_ROOT / "modules" / "aws", REPO_ROOT / "modules" / "events
 
 ENV_PATH = "/gradienterp/customers/gradienterp/metrics/env"
 USAGE_TABLE = "gerp-metrics-gradienterp-usage"
-_OWN = ("metrics", "metric_rules", "queries", "engines", "clock", "_helpers")
+_OWN = ("metrics", "metric_rules", "rows", "engines", "clock", "_helpers")
 
 
 def load_lambda(name):
@@ -74,9 +74,11 @@ def scratch_env():
         shutil.rmtree(out_dir)
     out_dir.mkdir(parents=True)
 
-    from helpers.localaws import make_bucket, make_bus
+    from helpers.localaws import make_bucket, make_bus, make_table
     bus, queue = make_bus(name)
     overrides = {
+        "SCHEMA_TABLE":      make_table("schema"),          # the registry table: metric_queries rows
+        "LOCAL_CANONICAL_DIR": str(REPO_ROOT / "modules" / "schemas" / "data"),
         "INTERNAL_BUS_NAME": bus,
         "_QUEUE_URL":        queue,
         "STORE_BUCKET":      make_bucket(name),
@@ -146,3 +148,24 @@ def usage_rows():
     d = client("dynamodb")
     items = d.scan(TableName=USAGE_TABLE)["Items"]
     return [{k: list(v.values())[0] for k, v in it.items()} for it in items]
+
+
+def query_rows():
+    """Every metric_queries row in the registry table, by name."""
+    from aws import client
+    from boto3.dynamodb.conditions import Key  # noqa: F401
+    d = client("dynamodb")
+    items = d.query(TableName=os.environ["SCHEMA_TABLE"],
+                    KeyConditionExpression="registry = :r", ExpressionAttributeValues={":r": {"S": "metric_queries"}})["Items"]
+    return {it["name"]["S"]: it for it in items}
+
+
+def save_query(name, sql, params, engine="athena", pinned=False):
+    """A row the agent would write with write_schema op=extend: the firm's own query."""
+    from aws import resource
+    item = {"registry": "metric_queries", "bucket_name": f"{engine}#{name}", "bucket": engine, "name": name,
+            "schema": {"description": f"{name}, saved", "params": params, "sql": sql},
+            "origin": "extension", "created_at": 1, "created_by": "test"}
+    if pinned:
+        item["pinned"] = True
+    resource("dynamodb").Table(os.environ["SCHEMA_TABLE"]).put_item(Item=item)

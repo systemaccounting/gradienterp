@@ -1575,6 +1575,93 @@ def _instruction_block() -> str:
             + "".join(lines))
 
 
+SCHEMA_TABLE = os.environ.get("SCHEMA_TABLE", "")   # the registry table: the metric_queries rows
+USAGE_TABLE = os.environ.get("USAGE_TABLE", "")     # modules/metrics: one row per query this firm ran
+RECENT_QUERIES_SK = "GERP#recent_queries"          # a settings row: how many recent names the tail carries
+RECENT_QUERIES_DEFAULT = 10
+
+
+def _query_rows() -> list:
+    """Every `metric_queries` row in the registry table — a gerp holds tens — as
+    `{name, description, params, pinned}`. One Query."""
+    if not SCHEMA_TABLE:
+        return []
+    import boto3
+    from boto3.dynamodb.conditions import Key
+    kwargs = {"KeyConditionExpression": Key("registry").eq("metric_queries")}
+    rows = []
+    table = boto3.resource("dynamodb").Table(SCHEMA_TABLE)
+    while True:
+        resp = table.query(**kwargs)
+        for item in resp.get("Items", []):
+            schema = _ddb_decode(item.get("schema")) or {}
+            rows.append({"name": item.get("name"), "description": schema.get("description", ""),
+                         "params": [p.get("name") for p in schema.get("params", []) if isinstance(p, dict)],
+                         "pinned": bool(item.get("pinned"))})
+        if "LastEvaluatedKey" not in resp:
+            break
+        kwargs["ExclusiveStartKey"] = resp["LastEvaluatedKey"]
+    return rows
+
+
+def _recent_query_names(n: int) -> list:
+    """The last `n` distinct query names this firm ran, newest first: one Query on the usage
+    table's newest rows (`payer = gerp`, the sort key a timestamp)."""
+    if not USAGE_TABLE or n <= 0:
+        return []
+    import boto3
+    from boto3.dynamodb.conditions import Key
+    resp = boto3.resource("dynamodb").Table(USAGE_TABLE).query(
+        KeyConditionExpression=Key("payer").eq("gerp"), ScanIndexForward=False, Limit=max(n * 5, 25))
+    names = []
+    for item in resp.get("Items", []):
+        name = item.get("name")
+        if name and name not in names:
+            names.append(name)
+        if len(names) >= n:
+            break
+    return names
+
+
+def _recent_n() -> int:
+    """`GERP#recent_queries` in settings, the owner's; the default when unset."""
+    try:
+        if SETTINGS_TABLE and CUSTOMER_ID:
+            item = _settings_table().get_item(Key={"gerp_id": CUSTOMER_ID, "sk": RECENT_QUERIES_SK}).get("Item") or {}
+            if item.get("value") is not None:
+                return max(0, int(item["value"]))
+    except Exception:  # noqa: BLE001 — the default, never the turn
+        pass
+    return RECENT_QUERIES_DEFAULT
+
+
+def _queries_block() -> str:
+    """The product reads this firm keeps in front of the agent: the rows the owner pinned, then
+    the names it ran last (modules/metrics). Names, descriptions and parameters, never the SQL;
+    no cap on pins, since the prompt's size and its cost are the owner's. Failures load nothing
+    rather than failing the turn."""
+    try:
+        rows = _query_rows()
+        if not rows:
+            return ""
+        by_name = {r["name"]: r for r in rows if r.get("name")}
+        pinned = [r for r in rows if r["pinned"]]
+        recent = [by_name[n] for n in _recent_query_names(_recent_n()) if n in by_name and not by_name[n]["pinned"]]
+    except Exception:  # noqa: BLE001
+        return ""
+    if not pinned and not recent:
+        return ""
+    lines = []
+    for r in pinned:
+        lines.append(f"- `{r['name']}` (pinned) — {r['description']} (params: {', '.join(r['params']) or 'none'})\n")
+    for r in recent:
+        lines.append(f"- `{r['name']}` — {r['description']} (params: {', '.join(r['params']) or 'none'})\n")
+    return ("\n\n## the product reads this firm keeps handy\n\n"
+            "Run one with `manage_metrics {op: query, name, params, window}`. The pinned ones the owner "
+            "asked to keep in front of you; the rest are the ones this firm ran last.\n\n"
+            + "".join(lines))
+
+
 def instruct(text: str) -> str:
     """Save a standing instruction for how you work at THIS business — it joins the owner's list on
     the gerp screen and is in front of you on every future turn, for every person you talk to. Use
@@ -2438,7 +2525,7 @@ async def _sse_stream(payload: dict, session_id: str):
     # No load() here: the engine's SessionManager restores prior history itself.
     new_messages = []
     try:
-        async for chunk in _engine.stream_turn(_system_blocks(_system, _date_block() + _instruction_block() + _memory_block()), session_id, message, interrupt_response=interrupt_response):
+        async for chunk in _engine.stream_turn(_system_blocks(_system, _date_block() + _instruction_block() + _queries_block() + _memory_block()), session_id, message, interrupt_response=interrupt_response):
             if "_messages" in chunk:
                 new_messages = chunk["_messages"]
                 continue
@@ -2547,7 +2634,7 @@ async def _invoke_inner(payload: dict, request: Request) -> dict:
         span.set_attribute("agent.transcript", type(_transcript).__name__)
         span.set_attribute("agent.engine", type(_engine).__name__)
         try:
-            reply, new_messages = _engine.run_turn(_system_blocks(_system, _date_block() + _instruction_block() + _memory_block()), session_id, message)
+            reply, new_messages = _engine.run_turn(_system_blocks(_system, _date_block() + _instruction_block() + _queries_block() + _memory_block()), session_id, message)
         except Exception as e:
             span.record_exception(e)
             span.set_status(trace.Status(trace.StatusCode.ERROR, str(e)))

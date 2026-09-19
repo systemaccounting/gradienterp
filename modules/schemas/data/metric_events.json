@@ -1,0 +1,127 @@
+{
+  "commerce": {
+    "lead.captured": {
+      "description": "a prospect gave a way to reach them: a form, a card, a call",
+      "properties": [
+        "source",
+        "campaign"
+      ]
+    },
+    "quote.sent": {
+      "description": "a price was put in front of a prospect",
+      "properties": [
+        "amount",
+        "item"
+      ]
+    },
+    "order.placed": {
+      "description": "a customer committed to buy",
+      "properties": [
+        "amount",
+        "item",
+        "channel"
+      ]
+    },
+    "order.fulfilled": {
+      "description": "what was bought was handed over or shipped",
+      "properties": [
+        "item"
+      ]
+    },
+    "order.refunded": {
+      "description": "money went back",
+      "properties": [
+        "amount",
+        "reason"
+      ]
+    }
+  },
+  "membership": {
+    "member.joined": {
+      "description": "a person became a member: a plan, a pass, a seat",
+      "properties": [
+        "plan",
+        "location"
+      ]
+    },
+    "member.checked_in": {
+      "description": "a member used the place or the service",
+      "properties": [
+        "location"
+      ]
+    },
+    "member.cancelled": {
+      "description": "a member ended their membership",
+      "properties": [
+        "plan",
+        "reason"
+      ]
+    }
+  },
+  "saas": {
+    "account.signed_up": {
+      "description": "a login was created",
+      "properties": [
+        "source"
+      ]
+    },
+    "session.started": {
+      "description": "a user came back and did something",
+      "properties": [
+        "surface"
+      ]
+    },
+    "trial.started": {
+      "description": "a user began a trial",
+      "properties": [
+        "plan"
+      ]
+    },
+    "subscription.started": {
+      "description": "a user began paying",
+      "properties": [
+        "plan",
+        "amount"
+      ]
+    },
+    "subscription.cancelled": {
+      "description": "a user stopped paying",
+      "properties": [
+        "plan",
+        "reason"
+      ]
+    }
+  },
+  "labor": {
+    "shift.worked": {
+      "description": "a worker completed a shift",
+      "properties": [
+        "hours",
+        "location",
+        "role"
+      ]
+    }
+  },
+  "support": {
+    "ticket.opened": {
+      "description": "a customer asked for help",
+      "properties": [
+        "channel",
+        "kind"
+      ]
+    },
+    "ticket.closed": {
+      "description": "the ask was answered",
+      "properties": [
+        "kind",
+        "hours_open"
+      ]
+    },
+    "cancellation.requested": {
+      "description": "a customer said they want out",
+      "properties": [
+        "reason"
+      ]
+    }
+  }
+}

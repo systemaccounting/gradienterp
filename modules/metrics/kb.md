@@ -56,20 +56,51 @@ from an automation.
 
     manage_metrics op=record event=cancellation.requested subject_id=c_4 properties={"reason": "moving"}
 
+## naming, from the vocabulary
+
+`read_schema {source: local, registry: metric_events}` lists the canonical event names with what
+each usually carries (`lead.captured`, `member.joined`, `member.checked_in`, `order.placed`,
+`shift.worked`, `account.signed_up`, …). Read it before naming a new event; a name the firm's
+product needs that is not there is `write_schema {op: extend, registry: metric_events, bucket,
+name, schema: {description, properties}, reason}`. The door records any name either way.
+
 ## reading it
 
-All on the firm's own calendar. `window`: today | this_week | this_month | last_month | this_year |
-last_7_days | last_30_days | last_90_days (default this_month), or `start` + `end`.
+A read is a query by name, a `metric_queries` row, with its parameters. The canonical set:
 
-    manage_metrics op=count event=loaf.sold grain=day by=location window=last_30_days
-    manage_metrics op=distinct event=member.checked_in grain=week          ← WAU; day is DAU, month MAU
-    manage_metrics op=funnel events=["lead.captured","member.joined","member.checked_in"] window=this_year
-    manage_metrics op=retention event=member.checked_in grain=week window=last_90_days
-    manage_metrics op=query sql="SELECT properties['plan'] AS plan, count(DISTINCT subject_id) AS members
-                                 FROM metrics WHERE event = 'member.joined' GROUP BY 1"
+| name | params | what it answers |
+|---|---|---|
+| `active` | event, grain | distinct subjects per period: DAU at day, WAU at week, MAU at month |
+| `count` | event, grain | events per period |
+| `count_by` | event, grain, property | events per period split by one property |
+| `funnel_3` | e1, e2, e3 | subjects reaching each of three steps, in order |
+| `retention` | event, grain | cohorts by first period, subjects per period since |
 
-The table for SQL is `metrics`: `event, subject_id, ts` (UTC ISO string), `via`, `properties`
-(a map: `properties['plan']`). Athena (Trino) syntax.
+`window`: today | this_week | this_month | last_month | this_year | last_7_days | last_30_days |
+last_90_days (default this_month), or `start` + `end`; all on the firm's own calendar. `grain`
+defaults to day.
 
-The joins are yours: revenue per active member is `get_statement` for the period over `distinct`
+    manage_metrics op=query name=active params={"event": "member.checked_in", "grain": "week"}       ← WAU this month
+    manage_metrics op=query name=count_by params={"event": "loaf.sold", "property": "location"} window=last_30_days
+    manage_metrics op=query name=funnel_3 params={"e1": "lead.captured", "e2": "member.joined", "e3": "member.checked_in"} window=this_year
+    manage_metrics op=query name=retention params={"event": "member.checked_in", "grain": "week"} window=last_90_days
+
+A question none of these answers: `read_schema {source: local, registry: metric_queries}` lists
+this firm's own rows; `search_guides` finds a canonical one by what it answers. None fits: write
+the SQL over the table `metrics` (`event, subject_id, ts` as a UTC ISO string, `via`,
+`properties` a map: `element_at(properties, 'plan')`; Athena syntax, `?` for each parameter),
+save it, then call it:
+
+    write_schema op=extend registry=metric_queries bucket=athena name=joined_by_plan
+      schema={"description": "members joined per plan in the window",
+              "params": [{"name": "event", "type": "string"}, {"name": "start", "type": "timestamp"}, {"name": "end", "type": "timestamp"}],
+              "sql": "SELECT element_at(properties, 'plan') AS plan, count(*) AS n FROM metrics WHERE event = ? AND ts >= ? AND ts < ? GROUP BY 1"}
+      reason="the owner asks it monthly"
+    manage_metrics op=query name=joined_by_plan params={"event": "member.joined"} window=last_month
+
+`params` is the order of the `?` markers; `start`, `end`, `zone` and `grain` are filled from the
+window when the row declares them. There is no way to run SQL that is not a row. Say "keep this one
+handy" and the row is pinned into every turn's prompt.
+
+The joins are yours: revenue per active member is `get_statement` for the period over `active`
 for the same period; cost per check-in is the cost structure over `count`.

@@ -1,10 +1,11 @@
-"""engines — where a read runs.
+"""engines — where a query runs.
 
-In Lambda, Athena: the gerp's own workgroup over its one Glue table, results under the cabinet.
-Anywhere else, duckdb over the same Parquet files pulled from the bucket the tests seeded, so a
-read runs the same SQL against the same store shape with no AWS. The engine is picked the way
-`modules/aws` picks its endpoint: `AWS_LAMBDA_FUNCTION_NAME` is set by the runtime and nothing
-else.
+In Lambda, Athena: the gerp's own workgroup over its one Glue table, results under the cabinet,
+the literals handed to `ExecutionParameters` for Athena to substitute. Anywhere else, duckdb over
+the same Parquet files pulled from the bucket the tests seeded, the literals substituted here the
+same way, with a fixed set of macros for the Trino functions the canonical rows use. The engine
+is picked the way `modules/aws` picks its endpoint: `AWS_LAMBDA_FUNCTION_NAME` is set by the
+runtime and nothing else.
 
 Both return `{query_id, columns, rows, bytes_scanned}`; the bytes are what the usage row records.
 """
@@ -20,18 +21,26 @@ from aws import client as _aws
 TABLE = "metrics"
 STORE_COLUMNS = ("event VARCHAR, subject_id VARCHAR, ts VARCHAR, via VARCHAR, "
                  "properties MAP(VARCHAR, VARCHAR), year INTEGER, month VARCHAR, day INTEGER")
+# the Trino functions the canonical rows use, as duckdb sees them
+MACROS = (
+    "CREATE MACRO from_iso8601_timestamp(s) AS CAST(s AS TIMESTAMPTZ)",
+    "CREATE MACRO date_format(t, f) AS strftime(t, f)",
+    "CREATE MACRO element_at(m, k) AS m[k]",
+)
 
 
 class QueryFailed(RuntimeError):
     """The engine refused the SQL; the message is the engine's own."""
 
 
-def dialect() -> str:
-    return "athena" if os.environ.get("AWS_LAMBDA_FUNCTION_NAME") else "duckdb"
+def local() -> bool:
+    return not os.environ.get("AWS_LAMBDA_FUNCTION_NAME")
 
 
-def run(sql: str) -> dict:
-    return _athena(sql) if dialect() == "athena" else _duckdb(sql)
+def run(engine: str, sql: str, literals: list) -> dict:
+    if engine != "athena":
+        raise QueryFailed(f"no engine named {engine!r} here; the store is athena")
+    return _duckdb(sql, literals) if local() else _athena(sql, literals)
 
 
 # ─── Athena ───
@@ -50,13 +59,13 @@ def _coerce(value, kind):
     return value
 
 
-def _athena(sql: str) -> dict:
+def _athena(sql: str, literals: list) -> dict:
     athena = _aws("athena")
-    q = athena.start_query_execution(
-        QueryString=sql,
-        QueryExecutionContext={"Database": os.environ["GLUE_DATABASE"]},
-        WorkGroup=os.environ["ATHENA_WORKGROUP"],
-    )["QueryExecutionId"]
+    kw = {"QueryString": sql, "QueryExecutionContext": {"Database": os.environ["GLUE_DATABASE"]},
+          "WorkGroup": os.environ["ATHENA_WORKGROUP"]}
+    if literals:
+        kw["ExecutionParameters"] = literals
+    q = athena.start_query_execution(**kw)["QueryExecutionId"]
     deadline = time.monotonic() + float(os.environ.get("QUERY_TIMEOUT_S", "50"))
     while True:
         ex = athena.get_query_execution(QueryExecutionId=q)["QueryExecution"]
@@ -88,7 +97,26 @@ def _athena(sql: str) -> dict:
 
 # ─── duckdb, locally ───
 
-def _duckdb(sql: str) -> dict:
+def substitute(sql: str, literals: list) -> str:
+    """The `?` markers replaced in order with the rendered literals, what Athena does before
+    planning. A marker inside a quoted string in the SQL is left alone."""
+    out, i, quoted = [], 0, False
+    for ch in sql:
+        if ch == "'":
+            quoted = not quoted
+        if ch == "?" and not quoted:
+            if i >= len(literals):
+                raise QueryFailed(f"the sql has more `?` markers than parameters ({len(literals)})")
+            out.append(literals[i])
+            i += 1
+        else:
+            out.append(ch)
+    if i != len(literals):
+        raise QueryFailed(f"the sql has {i} `?` markers and {len(literals)} parameters")
+    return "".join(out)
+
+
+def _duckdb(sql: str, literals: list) -> dict:
     duckdb = importlib.import_module("duckdb")   # a test dependency, never in the zip
     bucket, prefix = os.environ.get("STORE_BUCKET", ""), os.environ.get("STORE_PREFIX", "metrics/")
     s3 = _aws("s3")
@@ -106,12 +134,16 @@ def _duckdb(sql: str) -> dict:
                 scanned += int(o["Size"])
                 found = True
     con = duckdb.connect()
+    for m in MACROS:
+        con.execute(m)
     if found:
         con.execute(f"CREATE VIEW {TABLE} AS SELECT * FROM read_parquet('{root}/**/*.parquet', hive_partitioning = true)")
     else:
         con.execute(f"CREATE TABLE {TABLE} ({STORE_COLUMNS})")
     try:
-        cur = con.execute(sql)
+        cur = con.execute(substitute(sql, literals))
+    except QueryFailed:
+        raise
     except Exception as e:  # noqa: BLE001 — the engine's own message is the answer
         raise QueryFailed(str(e)) from e
     columns = [d[0] for d in cur.description]
