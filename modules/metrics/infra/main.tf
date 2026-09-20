@@ -524,7 +524,7 @@ resource "aws_iam_role_policy" "manage" {
         # a query is a metric_queries row in the registry table: read by name, and a canonical one
         # written on first use
         Effect   = "Allow"
-        Action   = ["dynamodb:Query", "dynamodb:PutItem"]
+        Action   = ["dynamodb:Query", "dynamodb:PutItem", "dynamodb:UpdateItem"]
         Resource = "arn:aws:dynamodb:${local.region}:${local.account_id}:table/${local.schema_table}"
       },
       {

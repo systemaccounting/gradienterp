@@ -5,6 +5,7 @@
     op: list_sources      who may POST
     op: record            one event now, from the conversation
     op: query             a read by name: a `metric_queries` registry row, its parameters bound
+    op: pin               keep a query in front of the agent every turn, or stop
 
 A query is a registry row (`rows.py`): the gerp's own, or a canonical one copied in on first use.
 There is no inline SQL; a query the agent writes is saved as a row (`write_schema op=extend`) and
@@ -31,7 +32,7 @@ USAGE_TABLE = os.environ.get("USAGE_TABLE", "")
 TOKEN_PREFIX = "METRICS_TOKEN_"
 CALLER_RE = re.compile(r"^[a-z0-9][a-z0-9_-]*$")
 
-OPS = ("publish_source", "unpublish_source", "list_sources", "record", "query")
+OPS = ("publish_source", "unpublish_source", "list_sources", "record", "query", "pin")
 
 
 def ok(body, code=200):
@@ -135,6 +136,14 @@ def _usage(name: str, engine: str, result: dict) -> None:
         "engine":        {"S": engine},
         "bytes_scanned": {"N": str(int(result.get("bytes_scanned") or 0))},
     })
+
+
+def _pin(body):
+    """The owner said to keep one handy, or to stop: the row's `pinned` flag, which the prompt's
+    dynamic tail reads every turn (modules/agent). No cap: the prompt's size is the owner's."""
+    if "pinned" in body and not isinstance(body["pinned"], bool):
+        return err("pinned: true or false")
+    return ok(rows.pin(body.get("name"), body.get("pinned", True)))
 
 
 def _query(body):

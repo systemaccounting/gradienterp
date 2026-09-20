@@ -12,9 +12,10 @@
         "unpublish_source",
         "list_sources",
         "record",
-        "query"
+        "query",
+        "pin"
       ],
-      "description": "publish_source | unpublish_source | list_sources: the apps that may POST. record: one event now. query: a read by name."
+      "description": "publish_source | unpublish_source | list_sources: the apps that may POST. record: one event now. query: a read by name. pin: keep a query in front of you every turn (pinned true), or stop (false)."
     },
     "caller": {
       "type": "string",
@@ -38,7 +39,7 @@
     },
     "name": {
       "type": "string",
-      "description": "query: the query's name \u2014 a metric_queries row of this firm's, or a canonical one (active, count, count_by, funnel_3, retention), copied in on first use. No inline SQL: save one with write_schema op=extend, then call it."
+      "description": "query, pin: the query's name \u2014 a metric_queries row of this firm's, or a canonical one (active, count, count_by, funnel_3, retention), copied in on first use. No inline SQL: save one with write_schema op=extend, then call it."
     },
     "params": {
       "type": "object",
@@ -55,6 +56,10 @@
     "end": {
       "type": "string",
       "description": "query: window end, exclusive, ISO date or datetime in the firm's zone."
+    },
+    "pinned": {
+      "type": "boolean",
+      "description": "pin: true to keep the query in every turn's prompt, false to stop. Default true."
     }
   }
 }

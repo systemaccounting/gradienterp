@@ -265,8 +265,8 @@ Adding a new domain (`modules/payroll/`, `modules/inventory_v2/`): drop the dire
 Every turn's system prompt is assembled as:
 
 ```
-_system  +  _date_block()  +  _instruction_block()  +  _memory_block()
- baked        today            the firm's list          this caller's facts
+_system  +  _date_block()  +  _instruction_block()  +  _queries_block()  +  _memory_block()
+ baked        today            the firm's list          the reads kept handy   this caller's facts
 ```
 
 `_system` is composed once at container start from `prompts/` and is identical for every turn; the
@@ -281,6 +281,10 @@ into `_system`, or ordering one ahead of the baked block, forecloses that for no
 - `_instruction_block()` — the firm's `INSTRUCTION#` rows, one prefix Query, firm-scoped so it loads
   for every caller including pokers and scheduled invokes. Empty list ⇒ no section at all: an empty
   heading is prompt weight and an invitation to invent policy.
+- `_queries_block()` — the product reads this firm keeps handy (modules/metrics): the
+  `metric_queries` rows the owner pinned (`manage_metrics op=pin`, no cap), then the names the
+  firm ran last (the usage table's newest rows, `GERP#recent_queries` many, default 10), as name,
+  description and parameters, never the SQL. Two Queries and a GetItem; empty ⇒ no section.
 - `_memory_block()` — the caller's `MEMORY#<account_id>#` rows, one prefix Query, gated on the
   JWT-verified caller ContextVar (no caller ⇒ nothing).
 
