@@ -105,7 +105,10 @@ export LOG_STRICT=1
 MOTO_PIDS=()
 MOTO_ENDPOINTS=()
 # only kill what we started; a server the developer left running stays running
-cleanup() { for p in "${MOTO_PIDS[@]:-}"; do kill "$p" 2>/dev/null; done; }
+cleanup() {
+    (( ${#MOTO_PIDS[@]} )) || return 0
+    for p in "${MOTO_PIDS[@]}"; do kill "$p" 2>/dev/null || true; done
+}
 trap cleanup EXIT
 
 # Free ports from the OS rather than a hardcoded base, and readiness probed with $PY — which this
