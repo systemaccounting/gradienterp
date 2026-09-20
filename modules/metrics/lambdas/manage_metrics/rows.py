@@ -108,6 +108,15 @@ def read(name: str) -> dict:
     raise NoSuchQuery(name)
 
 
+def pin(name: str, pinned: bool) -> dict:
+    """Set or clear `pinned` on the query's row; the prompt's tail carries a pinned row every turn.
+    A canonical name not yet in the table is copied first, so a pin never needs a prior call."""
+    row = read(name)
+    _table().update_item(Key={"registry": REGISTRY, "bucket_name": f"{row['engine']}#{name}"},
+                         UpdateExpression="SET pinned = :p", ExpressionAttributeValues={":p": bool(pinned)})
+    return {"name": name, "engine": row["engine"], "pinned": bool(pinned)}
+
+
 def _copy(engine: str, name: str, entry: dict, pinned) -> None:
     """The canonical entry as a row of the gerp's table, the shape `seed_schema` writes."""
     item = {"registry": REGISTRY, "bucket_name": f"{engine}#{name}", "bucket": engine, "name": name,

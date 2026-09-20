@@ -130,6 +130,20 @@ def test_a_canonical_row_follows_the_file_and_a_saved_row_is_left_alone():
         assert body["rows"] == [{"mine": 2}], "an extension row is never touched"
 
 
+def test_a_pin_sets_the_flag_the_prompt_reads_and_a_canonical_name_pins_on_first_use():
+    with scratch_env():
+        tool = load_lambda("manage_metrics")
+        r = tool.handler({"body": json.dumps({"op": "pin", "name": "retention"})}, None)
+        assert r["statusCode"] == 200 and json.loads(r["body"]) == {"name": "retention", "engine": "athena", "pinned": True}
+        assert query_rows()["retention"]["pinned"]["BOOL"] is True, "copied in and pinned in one call"
+        r = tool.handler({"body": json.dumps({"op": "pin", "name": "retention", "pinned": False})}, None)
+        assert json.loads(r["body"])["pinned"] is False and query_rows()["retention"]["pinned"]["BOOL"] is False
+        r = tool.handler({"body": json.dumps({"op": "pin", "name": "nope"})}, None)
+        assert r["statusCode"] == 404
+        r = tool.handler({"body": json.dumps({"op": "pin", "name": "retention", "pinned": "yes"})}, None)
+        assert r["statusCode"] == 400 and "pinned: true or false" in json.loads(r["body"])["error"]
+
+
 def test_a_missing_name_fails_naming_it_and_there_is_no_inline_sql():
     with scratch_env():
         tool = load_lambda("manage_metrics")

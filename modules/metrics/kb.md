@@ -101,8 +101,9 @@ save it, then call it:
     manage_metrics op=query name=joined_by_plan params={"event": "member.joined"} window=last_month
 
 `params` is the order of the `?` markers; `start`, `end`, `zone` and `grain` are filled from the
-window when the row declares them. There is no way to run SQL that is not a row. Say "keep this one
-handy" and the row is pinned into every turn's prompt.
+window when the row declares them. There is no way to run SQL that is not a row. When the owner says
+to keep one handy, `manage_metrics op=pin name=<name>` puts the row into every turn's prompt;
+`pinned=false` takes it out. As many as the owner wants.
 
 The joins are yours: revenue per active member is `get_statement` for the period over `active`
 for the same period; cost per check-in is the cost structure over `count`.

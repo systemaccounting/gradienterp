@@ -26,7 +26,9 @@ and joined to the books. Why in `README.md`.
   from the OS, SecureString) and returns it once with the url; the same caller again rotates.
   `unpublish_source` deletes it. `list_sources` names callers (DescribeParameters, no values).
   `record` writes one event from the conversation. `query {name, params, window|start+end}` is
-  the read: a `metric_queries` registry row run by name (below). There is no inline SQL
+  the read: a `metric_queries` registry row run by name (below). `pin {name, pinned}` sets or
+  clears the row's `pinned` flag, which the prompt's dynamic tail reads every turn (the agent
+  module), with no cap on how many. There is no inline SQL
 - **`record_metric`** (`metric_rules.py`) — params `{event, subject: <ctx field>, properties:
   {name: <ctx field>}}`. Reads the subject and the properties off the callsite's ctx, sends with
   `via: rule` and the exec id, returns `[]` so a callsite that folds returns into postings is
