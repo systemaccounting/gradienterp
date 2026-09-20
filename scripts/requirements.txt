@@ -1,0 +1,4 @@
+# What the deploy workflow's jobs run: scripts/deploy.py, scripts/docker.sh and the tests/*/integ
+# suites, every one of them boto3 against real AWS. tests/requirements.txt is the local suites' tree
+# (moto, fastapi, duckdb) and takes 20 s to install; this one takes 3.
+boto3

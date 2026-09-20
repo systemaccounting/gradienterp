@@ -209,7 +209,8 @@ if [[ $files -eq 0 ]]; then
 fi
 
 (( JOBS > files )) && JOBS=$files
-start_motos "$JOBS"
+# integ suites run against real AWS; a moto pool is the local suites' only
+[[ $ENV == local ]] && start_motos "$JOBS"
 
 # ── run one job ──────────────────────────────────────────────────────────────
 # $1 job index, $2 worker index. Streams when serial; when parallel, stdout goes to a per-job file
