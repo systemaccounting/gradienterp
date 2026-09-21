@@ -28,6 +28,12 @@ resource "aws_iam_role_policy" "notify_owner" {
     Version = "2012-10-17"
     Statement = [
       {
+        Sid      = "MetricsHook"
+        Effect   = "Allow"
+        Action   = "ssm:GetParameter"
+        Resource = "arn:aws:ssm:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:parameter${local.metrics_hook_param}"
+      },
+      {
         Effect   = "Allow"
         Action   = ["dynamodb:GetItem", "dynamodb:UpdateItem"]
         Resource = "arn:aws:dynamodb:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:table/${local.stack_prefix}-customers"
@@ -70,10 +76,11 @@ module "notify_owner" {
   src_dir         = "prod/tower/lambdas/notify_owner"
   timeout         = 15
   env_vars = {
-    CUSTOMERS_TABLE = "${local.stack_prefix}-customers"
-    SENDER_EMAIL    = "ops+sender@gradienterp.cloud"
-    CONSOLE_URL     = "https://gradienterp.cloud/"
-    ONBOARD_AFTER_S = "86400" # a day active with no conversation and no entry
+    METRICS_HOOK_PARAM = local.metrics_hook_param
+    CUSTOMERS_TABLE    = "${local.stack_prefix}-customers"
+    SENDER_EMAIL       = "ops+sender@gradienterp.cloud"
+    CONSOLE_URL        = "https://gradienterp.cloud/"
+    ONBOARD_AFTER_S    = "86400" # a day active with no conversation and no entry
   }
   log_retention_days = local.config.LOG_RETENTION_DAYS
 }

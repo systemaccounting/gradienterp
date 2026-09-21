@@ -18,6 +18,7 @@ import os
 import time
 
 from aws import client as _aws, log as alog
+import metrics_post
 
 log = logging.getLogger()
 log.setLevel(logging.INFO)
@@ -145,6 +146,11 @@ def notify(gerp_id, kind):
                                  UpdateExpression="SET #s = :t", ExpressionAttributeNames={"#s": stamp},
                                  ExpressionAttributeValues={":t": {"S": now}})
     log.info(json.dumps({"event": "owner.notified", "gerp_id": gerp_id, "kind": kind, "to": to, "at": now}))
+    if kind == "ready":
+        # the product record: a user began paying (modules/metrics, the canonical saas name); the
+        # ready mail follows `marked active`, so this is the activation
+        metrics_post.post("subscription.started", row.get("owner_sub", ""),
+                          {"plan": "hosting", "gerp_id": gerp_id, "region": row.get("region", "")})
     return {"gerp_id": gerp_id, "kind": kind, "to": to, "at": now}
 
 

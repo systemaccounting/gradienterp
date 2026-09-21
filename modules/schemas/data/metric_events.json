@@ -77,6 +77,12 @@
         "plan"
       ]
     },
+    "checkout.started": {
+      "description": "a user chose a plan and went to pay",
+      "properties": [
+        "plan"
+      ]
+    },
     "subscription.started": {
       "description": "a user began paying",
       "properties": [

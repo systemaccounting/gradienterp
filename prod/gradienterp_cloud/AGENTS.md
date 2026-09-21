@@ -322,6 +322,20 @@ invoices reference its id. Publishing a second hook for one caller rotates that 
 both parameters are written after the last publish. The role holds `ssm:GetParameter` on those
 two parameters and nothing in the seller's account.
 
+## the product record
+
+gradienterp instruments its own app the way any firm's app would (modules/metrics): the operator
+ran `manage_metrics {op: publish_source, caller: operator}` on the gradienterp gerp and stored the
+answer at `/gradienterp/cloud/hooks/metrics` (SecureString `{url, token}`; env `METRICS_HOOK_PARAM`),
+and this app posts two of the five funnel events through the same `_post_hook`, the canonical saas
+names, the account id (the sub) as the subject: `GET /api/gerps` posts `session.started`
+(`surface: owner_app`), the owner app's first call after sign-in; `POST /api/gerps` posts
+`checkout.started` (`plan: hosting`, `gerp_id`, `region`, `openly_operated`) after the
+`awaiting_payment` row is written. The other three (`account.signed_up`, `subscription.started`,
+`subscription.cancelled`) post from tower (prod/tower/AGENTS.md). A post follows the write it
+reports; a failed post is one log line and the response stands; no parameter, no post. The role
+holds `ssm:GetParameter` on that parameter too.
+
 ## deleting an account
 
 A deletion erases the person: every row that names them, in every place the platform put one.

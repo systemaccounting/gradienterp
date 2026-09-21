@@ -310,6 +310,24 @@ public?}`; it assumes `OperatorOrchestration` into the gerp's account and rewrit
 given in the tenant blob, keeping the rest. A closed or never-vended gerp is skipped; a missing
 blob is reported, not written.
 
+## the product record
+
+gradienterp instruments its own app the way any firm's app would (modules/metrics): the operator
+ran `manage_metrics {op: publish_source, caller: operator}` on the gradienterp gerp and stored the
+answer at `/gradienterp/cloud/hooks/metrics` (SecureString `{url, token}`), and three lambdas here
+post the canonical saas names with the owner's account id (the Cognito sub) as the subject, through
+one shared poster, `lambdas/metrics_post.py`: `cognito_post_confirmation` posts `account.signed_up`
+(`source: web`) after the `gerp-accounts` row is written, and nothing on a repeat confirm;
+`notify_owner` posts `subscription.started` (`plan: hosting`, `gerp_id`, `region`) with the ready
+mail, the row's `owner_sub` as the subject, so a row from before the sub was stashed sends the mail
+and posts nothing; `close_account` posts `subscription.cancelled` (`plan`, `gerp_id`, `reason`: the
+closure's `how`) after the directory row is deleted. The owner app posts the other two
+(prod/gradienterp_cloud/AGENTS.md). A post follows the write it reports; a failed post is one log
+line and the signup, the mail or the closure stands; the parameter is read once per container and
+dropped on a 401; no parameter, no post. The poster rides into each bundle on its import (the
+bundler resolves a sibling under `lambdas/`), each role holds `ssm:GetParameter` on the parameter,
+each function carries `METRICS_HOOK_PARAM` (`local.metrics_hook_param`).
+
 ## trust
 
 - tower lambdas run in the operator account

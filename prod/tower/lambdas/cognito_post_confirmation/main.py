@@ -21,6 +21,7 @@ import logging
 import os
 
 from aws import client as _aws_client, resource as _aws_resource, log as alog
+import metrics_post
 
 
 log = logging.getLogger()
@@ -51,6 +52,8 @@ def _seed_account(attrs: dict, meta: dict) -> None:
             ConditionExpression="attribute_not_exists(account_id)",  # don't clobber an existing profile
         )
         log.info("seeded gerp-accounts row sub=%s email=%s", sub, attrs.get("email"))
+        # the product record: a login was created (modules/metrics, the canonical saas name)
+        metrics_post.post("account.signed_up", sub, {"source": "web"})
     except _ddb.exceptions.ConditionalCheckFailedException:
         log.info("gerp-accounts row already exists sub=%s", sub)
     except Exception:

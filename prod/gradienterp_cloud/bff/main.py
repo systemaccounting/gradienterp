@@ -795,6 +795,8 @@ _EMAIL_RE = re.compile(r"[^@\s]+@[^@\s]+\.[^@\s]+")
 CUSTOMER_HOOK_PARAM = os.environ.get("CUSTOMER_HOOK_PARAM", "")
 # the same door in reverse — customers/erase, called when the account is deleted
 CUSTOMER_ERASE_HOOK_PARAM = os.environ.get("CUSTOMER_ERASE_HOOK_PARAM", "")
+# the metrics door gradienterp published for its own app (modules/metrics): {url, token} the same way
+METRICS_HOOK_PARAM = os.environ.get("METRICS_HOOK_PARAM", "")
 _customer_hook_cache: dict = {}   # param name → {url, token}
 
 
@@ -900,9 +902,21 @@ def _post_hook(param: str, payload: dict, what: str) -> int | None:
         return None
     if status == 401:
         _customer_hook_cache.pop(param, None)
-    if status != 200:
+    if status >= 300:
         log.warning("%s post returned %s", what, status)
     return status
+
+
+def _post_metric(event_name: str, subject_id: str, properties: dict) -> None:
+    """One product event to the door gradienterp published for its own app (modules/metrics): the
+    funnel this app reports on itself, the canonical saas names, the account id as the subject.
+    Follows the durable write it reports; a failed post is one log line and the response stands."""
+    if not _hook(METRICS_HOOK_PARAM):
+        return
+    _post_hook(METRICS_HOOK_PARAM,
+               {"event": event_name, "subject_id": subject_id,
+                "properties": {k: str(v) for k, v in properties.items() if v not in (None, "")}},
+               f"metric {event_name}")
 
 
 def _post_customer_contact(sub: str) -> None:
@@ -1351,6 +1365,7 @@ def _handle(event, context):
 
     if method == "GET" and path == "/api/gerps":
         gerps = _member_gerps(sub)
+        _post_metric("session.started", sub, {"surface": "owner_app"})
         # never leak gateway_url to the browser — the BFF routes. chat_url IS for the
         # browser (the chat deep-link). `status` is the row's — awaiting_payment, queued,
         # provisioning, active, close_requested, closing, closed, stopped — and the card renders
@@ -1425,6 +1440,8 @@ def _handle(event, context):
             except _aws("dynamodb").exceptions.ConditionalCheckFailedException:
                 if attempt == 2:
                     raise
+        _post_metric("checkout.started", sub, {"plan": "hosting", "gerp_id": gerp_id, "region": region,
+                                               "openly_operated": str(openly_operated).lower()})
         # awaiting_payment, not provisioning: the card comes next, and it is what vends
         return _json(202, {"status": "awaiting_payment", "gerp_id": gerp_id, "label": label,
                            "openly_operated": openly_operated})
