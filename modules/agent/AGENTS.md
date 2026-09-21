@@ -164,13 +164,14 @@ Invoking the deployed runtime has silent-failure modes — `--content-type appli
 ### a base-image bump
 
 Dependabot opens the pull request (`.github/dependabot.yml`, `modules/agent/docker`). None of the
-usual checks start the container, so `image-check.yaml` does: the build on an arm64 runner, always;
-then, once the `image-check` environment's reviewer approves the run, the image pushed as
-`pr-<n>-<sha>`, westwood's runtime moved onto it, one tool-calling turn through `scripts/chat.sh`,
-and the answer posted on the pull request; then westwood back onto the latest `vNN` and the `pr-`
-tag deleted, since the runtime's terraform pins the newest image in ECR and a `pr-` tag must never
-be it. Read the answer, merge, then `bash scripts/deploy.sh image --all` from main moves the fleet
-onto the next `vNN`.
+usual checks start the container, so `image-check.yaml` does: the build on an arm64 runner, on a
+docker or a prompt change. Its second job is commented out while the platform has no users: once
+the `image-check` environment's reviewer approves the run, the image pushed as `pr-<n>-<sha>`,
+westwood's runtime moved onto it, one tool-calling turn through `scripts/chat.sh`, and the answer
+posted on the pull request; then westwood back onto the latest `vNN` and the `pr-` tag deleted,
+since the runtime's terraform pins the newest image in ECR and a `pr-` tag must never be it. The
+environment, its secret and the deploy role's subject stay in place for it. Merge, then
+`bash scripts/deploy.sh image --all` from main moves the fleet onto the next `vNN`.
 
 ## tearing down
 
