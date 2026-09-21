@@ -1,10 +1,14 @@
 # ─── the artifact bucket — lambda deploys without terraform ───
 #
-# TF owns shape, S3 owns bytes. scripts/deploy.sh pushes each fleet lambda's
-# .build zip (produced by the module's own archive_file — the single build
-# recipe) to a VERSIONED stable key = "<gerp:src-dir>.zip", annotates the
-# version with provenance {src_dir, src_sha256, built_at} + agent-readable
-# release notes, then fans update-function-code across tenant accounts.
+# TF owns shape, S3 owns bytes. scripts/deploy.sh pushes each lambda's zip
+# (the dir plus its import graph, scripts/deploy.py build_py) to a VERSIONED
+# stable key = "<gerp:src-dir>.zip", annotates the version with provenance
+# {src_dir, src_sha256, built_at} + agent-readable release notes, then calls
+# update-function-code: the gerps' fleets, the BFF and tower's own functions.
+#
+# This root owns the bucket because tower sources its functions from it: a
+# bucket tower created could not be read by the apply that creates it. Its
+# regional replicas and the replication stay in prod/tower with the regions.
 # Deployed state is NEVER recorded here — it's one get-function call away
 # (CodeSha256), and mirroring queryable state is how records drift.
 #

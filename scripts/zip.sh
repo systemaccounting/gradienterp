@@ -6,9 +6,9 @@
 #   bash scripts/zip.sh lambda <src-dir>…            # .build/lambdas/<src-dir>.zip: the bytes deploy.sh pushes
 #   bash scripts/zip.sh bff                          # .build/bff.zip: the owner web app's bundle
 #
-# Zips that aren't built here: the operator stacks' lambdas and the agent's chat lambda (terraform's
-# archive_file, during the apply, from the tree the apply runs in), the agent image
-# (`docker.sh --build`), and the providers CI mirrors (downloaded by tf-provider-mirror.sh).
+# Zips that aren't built here: the agent's chat lambda (terraform's archive_file, during the apply,
+# from the tree the apply runs in), the agent image (`docker.sh --build`), and the providers CI
+# mirrors (downloaded by tf-provider-mirror.sh).
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"

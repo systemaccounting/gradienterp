@@ -75,6 +75,9 @@ def bucket_for(region: str) -> str:
 # reaches one level up for the web/ files the lambda serves — a detail of THIS unit's build, which
 # `build_artifact` routes to `build_webapp`.
 WEBAPP_DIR = "prod/gradienterp_cloud/bff"
+# tower's own functions: the same bundle and bucket as the fleet's, in the OPERATOR account, so
+# they answer to no gerp's tag query. Pushed when named by `--dirs`, never by a bare push or --all
+TOWER_DIR = "prod/tower/lambdas/"
 WEBAPP_ROOT = os.path.dirname(WEBAPP_DIR)
 BFF_FN = f"{CONFIG['STACK_PREFIX']}-cloud-bff"
 BFF_KEY = f"{WEBAPP_ROOT}/bff.zip"  # terraform reads this key; it does not track the src-dir
@@ -438,9 +441,25 @@ def cmd_status(args):
         except Exception as e:  # noqa: BLE001
             return BFF_FN, WEBAPP_DIR, f"unreadable ({type(e).__name__})"
 
+    def tower_rows():
+        """tower's functions live in the operator account too, outside the gerp's tag query: the
+        same comparison, read there."""
+        try:
+            op = _boto(args.operator_profile)
+            op_s3, op_lam = op.client("s3"), op.client("lambda")
+            tower = {n: s for n, s in fleet(op).items() if s.startswith(TOWER_DIR)}
+            tower_shas = deployed_shas(op_lam) if tower else {}
+            out = []
+            for name, src in sorted(tower.items()):
+                _, art = artifact_head(op_s3, src + ".zip")
+                out.append((name, src, sync_state(tower_shas.get(name), art, sha256_b64_bytes(build_artifact(src)))))
+            return out
+        except Exception as e:  # noqa: BLE001
+            return [("tower", TOWER_DIR, f"unreadable ({type(e).__name__})")]
+
     rows = []
     with cf.ThreadPoolExecutor(max_workers=16) as ex:
-        rows = list(ex.map(one, sorted(fns.items()))) + [webapp_row()]
+        rows = list(ex.map(one, sorted(fns.items()))) + [webapp_row()] + tower_rows()
     width = max(len(r[0]) for r in rows)
     counts = {}
     for name, src, state in rows:
@@ -512,9 +531,12 @@ def cmd_push(args):
     dirs = list(args.dirs) if args.dirs else None
     if args.all and args.profile:
         sys.exit("--all reaches each gerp through its own gerp-<id> profile; --profile names one")
+    tower_dirs = [d for d in (dirs or []) if d.startswith(TOWER_DIR)]
+    if tower_dirs and args.all:
+        sys.exit("tower's functions live in the operator account and take no --all; push them by --dirs alone")
     # the gerps are checked before anything builds or uploads, the BFF included; a push of the BFF
-    # alone reaches only the operator account and names no gerp
-    fleet_dirs = None if dirs is None else [d for d in dirs if d != WEBAPP_DIR]
+    # or of tower alone reaches only the operator account and names no gerp
+    fleet_dirs = None if dirs is None else [d for d in dirs if d != WEBAPP_DIR and not d.startswith(TOWER_DIR)]
     gerps = ([r["gerp_id"] for r in _active_rows(_boto(args.operator_profile))] if args.all else [args.gerp]) \
         if fleet_dirs != [] else []
     sessions = []
@@ -527,6 +549,9 @@ def cmd_push(args):
     # walks 131 functions, omits the 132nd, and says it pushed the fleet.
     if dirs is None or WEBAPP_DIR in dirs:
         _push_webapp(args)
+    if tower_dirs:
+        # the same push as a fleet's, in the operator session: build, put, update-function-code
+        _push_fleet(args, _boto(args.operator_profile), tower_dirs)
     for g, session in sessions:
         if args.all:
             print(f"==> {g}")

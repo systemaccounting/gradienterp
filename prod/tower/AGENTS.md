@@ -88,6 +88,22 @@ staging pair runs between sessions.
 
 bash equivalent at `.github/workflows/per-customer-apply.sh` — useful for ad-hoc provisioning + debugging.
 
+## how tower's own functions deploy
+
+The seven functions here source their code from the operator's artifact bucket like every
+module's: the module call names `artifact_key = "prod/tower/lambdas/<fn>.zip"`, the plan pins the
+key's latest version, and the bundle is scripts/deploy.py's, the dir plus its import graph, so a
+shared file under `lambdas/` rides on the import alone. Code moves with
+`bash scripts/deploy.sh push --dirs prod/tower/lambdas/<fn>`, the operator account, 10 s; the
+next apply is a pointer sync on the same bytes. A bare push and `--all` leave tower alone; a tower
+dir with `--all` is refused. `deploy.sh status` prints tower's rows beside the BFF's. A new
+function is push-then-apply: the plan reads the artifact. The bucket is prod/platform/operator's
+(artifacts.tf there), read here by name; the region replicas and the replication stay here with
+the regions.
+
+Standing up a tower is three ordered steps: apply prod/platform/operator (the bucket), push the
+seven bundles, apply this dir.
+
 ## dependencies
 
 - **cognito user pool** (operator account) — auth identity for signups; carries the signup record itself, no separate signups DDB needed for POC

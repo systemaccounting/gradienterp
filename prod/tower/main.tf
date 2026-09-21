@@ -14,6 +14,9 @@ locals {
   config              = jsondecode(file("${path.module}/../../config.json"))
   stack_prefix        = local.config.STACK_PREFIX
   operator_account_id = local.config.OPERATOR_ACCOUNT_ID
+  # the operator's artifact bucket (prod/platform/operator artifacts.tf), by the convention every
+  # reader derives; tower's functions source their code from it like every module's
+  artifact_bucket = "${local.stack_prefix}-artifacts-${local.operator_account_id}"
   # every org-scoped trust condition (aws:PrincipalOrgID / aws:ResourceOrgID) reads this list:
   # the organization this stack runs in plus the ones admitted in config.json ORG_IDS
   org_ids = concat([data.aws_organizations_organization.this.id], local.config.ORG_IDS)
@@ -334,30 +337,12 @@ resource "aws_cloudwatch_log_group" "hub" {
 # build that should run a changed per_customer/, modules/ or .codebuild/.
 ###############################################
 
-
 ###############################################
 # provision_customer lambda
 #
 # Creates a new sub-account, seeds SSM tenant metadata, triggers codebuild.
 # Bash equivalent: .github/workflows/per-customer-apply.sh.
 ###############################################
-
-data "archive_file" "provision_customer" {
-  type        = "zip"
-  output_path = "${path.module}/.build/provision_customer.zip"
-
-  source {
-    content  = file("${path.module}/lambdas/provision_customer/main.py")
-    filename = "main.py"
-  }
-  # the handler imports `aws` (modules/aws/aws.py). This archive is a hand-listed manifest, unlike
-  # scripts/deploy.py which walks the import graph — a shared lib added to an import here has to be
-  # added here too, or the function ImportErrors at cold start.
-  source {
-    content  = file("${path.module}/../../modules/aws/aws.py")
-    filename = "aws.py"
-  }
-}
 
 resource "aws_iam_role" "provision_customer" {
   name = "tower-provision-customer"
@@ -450,12 +435,12 @@ resource "aws_iam_role_policy" "provision_customer" {
 module "provision_customer" {
   source = "../../modules/terraform/lambda"
 
-  name             = "tower-provision-customer"
-  role             = aws_iam_role.provision_customer.arn
-  filename         = data.archive_file.provision_customer.output_path
-  source_code_hash = data.archive_file.provision_customer.output_base64sha256
-  src_dir          = "prod/tower/lambdas/provision_customer"
-  timeout          = 900
+  name            = "tower-provision-customer"
+  role            = aws_iam_role.provision_customer.arn
+  artifact_bucket = local.artifact_bucket
+  artifact_key    = "prod/tower/lambdas/provision_customer.zip"
+  src_dir         = "prod/tower/lambdas/provision_customer"
+  timeout         = 900
   env_vars = {
     STACK_PREFIX          = local.stack_prefix
     CUSTOMERS_TABLE       = "${local.stack_prefix}-customers"
@@ -493,7 +478,6 @@ moved {
   to   = module.provision_customer.aws_lambda_function.this
 }
 
-
 ###############################################
 # cognito_post_confirmation lambda
 #
@@ -507,23 +491,6 @@ moved {
 # at this function by constructed ARN — no terraform_remote_state coupling
 # either way. lambda_permission below grants Cognito the right to invoke.
 ###############################################
-
-data "archive_file" "cognito_post_confirmation" {
-  type        = "zip"
-  output_path = "${path.module}/.build/cognito_post_confirmation.zip"
-
-  source {
-    content  = file("${path.module}/lambdas/cognito_post_confirmation/main.py")
-    filename = "main.py"
-  }
-  # the handler imports `aws` (modules/aws/aws.py). This archive is a hand-listed manifest, unlike
-  # scripts/deploy.py which walks the import graph — a shared lib added to an import here has to be
-  # added here too, or the function ImportErrors at cold start.
-  source {
-    content  = file("${path.module}/../../modules/aws/aws.py")
-    filename = "aws.py"
-  }
-}
 
 resource "aws_iam_role" "cognito_post_confirmation" {
   name = "tower-cognito-post-confirmation"
@@ -571,12 +538,12 @@ resource "aws_iam_role_policy" "cognito_post_confirmation" {
 module "cognito_post_confirmation" {
   source = "../../modules/terraform/lambda"
 
-  name             = "tower-cognito-post-confirmation"
-  role             = aws_iam_role.cognito_post_confirmation.arn
-  filename         = data.archive_file.cognito_post_confirmation.output_path
-  source_code_hash = data.archive_file.cognito_post_confirmation.output_base64sha256
-  src_dir          = "prod/tower/lambdas/cognito_post_confirmation"
-  timeout          = 10
+  name            = "tower-cognito-post-confirmation"
+  role            = aws_iam_role.cognito_post_confirmation.arn
+  artifact_bucket = local.artifact_bucket
+  artifact_key    = "prod/tower/lambdas/cognito_post_confirmation.zip"
+  src_dir         = "prod/tower/lambdas/cognito_post_confirmation"
+  timeout         = 10
   env_vars = {
     ACCOUNTS_TABLE = "${local.stack_prefix}-accounts"
   }
@@ -587,7 +554,6 @@ moved {
   from = aws_lambda_function.cognito_post_confirmation
   to   = module.cognito_post_confirmation.aws_lambda_function.this
 }
-
 
 # Look up the gradienterp user pool by name so we don't need to read operator's
 # tfstate — direct data source instead of terraform_remote_state.
@@ -625,22 +591,6 @@ resource "aws_lambda_permission" "cognito_invoke_post_confirmation" {
 #
 # Design: tmp/billing.md.
 ###############################################
-
-data "archive_file" "bill_customer" {
-  type        = "zip"
-  output_path = "${path.module}/.build/bill_customer.zip"
-
-  source {
-    content  = file("${path.module}/lambdas/bill_customer/main.py")
-    filename = "main.py"
-  }
-  # hand-listed manifest, same as provision_customer above — a shared lib added to
-  # an import here has to be added here too or the function ImportErrors cold.
-  source {
-    content  = file("${path.module}/../../modules/aws/aws.py")
-    filename = "aws.py"
-  }
-}
 
 resource "aws_iam_role" "bill_customer" {
   name = "tower-bill-customer"
@@ -727,12 +677,12 @@ resource "aws_iam_role_policy" "bill_customer" {
 module "bill_customer" {
   source = "../../modules/terraform/lambda"
 
-  name             = "tower-bill-customer"
-  role             = aws_iam_role.bill_customer.arn
-  filename         = data.archive_file.bill_customer.output_path
-  source_code_hash = data.archive_file.bill_customer.output_base64sha256
-  src_dir          = "prod/tower/lambdas/bill_customer"
-  timeout          = 300
+  name            = "tower-bill-customer"
+  role            = aws_iam_role.bill_customer.arn
+  artifact_bucket = local.artifact_bucket
+  artifact_key    = "prod/tower/lambdas/bill_customer.zip"
+  src_dir         = "prod/tower/lambdas/bill_customer"
+  timeout         = 300
   env_vars = {
     CUSTOMERS_TABLE         = "${local.stack_prefix}-customers"
     PRIORS_TABLE            = "${local.stack_prefix}-priors"
@@ -759,7 +709,6 @@ moved {
   to   = module.bill_customer.aws_lambda_function.this
 }
 
-
 ###############################################
 # close_account lambda
 #
@@ -768,20 +717,6 @@ moved {
 # that one call, the way provision_customer does for Service Catalog. Invoked by the operator gerp's
 # `closure/close.py` through gerp-closure-requester (prod/platform/operator).
 ###############################################
-
-data "archive_file" "close_account" {
-  type        = "zip"
-  output_path = "${path.module}/.build/close_account.zip"
-
-  source {
-    content  = file("${path.module}/lambdas/close_account/main.py")
-    filename = "main.py"
-  }
-  source {
-    content  = file("${path.module}/../../modules/aws/aws.py")
-    filename = "aws.py"
-  }
-}
 
 resource "aws_iam_role" "close_account" {
   name = "tower-close-account"
@@ -848,12 +783,12 @@ resource "aws_iam_role_policy" "close_account" {
 module "close_account" {
   source = "../../modules/terraform/lambda"
 
-  name             = "tower-close-account"
-  role             = aws_iam_role.close_account.arn
-  filename         = data.archive_file.close_account.output_path
-  source_code_hash = data.archive_file.close_account.output_base64sha256
-  src_dir          = "prod/tower/lambdas/close_account"
-  timeout          = 60
+  name            = "tower-close-account"
+  role            = aws_iam_role.close_account.arn
+  artifact_bucket = local.artifact_bucket
+  artifact_key    = "prod/tower/lambdas/close_account.zip"
+  src_dir         = "prod/tower/lambdas/close_account"
+  timeout         = 60
   env_vars = {
     STACK_PREFIX            = local.stack_prefix
     CUSTOMERS_TABLE         = "${local.stack_prefix}-customers"
@@ -869,7 +804,6 @@ moved {
   to   = module.close_account.aws_lambda_function.this
 }
 
-
 ###############################################
 # update_owner_email lambda
 #
@@ -879,20 +813,6 @@ moved {
 # verify read owner_email off it), and the gerp-customers row. Invoked by the gerp-cloud BFF's
 # email sync, same account.
 ###############################################
-
-data "archive_file" "update_owner_email" {
-  type        = "zip"
-  output_path = "${path.module}/.build/update_owner_email.zip"
-
-  source {
-    content  = file("${path.module}/lambdas/update_owner_email/main.py")
-    filename = "main.py"
-  }
-  source {
-    content  = file("${path.module}/../../modules/aws/aws.py")
-    filename = "aws.py"
-  }
-}
 
 resource "aws_iam_role" "update_owner_email" {
   name = "tower-update-owner-email"
@@ -960,12 +880,12 @@ resource "aws_iam_role_policy" "update_owner_email" {
 module "update_owner_email" {
   source = "../../modules/terraform/lambda"
 
-  name             = "tower-update-owner-email"
-  role             = aws_iam_role.update_owner_email.arn
-  filename         = data.archive_file.update_owner_email.output_path
-  source_code_hash = data.archive_file.update_owner_email.output_base64sha256
-  src_dir          = "prod/tower/lambdas/update_owner_email"
-  timeout          = 60
+  name            = "tower-update-owner-email"
+  role            = aws_iam_role.update_owner_email.arn
+  artifact_bucket = local.artifact_bucket
+  artifact_key    = "prod/tower/lambdas/update_owner_email.zip"
+  src_dir         = "prod/tower/lambdas/update_owner_email"
+  timeout         = 60
   env_vars = {
     CUSTOMERS_TABLE         = "${local.stack_prefix}-customers"
     TOWER_PROVISIONING_ROLE = data.terraform_remote_state.management.outputs.tower_provisioning_role_arn
@@ -978,7 +898,6 @@ moved {
   from = aws_lambda_function.update_owner_email
   to   = module.update_owner_email.aws_lambda_function.this
 }
-
 
 resource "aws_cloudwatch_event_rule" "bill_customer_daily" {
   name        = "tower-bill-customer-daily"
@@ -1017,20 +936,6 @@ resource "aws_lambda_permission" "bill_customer_events" {
 # account (OperatorOrchestration; the agent, the mailbox and the documents it issues read the
 # firm's identity off it). The gerp-cloud BFF writes the row and invokes this, same account.
 ###############################################
-
-data "archive_file" "update_business_info" {
-  type        = "zip"
-  output_path = "${path.module}/.build/update_business_info.zip"
-
-  source {
-    content  = file("${path.module}/lambdas/update_business_info/main.py")
-    filename = "main.py"
-  }
-  source {
-    content  = file("${path.module}/../../modules/aws/aws.py")
-    filename = "aws.py"
-  }
-}
 
 resource "aws_iam_role" "update_business_info" {
   name = "tower-update-business-info"
@@ -1086,12 +991,12 @@ resource "aws_iam_role_policy" "update_business_info" {
 module "update_business_info" {
   source = "../../modules/terraform/lambda"
 
-  name             = "tower-update-business-info"
-  role             = aws_iam_role.update_business_info.arn
-  filename         = data.archive_file.update_business_info.output_path
-  source_code_hash = data.archive_file.update_business_info.output_base64sha256
-  src_dir          = "prod/tower/lambdas/update_business_info"
-  timeout          = 60
+  name            = "tower-update-business-info"
+  role            = aws_iam_role.update_business_info.arn
+  artifact_bucket = local.artifact_bucket
+  artifact_key    = "prod/tower/lambdas/update_business_info.zip"
+  src_dir         = "prod/tower/lambdas/update_business_info"
+  timeout         = 60
   env_vars = {
     CUSTOMERS_TABLE = "${local.stack_prefix}-customers"
   }

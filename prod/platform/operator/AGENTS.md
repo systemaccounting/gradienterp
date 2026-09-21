@@ -11,6 +11,7 @@ Operator-account foundation. Runs in the **operator sub-account** via cross-acco
 |---|---|
 | `aws_s3_bucket.tfstate` | s3 state bucket — every other terraform dir in the org points its `backend "s3"` here |
 | `aws_dynamodb_table.tfstate_lock` | DynamoDB lock table — terraform standard schema (`LockID` hash key) |
+| `aws_s3_bucket.artifacts` (`gerp-artifacts-<operator account>`) | the versioned lambda-artifact bucket every function on the platform sources its code from (`artifacts.tf`): stable key `<gerp:src-dir>.zip`, provenance and release annotations per version, org-read, operator-write, noncurrent versions expire at 60 days. `scripts/deploy.sh push` writes it; the gerps' fleets, the BFF and tower's own functions read it. Here and not in tower because tower's functions read it at plan. The regional replicas and the replication are tower's (`prod/tower/regions.tf`) |
 | `aws_dynamodb_table.customers` (`gerp-customers`) | the gerp-instance registry — one row per provisioned gerp, hash key `gerp_id`, owner-index GSI on `owner_sub` (account → its gerps). Streams enabled for downstream fan-out |
 | `aws_cloudwatch_event_bus.operator` (`gerp-operator`) | the operator's own bus: the hub's forward edge (`prod/hub`) puts every event not addressed to a gerp here, and the operator's consumers — the publisher, the counters, the archive (`prod/api_openlyoperated`), the platform's reports — are its rules. The old `gerp-events` bus forwards the same events here until every gerp puts to the hub |
 | `aws_cognito_user_pool.main` (`gradienterp`) + client + prefix domain (`gerp-auth`) | single auth identity for the platform. Hosted UI on cognito's prefix domain (no custom domain yet). Account is the cognito identity; capabilities (public_user, erp_instance) are dashboard tiles. |
@@ -44,6 +45,10 @@ This dir is the second apply, after `prod/platform/management/`:
    }
    ```
    Then `terraform init -migrate-state` per dir. Subsequent applies are remote-backed and concurrent-safe: `bash scripts/apply.sh --stack platform/operator` (this dir) and `--stack platform/management` (the laptop only: its `terraform.tfvars` and the management permission).
+
+4. **Push tower's bundles**, `bash scripts/deploy.sh push --dirs prod/tower/lambdas/<fn>` for each of
+   the seven, then apply `prod/tower/`: its plan reads each function's artifact from the bucket
+   this dir created.
 
 ## plaid gateway creds — set out of band, never through tf
 

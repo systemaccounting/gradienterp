@@ -189,7 +189,7 @@ resource "aws_ecr_replication_configuration" "agent" {
 output "regions" {
   description = "Per region: the artifact bucket and the OAM sink arn (us-east-1 is tower's own); config.json REGION_ARTIFACTS / OAM_SINKS ride from here"
   value = merge(
-    { (var.aws_region) = { artifacts_bucket = aws_s3_bucket.artifacts.id, oam_sink_arn = aws_oam_sink.gerps.arn, ops_alerts_topic_arn = aws_sns_topic.ops_alerts.arn } },
+    { (var.aws_region) = { artifacts_bucket = data.aws_s3_bucket.artifacts.id, oam_sink_arn = aws_oam_sink.gerps.arn, ops_alerts_topic_arn = aws_sns_topic.ops_alerts.arn } },
     { "eu-west-1" = { artifacts_bucket = module.region_eu_west_1.artifacts_bucket, oam_sink_arn = module.region_eu_west_1.oam_sink_arn, ops_alerts_topic_arn = module.region_eu_west_1.ops_alerts_topic_arn } },
     { "eu-central-1" = { artifacts_bucket = module.region_eu_central_1.artifacts_bucket, oam_sink_arn = module.region_eu_central_1.oam_sink_arn, ops_alerts_topic_arn = module.region_eu_central_1.ops_alerts_topic_arn } },
     { "eu-west-2" = { artifacts_bucket = module.region_eu_west_2.artifacts_bucket, oam_sink_arn = module.region_eu_west_2.oam_sink_arn, ops_alerts_topic_arn = module.region_eu_west_2.ops_alerts_topic_arn } },
@@ -201,6 +201,11 @@ output "regions" {
 }
 
 # ─── the artifacts follow: S3 replication from the us-east-1 bucket to every region's ───
+#
+# The bucket is prod/platform/operator's (artifacts.tf there); this root reads it by name.
+data "aws_s3_bucket" "artifacts" {
+  bucket = local.artifact_bucket
+}
 #
 # `deploy.sh push` writes one bucket; each region's replica fills within seconds, and a gerp
 # there deploys from it (scripts/deploy.py waits for the checksum it pushed). A new region's
@@ -224,12 +229,12 @@ resource "aws_iam_role_policy" "artifacts_replication" {
       {
         Effect   = "Allow"
         Action   = ["s3:GetReplicationConfiguration", "s3:ListBucket"]
-        Resource = aws_s3_bucket.artifacts.arn
+        Resource = data.aws_s3_bucket.artifacts.arn
       },
       {
         Effect   = "Allow"
         Action   = ["s3:GetObjectVersionForReplication", "s3:GetObjectVersionAcl", "s3:GetObjectVersionTagging"]
-        Resource = "${aws_s3_bucket.artifacts.arn}/*"
+        Resource = "${data.aws_s3_bucket.artifacts.arn}/*"
       },
       {
         Effect = "Allow"
@@ -249,7 +254,7 @@ resource "aws_iam_role_policy" "artifacts_replication" {
 }
 
 resource "aws_s3_bucket_replication_configuration" "artifacts" {
-  bucket = aws_s3_bucket.artifacts.id
+  bucket = data.aws_s3_bucket.artifacts.id
   role   = aws_iam_role.artifacts_replication.arn
 
   rule {
@@ -336,5 +341,4 @@ resource "aws_s3_bucket_replication_configuration" "artifacts" {
     }
   }
 
-  depends_on = [aws_s3_bucket_versioning.artifacts]
 }
