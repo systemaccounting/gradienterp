@@ -7,20 +7,6 @@
 # A message kind is a function in the lambda; the row's `notified_<kind>_at` stamp says it once.
 ###############################################
 
-data "archive_file" "notify_owner" {
-  type        = "zip"
-  output_path = "${path.module}/.build/notify_owner.zip"
-
-  source {
-    content  = file("${path.module}/lambdas/notify_owner/main.py")
-    filename = "main.py"
-  }
-  source {
-    content  = file("${path.module}/../../modules/aws/aws.py")
-    filename = "aws.py"
-  }
-}
-
 resource "aws_iam_role" "notify_owner" {
   name = "tower-notify-owner"
 
@@ -77,12 +63,12 @@ resource "aws_iam_role_policy" "notify_owner" {
 module "notify_owner" {
   source = "../../modules/terraform/lambda"
 
-  name             = "tower-notify-owner"
-  role             = aws_iam_role.notify_owner.arn
-  filename         = data.archive_file.notify_owner.output_path
-  source_code_hash = data.archive_file.notify_owner.output_base64sha256
-  src_dir          = "prod/tower/lambdas/notify_owner"
-  timeout          = 15
+  name            = "tower-notify-owner"
+  role            = aws_iam_role.notify_owner.arn
+  artifact_bucket = local.artifact_bucket
+  artifact_key    = "prod/tower/lambdas/notify_owner.zip"
+  src_dir         = "prod/tower/lambdas/notify_owner"
+  timeout         = 15
   env_vars = {
     CUSTOMERS_TABLE = "${local.stack_prefix}-customers"
     SENDER_EMAIL    = "ops+sender@gradienterp.cloud"
@@ -96,7 +82,6 @@ moved {
   from = aws_lambda_function.notify_owner
   to   = module.notify_owner.aws_lambda_function.this
 }
-
 
 # the daily ask: every active gerp, the `onboard` gate and its stamp decide
 resource "aws_cloudwatch_event_rule" "onboard_sweep" {

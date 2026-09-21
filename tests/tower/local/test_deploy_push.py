@@ -228,6 +228,34 @@ def test_a_pull_requests_image_is_pushed_under_its_own_tag_and_westwood_moves_on
     assert docker[1][0] == "--push" and docker[1][1].endswith(":pr-20-abcdef0")
     assert moved == ["sha256:pr-20-abcdef0"]
 
+def test_a_tower_dir_pushes_in_the_operator_account_names_no_gerp_and_takes_no_all():
+    """tower's functions live in the operator account, outside every gerp's tag query: a tower dir
+    goes through the operator session, a gerp dir through the gerp's, a bare push leaves tower
+    alone, and --all is refused since there is one tower."""
+    calls, asked = [], []
+
+    def target(args):
+        asked.append(args.gerp)
+        return f"session:gerp-{args.gerp}"
+
+    with _patched(_boto=lambda p: f"session:{p}", _target_session=target, _push_webapp=lambda args: None,
+                  _push_fleet=lambda args, s, d: calls.append((s, d))):
+        deploy.cmd_push(Namespace(dirs=["prod/tower/lambdas/notify_owner", "modules/x/lambdas/y"], all=False,
+                                  profile=None, gerp="gradienterp", operator_profile="op", deploy=False, notes=""))
+        assert calls == [("session:op", ["prod/tower/lambdas/notify_owner"]), ("session:gerp-gradienterp", ["modules/x/lambdas/y"])]
+        calls.clear(); asked.clear()
+        deploy.cmd_push(Namespace(dirs=["prod/tower/lambdas/notify_owner"], all=False, profile=None,
+                                  gerp="gradienterp", operator_profile="op", deploy=False, notes=""))
+        assert calls == [("session:op", ["prod/tower/lambdas/notify_owner"])] and asked == [], "no gerp is named or checked"
+        calls.clear()
+        try:
+            deploy.cmd_push(Namespace(dirs=["prod/tower/lambdas/notify_owner"], all=True, profile=None,
+                                      gerp="gradienterp", operator_profile="op", deploy=False, notes=""))
+            raise AssertionError("--all with a tower dir must refuse")
+        except SystemExit as e:
+            assert "operator account" in str(e) and calls == []
+
+
 if __name__ == "__main__":
     for _name, _fn in sorted(globals().items()):
         if _name.startswith("test_") and callable(_fn):
