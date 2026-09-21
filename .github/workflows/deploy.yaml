@@ -7,6 +7,7 @@
 #   gerps     the gerp list and the source's dirs, for the jobs after it
 #   bff       the BFF, once: it lives in the operator account, and a push per gerp would race
 #   lambdas   one job per gerp: deploy.sh push --gerp <g> --dirs <the fleet dirs>
+#   playbooks playbooks.yaml, the same gerps, after the pushes — with -f playbooks=true
 #   integ     the deployed modules' integ tests, once the pushes are done
 #   build     the agent image, on an arm64 runner (native, no emulation): docker.sh --build, upload.sh image
 #   runtimes  one job per gerp: its runtime onto the tag build pushed (or the top of ECR, image: no-build)
@@ -29,6 +30,10 @@ on:
         type: choice
         default: none
         options: [none, build, no-build]
+      playbooks:
+        description: after the pushes, ingest the playbooks (every modules/**/kb.md) into each gerp's knowledge base
+        type: boolean
+        default: false
       source_version:
         description: a version of source.zip (empty is its latest)
         required: false
@@ -155,6 +160,19 @@ jobs:
           bash scripts/deploy.sh push --gerp "$GERP" --dirs "${dirs[@]}" --notes "$(jq -r .commit source.json)" \
             | tee "$RUNNER_TEMP/push.out"
           { echo "### $GERP"; echo '```'; cat "$RUNNER_TEMP/push.out"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+
+  playbooks:
+    # playbooks.yaml composed: the same gerps, after their pushes; only when the dispatch asks, since a
+    # kb.md change reaching main runs it on its own
+    needs: [gerps, lambdas]
+    if: ${{ !cancelled() && inputs.playbooks }}
+    permissions:
+      contents: read
+      id-token: write
+    uses: ./.github/workflows/playbooks.yaml
+    with:
+      gerp: ${{ inputs.gerp }}
+    secrets: inherit
 
   integ:
     needs: [gerps, bff, lambdas]

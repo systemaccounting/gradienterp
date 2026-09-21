@@ -5,6 +5,9 @@ and `apply.yaml`, from an uploaded `source.zip` (`scripts/workflow.sh run` uploa
 waits on it). Three run on every pull request and every push to `main`: `unit.yaml`
 (`bash scripts/test.sh`), `e2e.yaml` (`bash scripts/e2e.sh` against the local stack, the seed written by
 `--configure`) and `terraform.yaml` (`terraform fmt -check`, then `tf-validate-all.sh`). None needs AWS.
+`playbooks.yaml` runs on a push to `main` that touches a `modules/**/kb.md`, by dispatch (`gerp`) or from
+`deploy.yaml` (`-f playbooks=true`), on its checkout with no upload: `scripts/sync_playbooks.sh` per active gerp,
+the knowledge base found by name in the gerp's account.
 A job that does reaches it through the `prod` environment (`environment.sh`: deployments from `main`
 only, no reviewers) and the shared step `.github/actions/aws`, which takes `gerp-github-deploy`
 (`prod/platform/management/github_deploy.tf`) with the environment's `AWS_DEPLOY_ROLE_ARN` and writes the

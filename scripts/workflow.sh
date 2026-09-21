@@ -6,14 +6,16 @@
 #   bash scripts/workflow.sh wait --commit [<sha>] [--event push|pull_request]
 #   bash scripts/workflow.sh log <run-id> [--failed]
 #
-# run   Unless `-f source_version=` names an upload, zips the tree (`zip.sh source`, with `--dirs`), uploads
+# run   A workflow with no `source_version` input (playbooks.yaml) runs on its checkout: nothing is uploaded and
+#       `--dirs` is refused. Otherwise, unless `-f source_version=` names an upload, zips the tree (`zip.sh source`, with `--dirs`), uploads
 #       it (`upload.sh source`) and dispatches on the version the upload printed, so the run takes this tree
 #       even if another upload lands before it starts. A deploy.yaml run naming nothing to deploy — no
 #       `--dirs`, no `-f image=` — is refused before anything uploads. Runs the workflow file from the
 #       current branch (WORKFLOW_REF for another), prints the new run's id and url, and waits on it
 #       unless `--no-wait`.
 # wait  One run: its url, then its result as the exit status, and its failing steps on a failure.
-#       `--commit` (default HEAD, event push): every workflow whose `on:` names the event, once each is
+#       `--commit` (default HEAD, event push): every workflow whose `on:` names the event with no `paths:`
+#       filter (one with a filter runs only when the commit touched a matching path), once each is
 #       listed for that commit — a push's runs take seconds to appear — waited on at once, one line per
 #       workflow, the failing steps of each that failed.
 # log   The run's log, or with `--failed` its failing steps alone.
@@ -48,11 +50,13 @@ wait_run() {
 
 # the events a workflow file's top-level `on:` names, one per line
 triggers() {
-  awk '/^on: *\[/ { gsub(/^on: *\[|\].*$/, ""); n = split($0, e, / *, */); for (i = 1; i <= n; i++) print e[i]; exit }
-       /^on: *[a-z_]+ *$/ { sub(/^on: */, ""); print; exit }
-       /^on:/ { inon = 1; next }
-       inon && /^[^ #]/ { exit }
-       inon && /^  [a-z_]+:/ { k = $0; sub(/^  /, "", k); sub(/:.*/, "", k); print k }' "$1"
+  # the events the file's `on:` names, less any that carries a `paths:` filter: whether such a
+  # trigger starts a run depends on what the commit touched, so a wait cannot expect it
+  awk '/^on:/ { inon = 1; next }
+       inon && /^[^ ]/ { inon = 0 }
+       inon && /^  [a-z_]+:/ { k = $0; sub(/^  /, "", k); sub(/:.*/, "", k); keys[++n] = k; next }
+       inon && /^    paths:/ { paths[k] = 1 }
+       END { for (i = 1; i <= n; i++) if (!(keys[i] in paths)) print keys[i] }' "$1"
 }
 
 workflow_name() {
@@ -119,7 +123,12 @@ run_workflow() {
     esac
   done
 
-  if [[ -z "$version" ]]; then
+  # a workflow with no `source_version` input runs on its checkout: nothing to zip or upload, and
+  # no --dirs to name
+  if ! grep -Eq '^\s+source_version:' "$REPO/.github/workflows/$workflow"; then
+    (( ${#dirs[@]} == 0 )) || { echo "workflow.sh run: $workflow runs on its checkout and takes no --dirs" >&2; exit 2; }
+    [[ -z "$version" ]] || { echo "workflow.sh run: $workflow runs on its checkout and takes no source_version" >&2; exit 2; }
+  elif [[ -z "$version" ]]; then
     if [[ "$workflow" == deploy.yaml && ${#dirs[@]} -eq 0 && ( -z "$image" || "$image" == none ) ]]; then
       echo "workflow.sh run: deploy.yaml with no --dirs and no -f image=… would deploy nothing" >&2
       exit 2

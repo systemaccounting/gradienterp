@@ -74,6 +74,31 @@ def test_the_deploy_matrices_fan_out_over_the_resolved_gerps_and_the_image_build
     assert "lambdas" not in (jobs["runtimes"]["needs"] or []), "the image and the lambdas run at once"
 
 
+def test_playbooks_runs_on_a_kb_change_by_dispatch_or_by_call_and_finds_the_knowledge_base_by_name():
+    """playbooks.yaml (issue #42): GitHub's paths filter is the change detection; the dispatch and the
+    call take a gerp; every job deploys from main through prod; the sync step finds the knowledge
+    base and data source by name in the gerp's account and hands the script its five arguments."""
+    wf = _load(REPO / ".github" / "workflows" / "playbooks.yaml")
+    on = wf["on"]
+    assert on["push"] == {"branches": ["main"], "paths": ["modules/**/kb.md"]}
+    assert "gerp" in on["workflow_dispatch"]["inputs"] and "gerp" in on["workflow_call"]["inputs"]
+    assert all(job["environment"] == "prod" for job in wf["jobs"].values())
+    sync = next(st for st in wf["jobs"]["sync"]["steps"] if st.get("name") == "sync")["run"]
+    for needle in ("list-knowledge-bases", 'playbooks-${GERP//_/-}', "list-data-sources", '"repo-playbooks"'):
+        assert needle in sync, needle
+    assert 'bash scripts/sync_playbooks.sh "$GERP" "$kb" "$ds" "gerp-$GERP" "$region"' in sync
+    assert wf["jobs"]["sync"]["strategy"]["matrix"]["gerp"] == "${{ fromJSON(needs.gerps.outputs.list) }}"
+
+
+def test_deploy_composes_playbooks_only_when_asked():
+    wf = _load(REPO / ".github" / "workflows" / "deploy.yaml")
+    assert wf["on"]["workflow_dispatch"]["inputs"]["playbooks"]["default"] is False
+    job = wf["jobs"]["playbooks"]
+    assert job["uses"] == "./.github/workflows/playbooks.yaml"
+    assert job["with"]["gerp"] == "${{ inputs.gerp }}" and job["secrets"] == "inherit"
+    assert "inputs.playbooks" in job["if"] and "lambdas" in job["needs"]
+
+
 if __name__ == "__main__":
     for _name, _fn in sorted(globals().items()):
         if _name.startswith("test_") and callable(_fn):

@@ -24,7 +24,7 @@ repo is deleted from the KB.
 - `aws_bedrockagent_data_source` — `type = "CUSTOM"` (inline ingest, `RETAIN`); terraform creates it but never ingests.
 - `aws_iam_role.kb_service` — assumed by `bedrock.amazonaws.com`; `InvokeModel` on the Titan ARN + s3vectors read/write on the index.
 - outputs: `knowledge_base_id` (feeds the agent's `PLAYBOOK_KB_ID`), `data_source_id`, `kb_service_role_arn`.
-- ingestion is the provisioning build's: `.codebuild/per-customer.yml` post_build runs `scripts/sync_playbooks.sh <gerp_id> <kb_id> <data_source_id> env` in the gerp's account before the row is marked active, on every apply — so a vended gerp is never ready with an empty shelf and an edited guide reaches a gerp on its next build. By hand the same script with the `gerp-<gerp_id>` profile; `--dry-run` previews (see below).
+- ingestion is `scripts/sync_playbooks.sh <gerp_id> <kb_id> <data_source_id> [profile] [region]`, three callers: the provisioning build (`.codebuild/per-customer.yml` post_build, `env` creds, in the gerp's account before the row is marked active, on every apply — a vended gerp is never ready with an empty shelf); `.github/workflows/playbooks.yaml`, one job per gerp, on every push to `main` that touches a `modules/**/kb.md` (every active gerp), by dispatch (`bash scripts/workflow.sh run playbooks.yaml -f gerp=<id>|all`, no upload: it runs on its checkout) or composed into `deploy.yaml` (`-f playbooks=true`), the knowledge base and data source found by name in the gerp's account (`playbooks-<gerp>`, `repo-playbooks`); and by hand, the same script with the `gerp-<gerp_id>` profile; `--dry-run` previews (see below).
 
 ## why per-customer, in the customer account
 

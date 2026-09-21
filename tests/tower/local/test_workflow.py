@@ -163,6 +163,24 @@ def test_log_prints_the_whole_log_or_the_failing_steps():
     assert out.returncode == 0 and out.stdout.strip() == "failing steps of 101"
 
 
+def test_run_of_a_workflow_that_runs_on_its_checkout_uploads_nothing_and_takes_no_dirs():
+    out, state = _workflow("run", "playbooks.yaml", "-f", "gerp=all")
+    assert out.returncode == 0, out.stderr
+    assert "zipped" not in state and "uploaded" not in state
+    assert state["dispatched"].endswith("-f gerp=all")
+    out, state = _workflow("run", "playbooks.yaml", "--dirs", "modules/x/lambdas/y")
+    assert out.returncode == 2 and "takes no --dirs" in out.stderr and state == {}
+
+
+def test_wait_on_a_commit_expects_no_workflow_behind_a_paths_filter():
+    """playbooks.yaml runs on a push only when a kb.md changed, image-check.yaml on a pull request only
+    when the image's inputs did: a wait cannot know which, so neither is expected and neither is
+    named missing."""
+    out, state = _workflow("wait", "--commit", SHA)
+    assert out.returncode == 0, out.stderr
+    assert "playbooks" not in out.stdout + out.stderr and "image-check" not in out.stdout + out.stderr
+
+
 if __name__ == "__main__":
     for _name, _fn in sorted(globals().items()):
         if _name.startswith("test_") and callable(_fn):
