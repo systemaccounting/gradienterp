@@ -85,6 +85,7 @@ and joined to the books. Why in `README.md`.
   the canonical rows shift the zone with `at_timezone(ts, ?)` (found on the first integ run). duckdb is a test
   dependency imported by name (`importlib.import_module`), so the deploy walk never bundles it. `tests/metrics/_helpers.py`
   seeds the bucket with the same partitioned Parquet Firehose writes
+- **reports on the portal** — prompt-tier, no tool: after a data answer the agent offers a page under `pages/reports/<slug>.html` (modules/storage `manage_storage op=put`, the link back), the standing preference `data-questions-as-reports` by `remember`, and a periodic one as an automation the calendar fires, its runs `pages/reports/<slug>/<YYYY-MM-DDTHH-MM>.html` with `latest.html` rewritten; the page and script shapes are in kb.md
 
 ## the row, end to end
 

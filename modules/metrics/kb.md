@@ -107,3 +107,48 @@ to keep one handy, `manage_metrics op=pin name=<name>` puts the row into every t
 
 The joins are yours: revenue per active member is `get_statement` for the period over `active`
 for the same period; cost per check-in is the cost structure over `count`.
+
+## a report on the portal
+
+A data answer the owner wants to keep is a page on the portal (modules/storage): `manage_storage
+op=put key=pages/reports/<slug>.html content=<html>` returns the served url. The body is plain
+html; the shell adds `<base>`, `ui.data()` and the version poll. The page holds the question as
+its title, a `<table>` built from the query's `columns` and `rows`, and a footer line naming the
+query, its parameters, the window and when it ran, so "refresh that" is the same call and the same
+key:
+
+    <h1>sessions this week</h1>
+    <table><thead><tr><th>period</th><th>n</th></tr></thead>
+    <tbody><tr><td>2026-09-15</td><td>12</td></tr></tbody></table>
+    <p class="source">count · event=session.started grain=day · this_week · run 2026-09-21T19:30Z</p>
+
+The slug is the question's words, kebab-case (`sessions-this-week`). The link is the answer from
+then on; the table stays on the page.
+
+## a periodic report
+
+"Every monday" is an automation (the writing playbook: `manage_storage op=put` to
+`automations/staged/<name>.py`, the review, then `manage_automation op=schedule`). Its `run` is the
+same two calls through `ctx.call`, the window named relative so each run reads its own period, the
+page put at a time-indexed key under one prefix and `latest.html` beside it, rewritten each run.
+The key set is the history and the portal's prefix listing (`/s3?prefix=pages/reports/<slug>/`) is
+its index; `latest.html` is the one link that always opens the current run.
+
+```python
+def run(ctx, name, params, window, slug, title):
+    """One report run: the query, then the page at a dated key and at latest.html."""
+    out = ctx.call("manage_metrics", {"op": "query", "name": name, "params": params, "window": window})
+    head = "".join(f"<th>{c}</th>" for c in out["columns"])
+    body = "".join("<tr>" + "".join(f"<td>{r.get(c, '')}</td>" for c in out["columns"]) + "</tr>" for r in out["rows"])
+    ran = out["window"]["end"][:16].replace(":", "-")
+    html = (f"<h1>{title}</h1><table><thead><tr>{head}</tr></thead><tbody>{body}</tbody></table>"
+            f"<p class=\"source\">{name} · {params} · {window} · run {ran}</p>")
+    prefix = f"pages/reports/{slug}/"
+    ctx.call("manage_storage", {"op": "put", "key": f"{prefix}{ran}.html", "content": html})
+    return ctx.call("manage_storage", {"op": "put", "key": f"{prefix}latest.html", "content": html})
+```
+
+    manage_automation op=schedule script=weekly_sessions.py schedule_expression="cron(0 8 ? * MON *)"
+      timezone=America/Los_Angeles subject=weekly-sessions
+      params={"name": "count", "params": {"event": "session.started", "grain": "day"}, "window": "last_week",
+              "slug": "weekly-sessions", "title": "sessions last week"}
