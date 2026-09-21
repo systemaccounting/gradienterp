@@ -1,0 +1,86 @@
+# Ingests the repo's playbooks — every modules/**/kb.md — into each gerp's Bedrock knowledge base with
+# scripts/sync_playbooks.sh, one job per gerp: on a push to main that touches a kb.md (every active
+# gerp), by dispatch (`-f gerp=<id>|all`), or called from deploy.yaml (`-f playbooks=true`). The
+# knowledge base and its data source are found by name in the gerp's account, so no id is stored.
+# It runs on its checkout: no source upload. The per-customer build syncs at provisioning too.
+name: playbooks
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - modules/**/kb.md
+  workflow_dispatch:
+    inputs:
+      gerp:
+        description: a gerp id, a comma list, or all (every active gerp)
+        type: string
+        default: all
+  workflow_call:
+    inputs:
+      gerp:
+        description: a gerp id, a comma list, or all (every active gerp)
+        type: string
+        default: all
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  gerps:
+    runs-on: ubuntu-latest
+    environment: prod
+    timeout-minutes: 10
+    outputs:
+      list: ${{ steps.gerps.outputs.list }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/aws
+        with:
+          role: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+      - id: gerps
+        env:
+          GERP: ${{ inputs.gerp || 'all' }}
+        run: |
+          if [ "$GERP" = all ]; then
+            # every gerp that runs: an active row with a real account, as deploy.py's _active_rows reads them
+            list="$(aws dynamodb scan --table-name gerp-customers --profile operator-org --no-cli-pager \
+              --filter-expression '#s = :a AND attribute_exists(aws_account_id)' \
+              --expression-attribute-names '{"#s": "status"}' --expression-attribute-values '{":a": {"S": "active"}}' \
+              --projection-expression gerp_id --output json | jq -c '[.Items[].gerp_id.S] | sort')"
+          else
+            list="$(jq -Rc 'split(",") | map(gsub("^ +| +$"; "")) | map(select(length > 0))' <<< "$GERP")"
+          fi
+          echo "list=$list" >> "$GITHUB_OUTPUT"
+          echo "gerps: $(jq -r 'join(", ")' <<< "$list")" >> "$GITHUB_STEP_SUMMARY"
+
+  sync:
+    needs: gerps
+    runs-on: ubuntu-latest
+    environment: prod
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        gerp: ${{ fromJSON(needs.gerps.outputs.list) }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/aws
+        with:
+          role: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+      - name: sync
+        env:
+          GERP: ${{ matrix.gerp }}
+        run: |
+          # the gerp's region off its row, then its knowledge base and data source by name in its account
+          region="$(aws dynamodb get-item --table-name gerp-customers --profile operator-org --no-cli-pager \
+            --key "{\"gerp_id\": {\"S\": \"$GERP\"}}" --projection-expression '#r' --expression-attribute-names '{"#r": "region"}' \
+            --output json | jq -r '.Item.region.S // "us-east-1"')"
+          kb="$(aws bedrock-agent list-knowledge-bases --profile "gerp-$GERP" --region "$region" --no-cli-pager --output json \
+            | jq -r --arg n "playbooks-${GERP//_/-}" '.knowledgeBaseSummaries[] | select(.name == $n) | .knowledgeBaseId')"
+          ds="$(aws bedrock-agent list-data-sources --knowledge-base-id "$kb" --profile "gerp-$GERP" --region "$region" --no-cli-pager --output json \
+            | jq -r '.dataSourceSummaries[] | select(.name == "repo-playbooks") | .dataSourceId')"
+          [ -n "$kb" ] && [ -n "$ds" ] || { echo "no playbooks knowledge base for $GERP in $region" >&2; exit 1; }
+          bash scripts/sync_playbooks.sh "$GERP" "$kb" "$ds" "gerp-$GERP" "$region" | tee "$RUNNER_TEMP/sync.out"
+          { echo "### $GERP"; echo '```'; tail -1 "$RUNNER_TEMP/sync.out"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
