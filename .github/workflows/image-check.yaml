@@ -29,65 +29,69 @@ jobs:
       - uses: actions/checkout@v7
       - run: bash scripts/docker.sh --build
 
-  westwood:
-    needs: build
-    runs-on: ubuntu-24.04-arm
-    environment: image-check
-    timeout-minutes: 60
-    permissions:
-      contents: read
-      id-token: write
-      pull-requests: write
-    steps:
-      - uses: actions/checkout@v7
-
-      - uses: actions/setup-python@v7
-        with:
-          python-version: "3.12"
-          cache: pip
-          cache-dependency-path: tests/requirements.txt
-      - run: pip install -r tests/requirements.txt
-
-      - uses: ./.github/actions/aws
-        with:
-          role: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
-
-      # the tag is outside the vNN line: it names the pull request and its head, and an immutable
-      # repository takes each once
-      - id: image
-        name: the image on westwood
-        env:
-          TAG: pr-${{ github.event.pull_request.number }}-${{ github.event.pull_request.head.sha }}
-        run: bash scripts/deploy.sh image --gerp westwood-c40fd8 --tag "${TAG:0:16}" | tee "$RUNNER_TEMP/image.out"
-
-      # a question only a tool answers: list_sources returns the door's url, which names the api;
-      # the answer has to carry it, or the container took no tool call round trip
-      - id: turn
-        name: a turn
-        run: |
-          bash scripts/chat.sh gerp-westwood-c40fd8 --new \
-            "Call manage_metrics with op list_sources and reply with the exact url it returns and nothing else." \
-            | tee "$RUNNER_TEMP/answer.txt"
-          grep -q "execute-api" "$RUNNER_TEMP/answer.txt" || { echo "the answer carries no url: no tool call came back"; exit 1; }
-
-      - name: the answer on the pull request
-        if: always() && steps.turn.conclusion != 'skipped'
-        env:
-          GH_TOKEN: ${{ github.token }}
-          PR: ${{ github.event.pull_request.number }}
-        run: |
-          { echo "image-check on westwood: $(grep '^==> pr-' "$RUNNER_TEMP/image.out" || echo 'no image')"; echo; echo '```'; cat "$RUNNER_TEMP/answer.txt" 2>/dev/null || echo "(no answer)"; echo '```'; } > "$RUNNER_TEMP/comment.md"
-          gh pr comment "$PR" --repo "$GITHUB_REPOSITORY" --body-file "$RUNNER_TEMP/comment.md"
-
-      # westwood back onto the latest vNN, then the pr- tag out of ECR, so the newest image is a vNN
-      # again for any gerp's next apply. Runs whatever the turn said, once the image step ran
-      - name: westwood back, the pr image gone
-        if: always() && steps.image.conclusion != 'skipped'
-        env:
-          TAG: pr-${{ github.event.pull_request.number }}-${{ github.event.pull_request.head.sha }}
-        run: |
-          latest="$(aws ecr describe-images --repository-name agentcore --profile operator-org --no-cli-pager \
-            --query 'imageDetails[].imageTags[]' --output text | tr '\t' '\n' | grep -E '^v[0-9]+$' | sort -V | tail -1)"
-          bash scripts/deploy.sh image --gerp westwood-c40fd8 --no-build --tag "$latest"
-          aws ecr batch-delete-image --repository-name agentcore --profile operator-org --no-cli-pager \
-            --image-ids imageTag="${TAG:0:16}" --query 'imageIds[].imageTag' --output text
+  # the westwood job — the pr image deployed to westwood under the image-check environment (a
+  # reviewer's approval), one chat turn, the answer on the pull request, westwood restored — is
+  # commented out while the platform has no users: the build above is the check. It returns as
+  # written, the environment, its secret and the deploy role's subject are all still in place.
+  #   westwood:
+  #     needs: build
+  #     runs-on: ubuntu-24.04-arm
+  #     environment: image-check
+  #     timeout-minutes: 60
+  #     permissions:
+  #       contents: read
+  #       id-token: write
+  #       pull-requests: write
+  #     steps:
+  #       - uses: actions/checkout@v7
+  #
+  #       - uses: actions/setup-python@v7
+  #         with:
+  #           python-version: "3.12"
+  #           cache: pip
+  #           cache-dependency-path: tests/requirements.txt
+  #       - run: pip install -r tests/requirements.txt
+  #
+  #       - uses: ./.github/actions/aws
+  #         with:
+  #           role: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+  #
+  #       # the tag is outside the vNN line: it names the pull request and its head, and an immutable
+  #       # repository takes each once
+  #       - id: image
+  #         name: the image on westwood
+  #         env:
+  #           TAG: pr-${{ github.event.pull_request.number }}-${{ github.event.pull_request.head.sha }}
+  #         run: bash scripts/deploy.sh image --gerp westwood-c40fd8 --tag "${TAG:0:16}" | tee "$RUNNER_TEMP/image.out"
+  #
+  #       # a question only a tool answers: list_sources returns the door's url, which names the api;
+  #       # the answer has to carry it, or the container took no tool call round trip
+  #       - id: turn
+  #         name: a turn
+  #         run: |
+  #           bash scripts/chat.sh gerp-westwood-c40fd8 --new \
+  #             "Call manage_metrics with op list_sources and reply with the exact url it returns and nothing else." \
+  #             | tee "$RUNNER_TEMP/answer.txt"
+  #           grep -q "execute-api" "$RUNNER_TEMP/answer.txt" || { echo "the answer carries no url: no tool call came back"; exit 1; }
+  #
+  #       - name: the answer on the pull request
+  #         if: always() && steps.turn.conclusion != 'skipped'
+  #         env:
+  #           GH_TOKEN: ${{ github.token }}
+  #           PR: ${{ github.event.pull_request.number }}
+  #         run: |
+  #           { echo "image-check on westwood: $(grep '^==> pr-' "$RUNNER_TEMP/image.out" || echo 'no image')"; echo; echo '```'; cat "$RUNNER_TEMP/answer.txt" 2>/dev/null || echo "(no answer)"; echo '```'; } > "$RUNNER_TEMP/comment.md"
+  #           gh pr comment "$PR" --repo "$GITHUB_REPOSITORY" --body-file "$RUNNER_TEMP/comment.md"
+  #
+  #       # westwood back onto the latest vNN, then the pr- tag out of ECR, so the newest image is a vNN
+  #       # again for any gerp's next apply. Runs whatever the turn said, once the image step ran
+  #       - name: westwood back, the pr image gone
+  #         if: always() && steps.image.conclusion != 'skipped'
+  #         env:
+  #           TAG: pr-${{ github.event.pull_request.number }}-${{ github.event.pull_request.head.sha }}
+  #         run: |
+  #           latest="$(aws ecr describe-images --repository-name agentcore --profile operator-org --no-cli-pager \
+  #             --query 'imageDetails[].imageTags[]' --output text | tr '\t' '\n' | grep -E '^v[0-9]+$' | sort -V | tail -1)"
+  #           bash scripts/deploy.sh image --gerp westwood-c40fd8 --no-build --tag "$latest"
+  #           aws ecr batch-delete-image --repository-name agentcore --profile operator-org --no-cli-pager \
+  #             --image-ids imageTag="${TAG:0:16}" --query 'imageIds[].imageTag' --output text
