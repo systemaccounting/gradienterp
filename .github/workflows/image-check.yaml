@@ -12,6 +12,7 @@ on:
   pull_request:
     paths:
       - modules/agent/docker/**
+      - modules/agent/prompts/**
 
 permissions:
   contents: read
