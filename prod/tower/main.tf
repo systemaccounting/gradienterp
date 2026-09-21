@@ -11,6 +11,9 @@
 ###############################################
 
 locals {
+  # the metrics door gradienterp published for its own app (modules/metrics op=publish_source, caller
+  # operator), stored by the operator as SecureString {url, token}; three lambdas post the funnel
+  metrics_hook_param  = "/gradienterp/cloud/hooks/metrics"
   config              = jsondecode(file("${path.module}/../../config.json"))
   stack_prefix        = local.config.STACK_PREFIX
   operator_account_id = local.config.OPERATOR_ACCOUNT_ID
@@ -516,6 +519,12 @@ resource "aws_iam_role_policy" "cognito_post_confirmation" {
     Version = "2012-10-17"
     Statement = [
       {
+        Sid      = "MetricsHook"
+        Effect   = "Allow"
+        Action   = "ssm:GetParameter"
+        Resource = "arn:aws:ssm:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:parameter${local.metrics_hook_param}"
+      },
+      {
         Sid    = "CloudWatchLogs"
         Effect = "Allow"
         Action = [
@@ -545,7 +554,8 @@ module "cognito_post_confirmation" {
   src_dir         = "prod/tower/lambdas/cognito_post_confirmation"
   timeout         = 10
   env_vars = {
-    ACCOUNTS_TABLE = "${local.stack_prefix}-accounts"
+    METRICS_HOOK_PARAM = local.metrics_hook_param
+    ACCOUNTS_TABLE     = "${local.stack_prefix}-accounts"
   }
   log_retention_days = local.config.LOG_RETENTION_DAYS
 }
@@ -739,6 +749,12 @@ resource "aws_iam_role_policy" "close_account" {
     Version = "2012-10-17"
     Statement = [
       {
+        Sid      = "MetricsHook"
+        Effect   = "Allow"
+        Action   = "ssm:GetParameter"
+        Resource = "arn:aws:ssm:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:parameter${local.metrics_hook_param}"
+      },
+      {
         Sid      = "AssumeTowerProvisioning"
         Effect   = "Allow"
         Action   = "sts:AssumeRole"
@@ -790,6 +806,7 @@ module "close_account" {
   src_dir         = "prod/tower/lambdas/close_account"
   timeout         = 60
   env_vars = {
+    METRICS_HOOK_PARAM      = local.metrics_hook_param
     STACK_PREFIX            = local.stack_prefix
     CUSTOMERS_TABLE         = "${local.stack_prefix}-customers"
     DIRECTORY_TABLE         = "${local.stack_prefix}-directory"

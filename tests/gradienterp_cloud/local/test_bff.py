@@ -1876,6 +1876,64 @@ def test_a_setup_link_returns_only_to_the_host_the_request_reached():
         assert resp["statusCode"] == 200
 
 
+def _with_fake_metrics_hook(mod, status=202, raising=False):
+    """The metrics door gradienterp published for its own app: the post is captured here, the url
+    and bearer from this stack's SSM, the way the operator stored them."""
+    posts = []
+
+    def _fake(url, tok, payload):
+        if raising:
+            raise RuntimeError("door unreachable")
+        posts.append({"url": url, "token": tok, "payload": payload})
+        return status
+
+    mod._post_json = _fake
+    mod.METRICS_HOOK_PARAM = "/gradienterp/cloud/hooks/metrics"
+    mod._customer_hook_cache.clear()
+    from aws import client
+    client("ssm").put_parameter(Name=mod.METRICS_HOOK_PARAM, Type="SecureString", Overwrite=True,
+                                Value=json.dumps({"url": "https://door/metrics", "token": "m3tr"}))
+    return posts
+
+
+def test_the_owner_app_posts_its_own_funnel_with_the_canonical_saas_names():
+    """gradienterp instruments itself the way any firm's app would: the list read after sign-in is
+    `session.started`, a create is `checkout.started`, the account id is the subject throughout and
+    the gerp is a property of the step. The post follows the row write."""
+    with scratch_env(GERPS):
+        mod = load_handler()
+        posts = _with_fake_metrics_hook(mod)
+        assert mod.handler(event("GET", "/api/gerps", sub="alice"), None)["statusCode"] == 200
+        assert posts == [{"url": "https://door/metrics", "token": "m3tr",
+                          "payload": {"event": "session.started", "subject_id": "alice", "properties": {"surface": "owner_app"}}}]
+        _complete_account(mod, "alice")
+        with capture_provisioning(mod):
+            resp = mod.handler(event("POST", "/api/gerps", sub="alice", body={"business_name": "Blue Bottle", "terms_version": "2026-08-14", "legal": LEGAL}), None)
+        assert resp["statusCode"] == 202
+        gid = json.loads(resp["body"])["gerp_id"]
+        [row] = [r for r in rows(os.environ["CUSTOMERS_TABLE"]) if r["gerp_id"] == gid]
+        assert posts[1]["payload"] == {"event": "checkout.started", "subject_id": "alice",
+                                       "properties": {"plan": "hosting", "gerp_id": gid, "region": row["region"], "openly_operated": "false"}}
+        assert len(posts) == 2
+
+
+def test_a_failed_metric_post_leaves_the_response_and_the_row_as_they_were():
+    with scratch_env(GERPS):
+        mod = load_handler()
+        posts = _with_fake_metrics_hook(mod, raising=True)
+        _complete_account(mod, "alice")
+        with capture_provisioning(mod):
+            resp = mod.handler(event("POST", "/api/gerps", sub="alice", body={"business_name": "Blue Bottle", "terms_version": "2026-08-14", "legal": LEGAL}), None)
+        assert resp["statusCode"] == 202 and posts == []
+        gid = json.loads(resp["body"])["gerp_id"]
+        assert [r for r in rows(os.environ["CUSTOMERS_TABLE"]) if r["gerp_id"] == gid], "the create stands"
+        assert mod.handler(event("GET", "/api/gerps", sub="alice"), None)["statusCode"] == 200
+
+        mod.METRICS_HOOK_PARAM = ""
+        mod._post_json = lambda *a: (_ for _ in ()).throw(AssertionError("no hook, no post"))
+        assert mod.handler(event("GET", "/api/gerps", sub="alice"), None)["statusCode"] == 200
+
+
 if __name__ == "__main__":
     for _n, _f in sorted(globals().items()):
         if _n.startswith("test_") and callable(_f):

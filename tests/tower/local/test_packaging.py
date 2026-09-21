@@ -26,6 +26,9 @@ def test_each_tower_function_bundles_with_every_local_import():
         assert {"main.py", "aws.py"} <= set(names), (fn, names)
     # a sibling module under prod/tower/lambdas/ rides on the import alone: the resolver's second
     # tier is the lambdas root, so a shared file there needs no listing anywhere
+    for fn in ("cognito_post_confirmation", "notify_owner", "close_account"):
+        names = zipfile.ZipFile(io.BytesIO(deploy.build_artifact(f"prod/tower/lambdas/{fn}"))).namelist()
+        assert "metrics_post.py" in names, (fn, names)
 
 
 def test_tower_functions_are_on_the_bucket_and_no_archive_is_listed_by_hand():

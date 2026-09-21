@@ -29,6 +29,7 @@ import os
 import boto3
 
 from aws import client as _aws_client
+import metrics_post
 
 log = logging.getLogger()
 log.setLevel(logging.INFO)
@@ -107,6 +108,10 @@ def handler(event, context):
         return _err("balance_owed must be a number")
 
     _remove_edges(gerp_id, row.get("region"))
+    # the product record: a user stopped paying (modules/metrics, the canonical saas name); the
+    # directory row is gone, so the gerp is off the platform whatever Organizations says next
+    metrics_post.post("subscription.cancelled", row.get("owner_sub", ""),
+                      {"plan": "hosting", "gerp_id": gerp_id, "reason": how})
     org = _assume(TOWER_PROVISIONING_ROLE, f"close-{gerp_id}"[:64]).client("organizations")
     try:
         org.close_account(AccountId=account_id)

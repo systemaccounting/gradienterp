@@ -32,6 +32,9 @@ locals {
   # screen's "accounts currently available" line (prod/platform/management capacity_read_role.tf)
   capacity_read_role        = "arn:aws:iam::${data.aws_organizations_organization.this.master_account_id}:role/GerpCapacityRead"
   customer_erase_hook_param = "/gradienterp/cloud/hooks/customers_erase"
+  # the metrics door gradienterp published for its own app (modules/metrics op=publish_source,
+  # caller operator), stored the same way: SecureString {url, token}
+  metrics_hook_param = "/gradienterp/cloud/hooks/metrics"
   # operator artifact bucket the web bundle deploys from (same account as this stack) — matches
   # the module-lambda convention (data.aws_s3_object below); literal like the module var-default.
   artifact_bucket = "${local.stack_prefix}-artifacts-185369506315"
@@ -199,6 +202,7 @@ resource "aws_iam_role_policy" "bff" {
         Resource = [
           "arn:aws:ssm:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:parameter${local.customer_hook_param}",
           "arn:aws:ssm:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:parameter${local.customer_erase_hook_param}",
+          "arn:aws:ssm:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:parameter${local.metrics_hook_param}",
         ]
       },
       {
@@ -274,6 +278,7 @@ module "bff" {
     PROFILES_TABLE      = "${local.stack_prefix}-profiles"
     REGIONS             = jsonencode(local.config.REGIONS) # the create screen's regions (config.json)
     CUSTOMER_HOOK_PARAM = local.customer_hook_param
+    METRICS_HOOK_PARAM  = local.metrics_hook_param
     CAPACITY_READ_ROLE  = local.capacity_read_role
     # the card page's Stripe.js key — the account's publishable key, public by design
     STRIPE_PUBLISHABLE_KEY = "pk_live_51Ta6U5RBOqTW9S9WmFw1hMXSPxX5YflH7dimUqgvThzHJXlzQ9WPEQzSVhEWIIFPRP8vOxqv5ZJeUt8geVHRvKqg004OHK5Q7E"
