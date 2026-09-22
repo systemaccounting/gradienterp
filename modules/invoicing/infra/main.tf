@@ -76,9 +76,15 @@ resource "aws_dynamodb_table" "invoice_lines" {
   }
 
   global_secondary_index {
-    name            = "item-index"
-    hash_key        = "gsi_item"
-    range_key       = "gsi_sk"
+    name = "item-index"
+    key_schema {
+      attribute_name = "gsi_item"
+      key_type       = "HASH"
+    }
+    key_schema {
+      attribute_name = "gsi_sk"
+      key_type       = "RANGE"
+    }
     projection_type = "ALL" # the ranking queries are the point; a KEYS_ONLY hit costs a second read
   }
 
@@ -86,9 +92,15 @@ resource "aws_dynamodb_table" "invoice_lines" {
   # the invoice could not be a GSI key, and "every invoice tagged X" has to be a Query rather than a
   # scan. `get_invoice` already queries this table for its lines, so tags cost no extra read.
   global_secondary_index {
-    name            = "tag-index"
-    hash_key        = "gsi_tag"
-    range_key       = "gsi_sk"
+    name = "tag-index"
+    key_schema {
+      attribute_name = "gsi_tag"
+      key_type       = "HASH"
+    }
+    key_schema {
+      attribute_name = "gsi_sk"
+      key_type       = "RANGE"
+    }
     projection_type = "KEYS_ONLY" # the answer is which invoices; the caller reads the ones it wants
   }
 }
@@ -189,20 +201,20 @@ resource "aws_iam_role_policy" "lambda" {
         # catalog (GetItem the item def — name / rate / revenue_account).
         Effect   = "Allow"
         Action   = "dynamodb:GetItem"
-        Resource = "arn:aws:dynamodb:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:table/${var.items_table_name}"
+        Resource = "arn:aws:dynamodb:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:table/${var.items_table_name}"
       },
       {
         # a tag must be declared before it can be applied — read-only, the vocabulary is written by
         # modules/schemas
         Effect   = "Allow"
         Action   = "dynamodb:GetItem"
-        Resource = "arn:aws:dynamodb:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:table/${var.schema_table_name}"
+        Resource = "arn:aws:dynamodb:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:table/${var.schema_table_name}"
       },
       {
         # building an invoice queries the instances attached to each inventory key it is selling
         Effect   = "Allow"
         Action   = "dynamodb:Query"
-        Resource = "arn:aws:dynamodb:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:table/${var.rule_instances_table_name}"
+        Resource = "arn:aws:dynamodb:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:table/${var.rule_instances_table_name}"
       },
       {
         # accept_po stamps the agreement row
@@ -243,7 +255,7 @@ resource "aws_iam_role_policy" "lambda" {
           "logs:CreateLogStream",
           "logs:PutLogEvents",
         ]
-        Resource = "arn:aws:logs:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:*"
+        Resource = "arn:aws:logs:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:*"
       },
     ]
   })
@@ -464,7 +476,7 @@ resource "aws_iam_role_policy" "settle" {
       {
         Effect   = "Allow"
         Action   = ["logs:CreateLogGroup", "logs:CreateLogStream", "logs:PutLogEvents"]
-        Resource = "arn:aws:logs:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:*"
+        Resource = "arn:aws:logs:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:*"
       },
     ]
   })
@@ -655,7 +667,7 @@ resource "aws_iam_role_policy" "owner_sub" {
     Statement = [{
       Effect   = "Allow"
       Action   = "ssm:GetParameter"
-      Resource = "arn:aws:ssm:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:parameter/gradienterp/customers/${var.gerp_id}/owner_sub"
+      Resource = "arn:aws:ssm:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:parameter/gradienterp/customers/${var.gerp_id}/owner_sub"
     }]
   })
 }

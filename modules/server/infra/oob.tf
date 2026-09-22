@@ -12,7 +12,7 @@
 
 locals {
   oob_settings_table_name = "${var.stack_prefix}-settings-${replace(var.gerp_id, "_", "-")}"
-  oob_settings_table_arn  = "arn:aws:dynamodb:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:table/${local.oob_settings_table_name}"
+  oob_settings_table_arn  = "arn:aws:dynamodb:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:table/${local.oob_settings_table_name}"
 }
 
 resource "aws_iam_role" "oob_discovery" {
@@ -44,7 +44,7 @@ resource "aws_iam_role_policy" "oob_discovery" {
       {
         Effect   = "Allow"
         Action   = ["logs:CreateLogGroup", "logs:CreateLogStream", "logs:PutLogEvents"]
-        Resource = "arn:aws:logs:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:*"
+        Resource = "arn:aws:logs:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:*"
       },
     ]
   })

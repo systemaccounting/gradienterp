@@ -76,7 +76,7 @@ data "aws_iam_policy_document" "agent_trust" {
     condition {
       test     = "ArnLike"
       variable = "aws:SourceArn"
-      values   = ["arn:aws:bedrock-agentcore:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:*"]
+      values   = ["arn:aws:bedrock-agentcore:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:*"]
     }
   }
 }
@@ -161,13 +161,13 @@ data "aws_iam_policy_document" "agent_execution" {
       "bedrock-agentcore:ConnectBrowserLiveViewStream",
     ]
     resources = [
-      "arn:aws:bedrock-agentcore:${data.aws_region.current.id}:aws:browser/aws.browser.v1",
-      "arn:aws:bedrock-agentcore:${data.aws_region.current.id}:aws:browser/aws.browser.v1/*",
-      "arn:aws:bedrock-agentcore:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:browser/aws.browser.v1",
-      "arn:aws:bedrock-agentcore:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:browser/aws.browser.v1/*",
-      "arn:aws:bedrock-agentcore:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:browser-custom/*",
+      "arn:aws:bedrock-agentcore:${data.aws_region.current.region}:aws:browser/aws.browser.v1",
+      "arn:aws:bedrock-agentcore:${data.aws_region.current.region}:aws:browser/aws.browser.v1/*",
+      "arn:aws:bedrock-agentcore:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:browser/aws.browser.v1",
+      "arn:aws:bedrock-agentcore:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:browser/aws.browser.v1/*",
+      "arn:aws:bedrock-agentcore:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:browser-custom/*",
       # a session started WITH a profile authorizes against the profile arn too
-      "arn:aws:bedrock-agentcore:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:browser-profile/*",
+      "arn:aws:bedrock-agentcore:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:browser-profile/*",
     ]
   }
 
@@ -178,8 +178,8 @@ data "aws_iam_policy_document" "agent_execution" {
   statement {
     actions = ["dynamodb:Query"]
     resources = [
-      "arn:aws:dynamodb:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:table/${var.stack_prefix}-schema-${replace(var.gerp_id, "_", "-")}",
-      "arn:aws:dynamodb:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:table/${var.stack_prefix}-metrics-${replace(var.gerp_id, "_", "-")}-usage",
+      "arn:aws:dynamodb:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:table/${var.stack_prefix}-schema-${replace(var.gerp_id, "_", "-")}",
+      "arn:aws:dynamodb:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:table/${var.stack_prefix}-metrics-${replace(var.gerp_id, "_", "-")}-usage",
     ]
   }
 
@@ -197,7 +197,7 @@ data "aws_iam_policy_document" "agent_execution" {
   statement {
     actions = ["dynamodb:GetItem", "dynamodb:Query", "dynamodb:PutItem", "dynamodb:UpdateItem", "dynamodb:DeleteItem"]
     resources = [
-      "arn:aws:dynamodb:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:table/${var.stack_prefix}-settings-${replace(var.gerp_id, "_", "-")}",
+      "arn:aws:dynamodb:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:table/${var.stack_prefix}-settings-${replace(var.gerp_id, "_", "-")}",
     ]
   }
 
@@ -249,7 +249,7 @@ data "aws_iam_policy_document" "agent_execution" {
   # above (gateway-scoped). The target itself is `web_search.tf`.
   statement {
     actions   = ["bedrock-agentcore:InvokeWebSearch"]
-    resources = ["arn:aws:bedrock-agentcore:${data.aws_region.current.id}:aws:tool/web-search.v1"]
+    resources = ["arn:aws:bedrock-agentcore:${data.aws_region.current.region}:aws:tool/web-search.v1"]
   }
 
   # browse_fill reads an owner secret (added in chat via collect_secret) from this gerp's secret
@@ -257,15 +257,15 @@ data "aws_iam_policy_document" "agent_execution" {
   # + kms:Decrypt; the secrets use the default aws/ssm key, so scope Decrypt via the SSM service.
   statement {
     actions   = ["ssm:GetParameter"]
-    resources = ["arn:aws:ssm:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:parameter/gradienterp/customers/${var.gerp_id}/secrets/*"]
+    resources = ["arn:aws:ssm:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:parameter/gradienterp/customers/${var.gerp_id}/secrets/*"]
   }
   # modules/mcp: the vendor gateway's url and the firm's client, read by path when a turn mounts
   # the vendors' tools
   statement {
     actions = ["ssm:GetParameter", "ssm:GetParametersByPath"]
     resources = [
-      "arn:aws:ssm:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:parameter/gradienterp/customers/${var.gerp_id}/mcp",
-      "arn:aws:ssm:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:parameter/gradienterp/customers/${var.gerp_id}/mcp/*",
+      "arn:aws:ssm:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:parameter/gradienterp/customers/${var.gerp_id}/mcp",
+      "arn:aws:ssm:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:parameter/gradienterp/customers/${var.gerp_id}/mcp/*",
     ]
   }
   statement {
@@ -274,7 +274,7 @@ data "aws_iam_policy_document" "agent_execution" {
     condition {
       test     = "StringEquals"
       variable = "kms:ViaService"
-      values   = ["ssm.${data.aws_region.current.id}.amazonaws.com"]
+      values   = ["ssm.${data.aws_region.current.region}.amazonaws.com"]
     }
   }
 
@@ -478,8 +478,8 @@ resource "aws_bedrockagentcore_agent_runtime" "this" {
   environment_variables = {
     BROWSER_ID         = aws_bedrockagentcore_browser.this.browser_id         # browse_* drives the RECORDED custom browser
     BROWSER_PROFILE_ID = aws_bedrockagentcore_browser_profile.this.profile_id # persistent cookies — portal logins survive across sessions
-    AWS_REGION         = data.aws_region.current.id
-    AWS_DEFAULT_REGION = data.aws_region.current.id
+    AWS_REGION         = data.aws_region.current.region
+    AWS_DEFAULT_REGION = data.aws_region.current.region
     AGENT_MODE         = "bookkeeper" # onboarding flow triggered separately for new customers
 
     # The business's clock. The agent renders today's date in it and NAMES it whenever it states a

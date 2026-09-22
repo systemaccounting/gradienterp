@@ -237,12 +237,12 @@ resource "aws_iam_role_policy" "ops_read" {
       {
         Effect   = "Allow"
         Action   = ["sqs:GetQueueUrl", "sqs:GetQueueAttributes", "sqs:ReceiveMessage"]
-        Resource = "arn:aws:sqs:${data.aws_region.current.id}:${var.aws_account_id}:${var.stack_prefix}-*-failed"
+        Resource = "arn:aws:sqs:${data.aws_region.current.region}:${var.aws_account_id}:${var.stack_prefix}-*-failed"
       },
       {
         Effect   = "Allow"
         Action   = "dynamodb:DescribeTable"
-        Resource = "arn:aws:dynamodb:${data.aws_region.current.id}:${var.aws_account_id}:table/${var.stack_prefix}-*"
+        Resource = "arn:aws:dynamodb:${data.aws_region.current.region}:${var.aws_account_id}:table/${var.stack_prefix}-*"
       },
     ]
   })

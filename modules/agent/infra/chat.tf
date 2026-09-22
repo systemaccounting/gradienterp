@@ -91,15 +91,15 @@ resource "aws_iam_role_policy" "chat" {
         Effect = "Allow"
         Action = ["dynamodb:Query"]
         Resource = [
-          "arn:aws:dynamodb:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:table/${var.contacts_table_name}",
-          "arn:aws:dynamodb:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:table/${var.contacts_table_name}/index/account-index",
+          "arn:aws:dynamodb:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:table/${var.contacts_table_name}",
+          "arn:aws:dynamodb:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:table/${var.contacts_table_name}/index/account-index",
         ]
       },
       {
         # read the owner's account_id, stashed locally at provision
         Effect   = "Allow"
         Action   = "ssm:GetParameter"
-        Resource = "arn:aws:ssm:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:parameter${local.owner_sub_ssm}"
+        Resource = "arn:aws:ssm:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:parameter${local.owner_sub_ssm}"
       },
       {
         # render_frame: discover the sink lambdas (tagged agent_frame_sink) and invoke the one the
@@ -114,7 +114,7 @@ resource "aws_iam_role_policy" "chat" {
         # discovery query above finds it by (manage_secret, modules/secrets)
         Effect    = "Allow"
         Action    = "lambda:InvokeFunction"
-        Resource  = "arn:aws:lambda:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:function:${var.stack_prefix}-*"
+        Resource  = "arn:aws:lambda:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:function:${var.stack_prefix}-*"
         Condition = { StringEquals = { "aws:ResourceTag/agent_frame_sink" = "true" } }
       },
       {
@@ -142,7 +142,7 @@ resource "aws_iam_role_policy" "chat" {
       {
         Effect   = "Allow"
         Action   = ["logs:CreateLogGroup", "logs:CreateLogStream", "logs:PutLogEvents"]
-        Resource = "arn:aws:logs:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:*"
+        Resource = "arn:aws:logs:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:*"
       },
     ]
   })

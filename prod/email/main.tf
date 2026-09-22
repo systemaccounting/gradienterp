@@ -53,7 +53,7 @@ resource "aws_route53_record" "mx" {
   name    = local.domain
   type    = "MX"
   ttl     = 600
-  records = ["10 inbound-smtp.${data.aws_region.current.id}.amazonaws.com"]
+  records = ["10 inbound-smtp.${data.aws_region.current.region}.amazonaws.com"]
 }
 
 resource "aws_route53_record" "spf" {
@@ -172,7 +172,7 @@ resource "aws_iam_role_policy" "forwarder" {
       { Effect = "Allow", Action = "s3:GetObject", Resource = "${aws_s3_bucket.mail.arn}/*" },
       { Effect = "Allow", Action = "ses:SendRawEmail", Resource = "*" },
       { Effect = "Allow", Action = "ssm:GetParameter", Resource = aws_ssm_parameter.forward_to.arn },
-      { Effect = "Allow", Action = ["logs:CreateLogGroup", "logs:CreateLogStream", "logs:PutLogEvents"], Resource = "arn:aws:logs:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:*" },
+      { Effect = "Allow", Action = ["logs:CreateLogGroup", "logs:CreateLogStream", "logs:PutLogEvents"], Resource = "arn:aws:logs:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:*" },
     ]
   })
 }

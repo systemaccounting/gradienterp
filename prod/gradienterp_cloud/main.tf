@@ -112,29 +112,29 @@ resource "aws_iam_role_policy" "bff" {
         Effect = "Allow"
         # DeleteItem: an `awaiting_payment` row goes with its account — nothing was vended
         Action   = ["dynamodb:GetItem", "dynamodb:PutItem", "dynamodb:UpdateItem", "dynamodb:DeleteItem", "dynamodb:Scan"]
-        Resource = "arn:aws:dynamodb:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:table/${local.stack_prefix}-customers"
+        Resource = "arn:aws:dynamodb:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:table/${local.stack_prefix}-customers"
       },
       {
         # gerp-members = the account↔gerp membership spine, the one read of ownership. Query by
         # account_id for /api/gerps and the forwards; PutItem the owner row on create-gerp.
         Effect   = "Allow"
         Action   = ["dynamodb:Query", "dynamodb:PutItem", "dynamodb:DeleteItem"]
-        Resource = "arn:aws:dynamodb:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:table/${local.stack_prefix}-members"
+        Resource = "arn:aws:dynamodb:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:table/${local.stack_prefix}-members"
       },
       {
         # a card landing sends the provisioning payload to tower's vends queue (same account)
         Effect   = "Allow"
         Action   = "sqs:SendMessage"
-        Resource = "arn:aws:sqs:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:tower-vends"
+        Resource = "arn:aws:sqs:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:tower-vends"
       },
       {
         Effect = "Allow"
         Action = "lambda:InvokeFunction"
         Resource = [
           # a changed login → the Identity Center user and each owned gerp's tenant blob
-          "arn:aws:lambda:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:function:tower-update-owner-email",
+          "arn:aws:lambda:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:function:tower-update-owner-email",
           # an edited business profile → the gerp's tenant blob
-          "arn:aws:lambda:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:function:tower-update-business-info",
+          "arn:aws:lambda:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:function:tower-update-business-info",
         ]
       },
       {
@@ -145,10 +145,10 @@ resource "aws_iam_role_policy" "bff" {
         Effect = "Allow"
         Action = "lambda:InvokeFunction"
         Resource = [
-          "arn:aws:lambda:${data.aws_region.current.id}:${var.seller_account_id}:function:${local.stack_prefix}-payments-${var.seller_gerp}-payment_links",
-          "arn:aws:lambda:${data.aws_region.current.id}:${var.seller_account_id}:function:${local.stack_prefix}-payments-${var.seller_gerp}-save_payment_method",
-          "arn:aws:lambda:${data.aws_region.current.id}:${var.seller_account_id}:function:${local.stack_prefix}-payments-${var.seller_gerp}-manage_saved_cards",
-          "arn:aws:lambda:${data.aws_region.current.id}:${var.seller_account_id}:function:${local.stack_prefix}-payments-${var.seller_gerp}-charge_saved_method",
+          "arn:aws:lambda:${data.aws_region.current.region}:${var.seller_account_id}:function:${local.stack_prefix}-payments-${var.seller_gerp}-payment_links",
+          "arn:aws:lambda:${data.aws_region.current.region}:${var.seller_account_id}:function:${local.stack_prefix}-payments-${var.seller_gerp}-save_payment_method",
+          "arn:aws:lambda:${data.aws_region.current.region}:${var.seller_account_id}:function:${local.stack_prefix}-payments-${var.seller_gerp}-manage_saved_cards",
+          "arn:aws:lambda:${data.aws_region.current.region}:${var.seller_account_id}:function:${local.stack_prefix}-payments-${var.seller_gerp}-charge_saved_method",
         ]
       },
       {
@@ -163,7 +163,7 @@ resource "aws_iam_role_policy" "bff" {
         # that matters is the function name, which only per-customer export stacks ever carry.
         Effect   = "Allow"
         Action   = "lambda:InvokeFunction"
-        Resource = "arn:aws:lambda:${data.aws_region.current.id}:*:function:${local.stack_prefix}-export-*-export_gerp"
+        Resource = "arn:aws:lambda:${data.aws_region.current.region}:*:function:${local.stack_prefix}-export-*-export_gerp"
       },
       {
         # the vendor-consent landing (modules/mcp): the owner returns from a vendor with a
@@ -171,7 +171,7 @@ resource "aws_iam_role_policy" "bff" {
         # export's: the callee admits this role by name, the handler checks ownership first.
         Effect   = "Allow"
         Action   = "lambda:InvokeFunction"
-        Resource = "arn:aws:lambda:${data.aws_region.current.id}:*:function:${local.stack_prefix}-mcp-*-complete_mcp_auth"
+        Resource = "arn:aws:lambda:${data.aws_region.current.region}:*:function:${local.stack_prefix}-mcp-*-complete_mcp_auth"
       },
       {
         # closing a gerp hands the request to the seller gerp's closure scripts through its
@@ -180,7 +180,7 @@ resource "aws_iam_role_policy" "bff" {
         # operator's own switch; this stack starts no build.
         Effect   = "Allow"
         Action   = "lambda:InvokeFunction"
-        Resource = "arn:aws:lambda:${data.aws_region.current.id}:${var.seller_account_id}:function:${local.stack_prefix}-automation-${var.seller_gerp}-automate"
+        Resource = "arn:aws:lambda:${data.aws_region.current.region}:${var.seller_account_id}:function:${local.stack_prefix}-automation-${var.seller_gerp}-automate"
       },
       {
         # the seller gerp's customer-contact hook: url + bearer the operator stored after publishing the hook.
@@ -200,16 +200,16 @@ resource "aws_iam_role_policy" "bff" {
         Effect = "Allow"
         Action = "ssm:GetParameter"
         Resource = [
-          "arn:aws:ssm:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:parameter${local.customer_hook_param}",
-          "arn:aws:ssm:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:parameter${local.customer_erase_hook_param}",
-          "arn:aws:ssm:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:parameter${local.metrics_hook_param}",
+          "arn:aws:ssm:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:parameter${local.customer_hook_param}",
+          "arn:aws:ssm:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:parameter${local.customer_erase_hook_param}",
+          "arn:aws:ssm:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:parameter${local.metrics_hook_param}",
         ]
       },
       {
         # public profile → operator-account profile registry (read + upsert the caller's own)
         Effect   = "Allow"
         Action   = ["dynamodb:GetItem", "dynamodb:UpdateItem", "dynamodb:DeleteItem"]
-        Resource = "arn:aws:dynamodb:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:table/${local.stack_prefix}-profiles"
+        Resource = "arn:aws:dynamodb:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:table/${local.stack_prefix}-profiles"
       },
       {
         # address autocomplete/geocode for the public-profile form (Places V2 is resource-less)
@@ -221,25 +221,25 @@ resource "aws_iam_role_policy" "bff" {
         # account info (Info & Billing) — read/write the caller's own private profile row
         Effect   = "Allow"
         Action   = ["dynamodb:GetItem", "dynamodb:UpdateItem", "dynamodb:DeleteItem"]
-        Resource = "arn:aws:dynamodb:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:table/${local.stack_prefix}-accounts"
+        Resource = "arn:aws:dynamodb:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:table/${local.stack_prefix}-accounts"
       },
       {
         # what a closed account left behind — written by the deletion, read at create-gerp and
         # at provisioning
         Effect   = "Allow"
         Action   = ["dynamodb:GetItem", "dynamodb:PutItem"]
-        Resource = "arn:aws:dynamodb:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:table/${local.stack_prefix}-priors"
+        Resource = "arn:aws:dynamodb:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:table/${local.stack_prefix}-priors"
       },
       {
         # the account's Cognito user goes last in the deletion
         Effect   = "Allow"
         Action   = "cognito-idp:AdminDeleteUser"
-        Resource = "arn:aws:cognito-idp:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:userpool/${local.cognito_pool}"
+        Resource = "arn:aws:cognito-idp:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:userpool/${local.cognito_pool}"
       },
       {
         Effect   = "Allow"
         Action   = ["logs:CreateLogGroup", "logs:CreateLogStream", "logs:PutLogEvents"]
-        Resource = "arn:aws:logs:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:*"
+        Resource = "arn:aws:logs:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:*"
       },
     ]
   })
@@ -263,18 +263,18 @@ module "bff" {
   env_vars = {
     CUSTOMERS_TABLE  = "${local.stack_prefix}-customers"
     MEMBERS_TABLE    = "${local.stack_prefix}-members"
-    PROVISION_QUEUE  = local.provision_queue == "" ? "" : "https://sqs.${data.aws_region.current.id}.amazonaws.com/${data.aws_caller_identity.current.account_id}/${local.provision_queue}"
+    PROVISION_QUEUE  = local.provision_queue == "" ? "" : "https://sqs.${data.aws_region.current.region}.amazonaws.com/${data.aws_caller_identity.current.account_id}/${local.provision_queue}"
     OWNER_EMAIL_FN   = "tower-update-owner-email"
     BUSINESS_INFO_FN = "tower-update-business-info"
     # a requested closure goes to the seller gerp's closure scripts; empty records and stops
-    CLOSURE_BEGIN_FN = local.closure_enabled ? "arn:aws:lambda:${data.aws_region.current.id}:${var.seller_account_id}:function:${local.stack_prefix}-automation-${var.seller_gerp}-automate" : ""
+    CLOSURE_BEGIN_FN = local.closure_enabled ? "arn:aws:lambda:${data.aws_region.current.region}:${var.seller_account_id}:function:${local.stack_prefix}-automation-${var.seller_gerp}-automate" : ""
     # the card-saving pair, in the seller's account (cross-account invoke)
     # Full ARNs, not names: boto3 resolves an unqualified function name against the CALLER's
     # account, so a bare name looks for these in operator and fails on an arn that never existed.
-    SETUP_LINK_FN       = "arn:aws:lambda:${data.aws_region.current.id}:${var.seller_account_id}:function:${local.stack_prefix}-payments-${var.seller_gerp}-payment_links"
-    SAVE_CARD_FN        = "arn:aws:lambda:${data.aws_region.current.id}:${var.seller_account_id}:function:${local.stack_prefix}-payments-${var.seller_gerp}-save_payment_method"
-    CARD_METHODS_FN     = "arn:aws:lambda:${data.aws_region.current.id}:${var.seller_account_id}:function:${local.stack_prefix}-payments-${var.seller_gerp}-manage_saved_cards"
-    CHARGE_FN           = "arn:aws:lambda:${data.aws_region.current.id}:${var.seller_account_id}:function:${local.stack_prefix}-payments-${var.seller_gerp}-charge_saved_method"
+    SETUP_LINK_FN       = "arn:aws:lambda:${data.aws_region.current.region}:${var.seller_account_id}:function:${local.stack_prefix}-payments-${var.seller_gerp}-payment_links"
+    SAVE_CARD_FN        = "arn:aws:lambda:${data.aws_region.current.region}:${var.seller_account_id}:function:${local.stack_prefix}-payments-${var.seller_gerp}-save_payment_method"
+    CARD_METHODS_FN     = "arn:aws:lambda:${data.aws_region.current.region}:${var.seller_account_id}:function:${local.stack_prefix}-payments-${var.seller_gerp}-manage_saved_cards"
+    CHARGE_FN           = "arn:aws:lambda:${data.aws_region.current.region}:${var.seller_account_id}:function:${local.stack_prefix}-payments-${var.seller_gerp}-charge_saved_method"
     PROFILES_TABLE      = "${local.stack_prefix}-profiles"
     REGIONS             = jsonencode(local.config.REGIONS) # the create screen's regions (config.json)
     CUSTOMER_HOOK_PARAM = local.customer_hook_param
@@ -316,7 +316,7 @@ resource "aws_apigatewayv2_authorizer" "owner" {
   name             = "${local.prefix}-owner"
   jwt_configuration {
     audience = [local.cognito_client]
-    issuer   = "https://cognito-idp.${data.aws_region.current.id}.amazonaws.com/${local.cognito_pool}"
+    issuer   = "https://cognito-idp.${data.aws_region.current.region}.amazonaws.com/${local.cognito_pool}"
   }
 }
 

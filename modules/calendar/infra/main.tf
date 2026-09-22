@@ -87,9 +87,15 @@ resource "aws_dynamodb_table" "events" {
   }
 
   global_secondary_index {
-    name            = "calendar-index"
-    hash_key        = "subject"
-    range_key       = "starts_at"
+    name = "calendar-index"
+    key_schema {
+      attribute_name = "subject"
+      key_type       = "HASH"
+    }
+    key_schema {
+      attribute_name = "starts_at"
+      key_type       = "RANGE"
+    }
     projection_type = "ALL"
   }
 }
@@ -139,7 +145,7 @@ resource "aws_iam_role_policy" "scheduler_target" {
       {
         Effect   = "Allow"
         Action   = "sns:Publish"
-        Resource = "arn:aws:sns:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:*"
+        Resource = "arn:aws:sns:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:*"
       },
     ]
   })
@@ -180,8 +186,8 @@ resource "aws_iam_role_policy" "dispatcher" {
           "bedrock-agentcore:InvokeAgentRuntime",
         ]
         Resource = [
-          "arn:aws:bedrock-agentcore:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:runtime/*",
-          "arn:aws:bedrock-agentcore:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:runtime-endpoint/*",
+          "arn:aws:bedrock-agentcore:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:runtime/*",
+          "arn:aws:bedrock-agentcore:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:runtime-endpoint/*",
         ]
       },
       {
@@ -191,7 +197,7 @@ resource "aws_iam_role_policy" "dispatcher" {
           "logs:CreateLogStream",
           "logs:PutLogEvents",
         ]
-        Resource = "arn:aws:logs:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:*"
+        Resource = "arn:aws:logs:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:*"
       },
     ]
   })
@@ -245,7 +251,7 @@ resource "aws_iam_role_policy" "lambda" {
       {
         Effect   = "Allow",
         Action   = ["dynamodb:GetItem"],
-        Resource = "arn:aws:dynamodb:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:table/${var.stack_prefix}-settings-${replace(var.gerp_id, "_", "-")}"
+        Resource = "arn:aws:dynamodb:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:table/${var.stack_prefix}-settings-${replace(var.gerp_id, "_", "-")}"
         # `clock` reads GERP#timezone at cold start — the owner-editable source of truth for which
         # calendar a period closes on. Arn constructed, not an output: no cross-module dependency.
       },
@@ -258,7 +264,7 @@ resource "aws_iam_role_policy" "lambda" {
           "scheduler:DeleteSchedule",
         ]
         Resource = [
-          "arn:aws:scheduler:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:schedule/${local.group_name}/*",
+          "arn:aws:scheduler:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:schedule/${local.group_name}/*",
           aws_scheduler_schedule_group.calendar.arn,
         ]
       },
@@ -287,7 +293,7 @@ resource "aws_iam_role_policy" "lambda" {
           "logs:CreateLogStream",
           "logs:PutLogEvents",
         ]
-        Resource = "arn:aws:logs:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:*"
+        Resource = "arn:aws:logs:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:*"
       },
     ]
   })
@@ -327,12 +333,12 @@ resource "aws_iam_role_policy" "crud" {
         # manage_event validates field names against the calendar_fields registry
         Effect   = "Allow"
         Action   = "dynamodb:Query"
-        Resource = "arn:aws:dynamodb:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:table/${var.schema_table_name}"
+        Resource = "arn:aws:dynamodb:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:table/${var.schema_table_name}"
       },
       {
         Effect   = "Allow"
         Action   = ["logs:CreateLogGroup", "logs:CreateLogStream", "logs:PutLogEvents"]
-        Resource = "arn:aws:logs:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:*"
+        Resource = "arn:aws:logs:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:*"
       },
     ]
   })

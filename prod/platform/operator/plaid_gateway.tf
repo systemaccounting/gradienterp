@@ -72,7 +72,7 @@ resource "aws_iam_role_policy" "plaid_gateway" {
         # wildcarded — the operator is the caller into many gerp accounts).
         Effect   = "Allow"
         Action   = "lambda:InvokeFunction"
-        Resource = "arn:aws:lambda:${data.aws_region.current.id}:*:function:${local.stack_prefix}-accounting-*-reconcile"
+        Resource = "arn:aws:lambda:${data.aws_region.current.region}:*:function:${local.stack_prefix}-accounting-*-reconcile"
       },
       {
         Effect = "Allow"
@@ -81,7 +81,7 @@ resource "aws_iam_role_policy" "plaid_gateway" {
           "logs:CreateLogStream",
           "logs:PutLogEvents",
         ]
-        Resource = "arn:aws:logs:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:*"
+        Resource = "arn:aws:logs:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:*"
       },
     ]
   })

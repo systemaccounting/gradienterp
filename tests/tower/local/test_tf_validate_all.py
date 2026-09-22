@@ -11,16 +11,23 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parents[3]
 SCRIPT = REPO / ".github/workflows/tf-validate-all.sh"
 
-# init fails in a dir named broken_init, validate in broken_validate; dir `slow` finishes last
+# init fails in a dir named broken_init, validate in broken_validate, a warning comes from warned; dir
+# `slow` finishes last
 TERRAFORM = """#!/usr/bin/env bash
 d=$(basename "$PWD")
 [[ $d == slow ]] && sleep 1
 case "$1" in
   init) [[ $d == broken_init ]] && { echo "Error: no provider"; exit 1; }; echo initialized;;
   validate)
-    [[ -f zz_validate_providers.tf ]] && cat zz_validate_providers.tf
-    [[ $d == broken_validate ]] && { echo "Error: bad reference"; exit 1; }
-    echo "Success!";;
+    # terraform validate -json: the document on stdout, anything else on stderr
+    [[ -f zz_validate_providers.tf ]] && cat zz_validate_providers.tf >&2
+    if [[ $d == broken_validate ]]; then
+      echo '{"valid":false,"diagnostics":[{"severity":"error","summary":"bad reference","detail":"no such thing","range":{"filename":"main.tf","start":{"line":1}}}]}'; exit 1
+    fi
+    if [[ $d == warned ]]; then
+      echo '{"valid":true,"diagnostics":[{"severity":"warning","summary":"Deprecated attribute","detail":"The attribute \\"id\\" is deprecated.","range":{"filename":"main.tf","start":{"line":3}}}]}'; exit 0
+    fi
+    echo '{"valid":true,"diagnostics":[]}';;
 esac
 """
 
@@ -52,6 +59,15 @@ def test_a_failed_directory_fails_the_run_and_is_named():
     assert "2 of 3 dirs failed:" in out, out
     assert "  - broken_init (init)" in out and "  - broken_validate (validate)" in out, out
     assert "Error: no provider" in out and "Error: bad reference" in out, out
+
+
+def test_a_warning_fails_the_directory_and_prints_where():
+    """validate -json: a deprecation warning is a failure, named with its file and line, so validate
+    says nothing when nothing is wrong."""
+    rc, out, _ = _run(["ok", "warned"])
+    assert rc == 1, out
+    assert "  - warned (warning)" in out and "1 of 2 dirs failed:" in out, out
+    assert "Warning: Deprecated attribute (main.tf:3)" in out and 'The attribute "id" is deprecated.' in out, out
 
 
 def test_every_directory_valid_passes():

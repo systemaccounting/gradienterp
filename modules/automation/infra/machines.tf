@@ -33,7 +33,7 @@ resource "aws_iam_role_policy" "machine" {
         # AccessDenied is the answer, so there is no allowlist to maintain and none to forget.
         Effect   = "Allow"
         Action   = "lambda:InvokeFunction"
-        Resource = "arn:aws:lambda:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:function:${var.stack_prefix}-*-${local.gerp}-*"
+        Resource = "arn:aws:lambda:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:function:${var.stack_prefix}-*-${local.gerp}-*"
       },
       {
         # Step Functions delivers logs through the log-delivery API, none of which takes a resource
@@ -90,13 +90,13 @@ resource "aws_iam_role_policy" "sfn" {
           "states:CreateStateMachine", "states:UpdateStateMachine", "states:DeleteStateMachine",
           "states:DescribeStateMachine", "states:StartExecution", "states:ListExecutions",
         ]
-        Resource = "arn:aws:states:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:stateMachine:${local.prefix}-*"
+        Resource = "arn:aws:states:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:stateMachine:${local.prefix}-*"
       },
       {
         Effect = "Allow"
         Action = ["states:DescribeExecution", "states:StopExecution", "states:RedriveExecution",
         "states:GetExecutionHistory"]
-        Resource = "arn:aws:states:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:execution:${local.prefix}-*:*"
+        Resource = "arn:aws:states:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:execution:${local.prefix}-*:*"
       },
       {
         Effect   = "Allow"
@@ -133,7 +133,7 @@ resource "aws_iam_role_policy" "sfn" {
       {
         Effect   = "Allow"
         Action   = ["logs:CreateLogGroup", "logs:CreateLogStream", "logs:PutLogEvents"]
-        Resource = "arn:aws:logs:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:*"
+        Resource = "arn:aws:logs:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:*"
       },
     ]
   })
@@ -163,7 +163,7 @@ resource "aws_cloudwatch_event_rule" "machine_status" {
       status = ["FAILED", "TIMED_OUT"]
       # this firm's machines only. The bus is the account's, and an account hosting one gerp today
       # is not a reason to report on anything that appears beside it.
-      stateMachineArn = [{ prefix = "arn:aws:states:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:stateMachine:${local.prefix}-" }]
+      stateMachineArn = [{ prefix = "arn:aws:states:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:stateMachine:${local.prefix}-" }]
     }
   })
 }
@@ -256,7 +256,7 @@ resource "aws_iam_role_policy" "machine_reporter" {
       {
         Effect   = "Allow"
         Action   = "states:DescribeExecution"
-        Resource = "arn:aws:states:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:execution:${local.prefix}-*:*"
+        Resource = "arn:aws:states:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:execution:${local.prefix}-*:*"
       },
       {
         # the on-failure destination is written by the FUNCTION's role, not by EventBridge — without
@@ -268,7 +268,7 @@ resource "aws_iam_role_policy" "machine_reporter" {
       {
         Effect   = "Allow"
         Action   = ["logs:CreateLogGroup", "logs:CreateLogStream", "logs:PutLogEvents"]
-        Resource = "arn:aws:logs:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:*"
+        Resource = "arn:aws:logs:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:*"
       },
     ]
   })
@@ -294,7 +294,7 @@ resource "aws_iam_role_policy" "scheduler_starts_machines" {
     Statement = [{
       Effect   = "Allow"
       Action   = "states:StartExecution"
-      Resource = "arn:aws:states:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:stateMachine:${local.prefix}-*"
+      Resource = "arn:aws:states:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:stateMachine:${local.prefix}-*"
     }]
   })
 }

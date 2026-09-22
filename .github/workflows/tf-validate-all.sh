@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # tf-validate-all.sh — terraform validate every dir containing .tf files.
 #
-# CI hygiene: catches accidental syntax breakage across dirs. Safe to run
+# CI hygiene: catches accidental syntax breakage across dirs, and a deprecation warning fails it,
+# so validate says nothing when nothing is wrong. Safe to run
 # anywhere — uses `terraform init -backend=false` (no network state ops).
 #
 # .github/workflows/terraform.yaml runs it on every pull request and push to main.
@@ -66,7 +67,23 @@ validate_one() {
     if [[ -n "$aliases" ]]; then
       for a in $aliases; do printf 'provider "%s" {\n  alias = "%s"\n}\n' "${a%%.*}" "${a#*.}"; done >"$ALIAS_FILE"
     fi
-    if terraform validate -no-color; then echo "" >"$OUT/$i.rc"; else echo validate >"$OUT/$i.rc"; fi
+    # -json, so a warning counts: a deprecation is a failure here, not a page to scroll past. The
+    # diagnostics print with their file and line; whatever terraform said on stderr prints as is
+    if out="$(terraform validate -json 2>"$OUT/$i.err")"; then
+      cat "$OUT/$i.err"
+      warnings="$(jq -r '[.diagnostics[]? | select(.severity == "warning")] | length' <<< "$out" 2>/dev/null || echo 0)"
+      if [[ "$warnings" == 0 ]]; then
+        echo "" >"$OUT/$i.rc"
+      else
+        echo "    $warnings warning(s):"
+        jq -r '.diagnostics[] | select(.severity == "warning") | "    Warning: \(.summary) (\(.range.filename // "?"):\(.range.start.line // "?")) \(.detail)"' <<< "$out"
+        echo warning >"$OUT/$i.rc"
+      fi
+    else
+      cat "$OUT/$i.err"
+      jq -r '.diagnostics[]? | select(.severity == "error") | "    Error: \(.summary) (\(.range.filename // "?"):\(.range.start.line // "?")) \(.detail)"' <<< "$out" 2>/dev/null || printf '%s\n' "$out"
+      echo validate >"$OUT/$i.rc"
+    fi
     rm -f "$ALIAS_FILE"
   } >"$OUT/$i.out" 2>&1
 }

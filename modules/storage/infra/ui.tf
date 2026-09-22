@@ -37,7 +37,7 @@ resource "random_id" "portal_slug" {
 }
 
 locals {
-  tasks_table_arn = "arn:aws:dynamodb:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:table/${var.tasks_table}"
+  tasks_table_arn = "arn:aws:dynamodb:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:table/${var.tasks_table}"
   portal_url      = "${trimsuffix(aws_lambda_function_url.ui.function_url, "/")}/${random_id.portal_slug.hex}"
 }
 
@@ -99,7 +99,7 @@ resource "aws_iam_role_policy" "ui" {
       {
         Effect   = "Allow"
         Action   = ["logs:CreateLogGroup", "logs:CreateLogStream", "logs:PutLogEvents"]
-        Resource = "arn:aws:logs:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:*"
+        Resource = "arn:aws:logs:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:*"
       },
       ], var.email_bucket == "" ? [] : [
       {

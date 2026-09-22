@@ -46,7 +46,7 @@ resource "aws_iam_role_policy" "pay_run" {
         # total the period's WAGES_PAYABLE credits from accounting's ledger
         Effect   = "Allow"
         Action   = "dynamodb:Query"
-        Resource = "arn:aws:dynamodb:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:table/${var.ledger_table_name}"
+        Resource = "arn:aws:dynamodb:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:table/${var.ledger_table_name}"
       },
       {
         # the worker row — its home location stamps the withholding entry's dims
@@ -59,14 +59,14 @@ resource "aws_iam_role_policy" "pay_run" {
         # taxes this worker owes. The attachment IS the dispatch; there is no rule set.
         Effect   = "Allow"
         Action   = "dynamodb:Query"
-        Resource = "arn:aws:dynamodb:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:table/${var.rule_instances_table_name}"
+        Resource = "arn:aws:dynamodb:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:table/${var.rule_instances_table_name}"
       },
       {
         # the GENERAL platform rows — the bracket tables in force for the period. Read-only:
         # the gerp never authors a platform value, which is why it can't forge one.
         Effect   = "Allow"
         Action   = "dynamodb:Query"
-        Resource = "arn:aws:dynamodb:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:table/${var.rules_params_table_name}"
+        Resource = "arn:aws:dynamodb:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:table/${var.rules_params_table_name}"
       },
       {
         # post the withholding entry
@@ -81,7 +81,7 @@ resource "aws_iam_role_policy" "pay_run" {
           "logs:CreateLogStream",
           "logs:PutLogEvents",
         ]
-        Resource = "arn:aws:logs:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:*"
+        Resource = "arn:aws:logs:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:*"
       },
     ]
   })

@@ -70,7 +70,7 @@ resource "aws_cognito_user_pool" "main" {
   # initial apply order is operator first (this), tower second (creates the
   # actual lambda + lambda_permission). Avoids circular terraform_remote_state.
   lambda_config {
-    post_confirmation = "arn:aws:lambda:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:function:tower-cognito-post-confirmation"
+    post_confirmation = "arn:aws:lambda:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:function:tower-cognito-post-confirmation"
   }
 }
 

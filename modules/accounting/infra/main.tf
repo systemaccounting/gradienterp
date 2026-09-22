@@ -256,8 +256,8 @@ resource "aws_iam_role_policy" "lambda" {
           "lambda:InvokeFunction",
         ]
         Resource = concat([
-          "arn:aws:lambda:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:function:${local.prefix}-post_journal_entry",
-          "arn:aws:lambda:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:function:${local.prefix}-get_statement",
+          "arn:aws:lambda:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:function:${local.prefix}-post_journal_entry",
+          "arn:aws:lambda:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:function:${local.prefix}-get_statement",
           var.extend_schema_fn_arn, # add_classification invokes extend_schema
           var.plaid_gateway_arn,    # reconcile invokes the operator plaid-gateway cross-account
           # compute_balances invokes treasury's distribution handler on period close (by
@@ -304,7 +304,7 @@ resource "aws_iam_role_policy" "lambda" {
           "logs:CreateLogStream",
           "logs:PutLogEvents",
         ]
-        Resource = "arn:aws:logs:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:*"
+        Resource = "arn:aws:logs:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:*"
       },
       {
         Effect   = "Allow"
@@ -322,21 +322,21 @@ resource "aws_iam_role_policy" "lambda" {
         # DDB at cold start.
         Effect   = "Allow"
         Action   = "dynamodb:Query"
-        Resource = "arn:aws:dynamodb:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:table/${var.schema_table_name}"
+        Resource = "arn:aws:dynamodb:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:table/${var.schema_table_name}"
       },
       {
         # the plaid access_token (a SecureString derived secret): reconcile reads it, check_bank_connection
         # writes it on a linked session.
         Effect   = "Allow"
         Action   = ["ssm:GetParameter", "ssm:PutParameter"]
-        Resource = "arn:aws:ssm:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:parameter/gradienterp/customers/${var.gerp_id}/secrets/plaid/*"
+        Resource = "arn:aws:ssm:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:parameter/gradienterp/customers/${var.gerp_id}/secrets/plaid/*"
       },
       {
         # accounting-owned plaid state (not secrets): the sync cursor (reconcile) + the pending Hosted
         # Link token (connect_bank writes, check_bank_connection reads/deletes).
         Effect   = "Allow"
         Action   = ["ssm:GetParameter", "ssm:PutParameter", "ssm:DeleteParameter"]
-        Resource = "arn:aws:ssm:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:parameter/gradienterp/customers/${var.gerp_id}/accounting/plaid_*"
+        Resource = "arn:aws:ssm:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:parameter/gradienterp/customers/${var.gerp_id}/accounting/plaid_*"
       },
       {
         # encrypt/decrypt SecureString params (account-default aws/ssm key; gated by its key policy)
