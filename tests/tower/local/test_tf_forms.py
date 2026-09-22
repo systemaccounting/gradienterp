@@ -13,7 +13,7 @@ def test_no_deprecated_region_read_and_no_key_argument_inside_an_index():
         s = p.read_text()
         for m in re.finditer(r"data\.aws_region\.\w+\.(id|name)\b", s):
             bad.append(f"{p.relative_to(REPO)}: {m.group(0)}")
-        for m in re.finditer(r"global_secondary_index \{\n((?:[^{}]|\n)*?)\n\s*\}", s):
+        for m in re.finditer(r"global_secondary_index \{\n([^{}]*?)\n\s*\}", s):  # [^{}] takes newlines too
             if re.search(r"^\s*(hash_key|range_key)\s*=", m.group(1), re.M):
                 bad.append(f"{p.relative_to(REPO)}: hash_key/range_key inside global_secondary_index")
     assert not bad, "\n".join(bad)
