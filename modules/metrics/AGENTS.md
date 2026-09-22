@@ -86,6 +86,7 @@ and joined to the books. Why in `README.md`.
   dependency imported by name (`importlib.import_module`), so the deploy walk never bundles it. `tests/metrics/_helpers.py`
   seeds the bucket with the same partitioned Parquet Firehose writes
 - **reports on the portal** — prompt-tier, no tool: after a data answer the agent offers a page under `pages/reports/<slug>.html` (modules/storage `manage_storage op=put`, the link back), the standing preference `data-questions-as-reports` by `remember`, and a periodic one as an automation the calendar fires, its runs `pages/reports/<slug>/<YYYY-MM-DDTHH-MM>.html` with `latest.html` rewritten; the page and script shapes are in kb.md
+- **the public metric key** — `public_key(definition, period)` and `parse_public_key(key)` in `metrics.py`, the one place the platform's counters key is built or read: `<event>#<kind>[#<property>=<value>]#<grain>#<period>` under the firm's partition on `gerp-counters`, `kind` one of `count | active | count_by`, `grain` one of `day | week | month`, `#`, `=` and `%` in a value percent-encoded. Two firms' identical definitions share a key; the vocabulary's bucket is the metric's class, read off `metric_events`, never stored. The stamp (#47), the counter and the api import it; nothing else splits a key
 
 ## the row, end to end
 

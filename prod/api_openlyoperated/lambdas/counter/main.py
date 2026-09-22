@@ -1,8 +1,9 @@
 """counter — the dumb economic-counter incrementer.
 
 Consumes any bus event whose `detail.counters` is a list of {op, key, magnitude}, and applies each as
-trivial arithmetic on the schemaless counters table, keyed `<key>#<YYYY-MM>` (period from the event's
-`posted_at_ms`, else now). No domain knowledge: the emitter decided the key + magnitude (translate at the
+trivial arithmetic on the counters table: the platform's signals under partition `platform`, range key
+`<key>#<YYYY-MM>` (period from the event's `posted_at_ms`, else now), `signal` and `period` set as
+attributes beside the value so no reader splits the key. No domain knowledge: the emitter decided the key + magnitude (translate at the
 boundary); this just does the math. Extensible by op — today `add` (atomic ADD); new ops are new match
 limbs, still dumb. The counter takes every business's events (aggregate = terms-of-use baseline), so there
 is no openly_operated gate — the routing rule matches on `detail.counters` existing.
@@ -41,14 +42,16 @@ def _period(detail):
     return dt.strftime("%Y-%m")
 
 
+PLATFORM = "platform"   # the partition the platform's own signals live under
+
+
 def _apply(op, key, magnitude, period):
-    pk = f"{key}#{period}"
     if op == "add":
         _table.update_item(
-            Key={"counter": pk},
-            UpdateExpression="ADD #v :m",
-            ExpressionAttributeNames={"#v": "value"},
-            ExpressionAttributeValues={":m": magnitude},
+            Key={"gerp_id": PLATFORM, "key": f"{key}#{period}"},
+            UpdateExpression="ADD #v :m SET #s = :k, #p = :p",
+            ExpressionAttributeNames={"#v": "value", "#s": "signal", "#p": "period"},
+            ExpressionAttributeValues={":m": magnitude, ":k": key, ":p": period},
         )
     else:
         raise ValueError(f"unknown counter op: {op}")

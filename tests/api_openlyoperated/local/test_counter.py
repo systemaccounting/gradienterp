@@ -20,8 +20,8 @@ def _load():
     from aws import client
     os.environ["COUNTERS_TABLE"] = unique("counters")
     client("dynamodb").create_table(TableName=os.environ["COUNTERS_TABLE"], BillingMode="PAY_PER_REQUEST",
-                                    AttributeDefinitions=[{"AttributeName": "counter", "AttributeType": "S"}],
-                                    KeySchema=[{"AttributeName": "counter", "KeyType": "HASH"}])
+                                    AttributeDefinitions=[{"AttributeName": "gerp_id", "AttributeType": "S"}, {"AttributeName": "key", "AttributeType": "S"}],
+                                    KeySchema=[{"AttributeName": "gerp_id", "KeyType": "HASH"}, {"AttributeName": "key", "KeyType": "RANGE"}])
     for g, a in ACCT.items():
         client("dynamodb").put_item(TableName=os.environ["CUSTOMERS_TABLE"], Item={
             "gerp_id": {"S": g}, "status": {"S": "active"}, "aws_account_id": {"S": a}})
@@ -43,7 +43,8 @@ def test_a_count_is_taken_only_from_the_gerps_own_account():
         for gerp_id, account in (("cafe", ACCT["mallory"]), ("cafe", ""), ("ghost", ACCT["cafe"])):
             assert mod.handler(_event(gerp_id, account), None)["refused"], (gerp_id, account)
         [row] = rows(os.environ["COUNTERS_TABLE"])
-        assert row["counter"] == "revenue#2026-09" and Decimal(str(row["value"])) == 40
+        assert row["gerp_id"] == "platform" and row["key"] == "revenue#2026-09" and Decimal(str(row["value"])) == 40
+        assert row["signal"] == "revenue" and row["period"] == "2026-09", "the attributes a reader takes, never a split"
 
 
 if __name__ == "__main__":

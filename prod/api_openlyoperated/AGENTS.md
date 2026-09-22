@@ -67,7 +67,10 @@ to answer on the custom domain; a 403 in that window is propagation.
   read-through and the publisher read that one bit instead of asking a gerp per request.
   Provisioning stamps the create-time wish first.
 - **the counters** (`counters.tf`) — the rule on `detail.counters` and the counter lambda that
-  ADDs each entry onto `gerp-counters` (`<key>#<YYYY-MM>`). Every gerp, no gate.
+  ADDs each entry onto `gerp-counters`, one partition per gerp (`gerp_id`), the platform's own
+  signals under `platform` with the range key `<signal>#<YYYY-MM>` and `signal` + `period` as
+  attributes, so `/economy/counters` Queries the partition and splits nothing. A firm's rows take
+  the public metric key (modules/metrics `public_key`) as their range key. Every gerp, no gate.
 - **the meter** — usage plan `gerp-api-keyed` (200/400, 1M a month) and one hand-made key for
   gradienterp's reads and the tests. Anonymous reads share the stage throttle (20/40).
 - **the archive** (`main.tf`) — the bus → firehose → S3 path from the first cut, still applied,
