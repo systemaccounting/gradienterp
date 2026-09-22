@@ -32,7 +32,7 @@ locals {
   # stack), so the ARN is constructed rather than pulled through remote_state. Cognito sends
   # verification + recovery mail as this identity (see cognito.tf).
   mail_domain       = "gradienterp.cloud"
-  mail_identity_arn = "arn:aws:ses:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:identity/gradienterp.cloud"
+  mail_identity_arn = "arn:aws:ses:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:identity/gradienterp.cloud"
 }
 
 data "aws_caller_identity" "current" {}
@@ -186,7 +186,7 @@ resource "aws_dynamodb_table" "directory" {
   # reads its own region's copy. The resource policy below does not replicate; a replica gets
   # its own (aws_dynamodb_resource_policy.directory_replica)
   dynamic "replica" {
-    for_each = [for r in keys(local.config.REGIONS) : r if r != data.aws_region.current.id]
+    for_each = [for r in keys(local.config.REGIONS) : r if r != data.aws_region.current.region]
     content {
       region_name = replica.value
     }
@@ -236,8 +236,11 @@ resource "aws_dynamodb_table" "profile_index" {
   }
 
   global_secondary_index {
-    name            = "by-profile"
-    hash_key        = "gerp_profile_id"
+    name = "by-profile"
+    key_schema {
+      attribute_name = "gerp_profile_id"
+      key_type       = "HASH"
+    }
     projection_type = "KEYS_ONLY"
   }
 }

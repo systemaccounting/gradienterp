@@ -133,57 +133,99 @@ resource "aws_dynamodb_table" "tasks" {
   }
 
   global_secondary_index {
-    name            = "contact-index"
-    hash_key        = "contact_id"
-    range_key       = "due_date"
+    name = "contact-index"
+    key_schema {
+      attribute_name = "contact_id"
+      key_type       = "HASH"
+    }
+    key_schema {
+      attribute_name = "due_date"
+      key_type       = "RANGE"
+    }
     projection_type = "ALL"
   }
 
   global_secondary_index {
-    name            = "journal-entry-index"
-    hash_key        = "journal_entry_id"
-    range_key       = "due_date"
+    name = "journal-entry-index"
+    key_schema {
+      attribute_name = "journal_entry_id"
+      key_type       = "HASH"
+    }
+    key_schema {
+      attribute_name = "due_date"
+      key_type       = "RANGE"
+    }
     projection_type = "ALL"
   }
 
   global_secondary_index {
-    name            = "purchase-order-index"
-    hash_key        = "purchase_order_id"
-    range_key       = "due_date"
+    name = "purchase-order-index"
+    key_schema {
+      attribute_name = "purchase_order_id"
+      key_type       = "HASH"
+    }
+    key_schema {
+      attribute_name = "due_date"
+      key_type       = "RANGE"
+    }
     projection_type = "ALL"
   }
 
   global_secondary_index {
-    name            = "invoice-index"
-    hash_key        = "invoice_id"
-    range_key       = "due_date"
+    name = "invoice-index"
+    key_schema {
+      attribute_name = "invoice_id"
+      key_type       = "HASH"
+    }
+    key_schema {
+      attribute_name = "due_date"
+      key_type       = "RANGE"
+    }
     projection_type = "ALL"
   }
 
   # "every task tagged X". A set cannot be a key, so the tags are rows and this is how they are
   # found without scanning. Sorted newest first by `<applied_at>#<task_id>`.
   global_secondary_index {
-    name            = "tag-index"
-    hash_key        = "gsi_tag"
-    range_key       = "gsi_tag_sk"
+    name = "tag-index"
+    key_schema {
+      attribute_name = "gsi_tag"
+      key_type       = "HASH"
+    }
+    key_schema {
+      attribute_name = "gsi_tag_sk"
+      key_type       = "RANGE"
+    }
     projection_type = "KEYS_ONLY"
   }
 
   # subject-index ranges on created_at (always present) rather than due_date —
   # incidents rarely carry a due date, and service history reads in time order.
   global_secondary_index {
-    name            = "subject-index"
-    hash_key        = "subject_key"
-    range_key       = "created_at"
+    name = "subject-index"
+    key_schema {
+      attribute_name = "subject_key"
+      key_type       = "HASH"
+    }
+    key_schema {
+      attribute_name = "created_at"
+      key_type       = "RANGE"
+    }
     projection_type = "ALL"
   }
 
   # ranged on created_at (always present) — a GSI is SPARSE, and ranging on due_date hid
   # every open task without a stamped ceiling from the queue. Lapse order = allocation order.
   global_secondary_index {
-    name            = "open-tasks-index"
-    hash_key        = "open_flag"
-    range_key       = "created_at"
+    name = "open-tasks-index"
+    key_schema {
+      attribute_name = "open_flag"
+      key_type       = "HASH"
+    }
+    key_schema {
+      attribute_name = "created_at"
+      key_type       = "RANGE"
+    }
     projection_type = "ALL"
   }
 
@@ -235,7 +277,7 @@ resource "aws_iam_role_policy" "lambda" {
         # declaration — `tag_declared` reads a single key rather than listing the vocabulary.
         Effect   = "Allow"
         Action   = ["dynamodb:Query", "dynamodb:GetItem"]
-        Resource = "arn:aws:dynamodb:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:table/${var.schema_table_name}"
+        Resource = "arn:aws:dynamodb:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:table/${var.schema_table_name}"
       },
       {
         # escalate emits platform/escalation.raised to the shared operator bus
@@ -259,8 +301,8 @@ resource "aws_iam_role_policy" "lambda" {
         Effect = "Allow"
         Action = "bedrock-agentcore:InvokeAgentRuntime"
         Resource = [
-          "arn:aws:bedrock-agentcore:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:runtime/*",
-          "arn:aws:bedrock-agentcore:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:runtime-endpoint/*",
+          "arn:aws:bedrock-agentcore:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:runtime/*",
+          "arn:aws:bedrock-agentcore:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:runtime-endpoint/*",
         ]
       },
       {
@@ -270,7 +312,7 @@ resource "aws_iam_role_policy" "lambda" {
           "logs:CreateLogStream",
           "logs:PutLogEvents",
         ]
-        Resource = "arn:aws:logs:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:*"
+        Resource = "arn:aws:logs:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:*"
       },
     ]
   })

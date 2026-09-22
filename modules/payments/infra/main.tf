@@ -226,13 +226,13 @@ resource "aws_iam_role_policy" "lambda" {
           # charge_saved_method reads the payer's contact for the card they saved
           var.contacts_get_fn_arn,
           # payment_links (kind payment) reads the invoice it is a link for
-          "arn:aws:lambda:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:function:${var.stack_prefix}-invoicing-${replace(var.gerp_id, "_", "-")}-manage_invoice",
+          "arn:aws:lambda:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:function:${var.stack_prefix}-invoicing-${replace(var.gerp_id, "_", "-")}-manage_invoice",
           # ingest_stripe settles the receivable when a charge names its invoice — the transition
           # releases parked revenue per line, which a journal entry cannot do
-          "arn:aws:lambda:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:function:${var.stack_prefix}-invoicing-${replace(var.gerp_id, "_", "-")}-record_invoice_paid",
+          "arn:aws:lambda:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:function:${var.stack_prefix}-invoicing-${replace(var.gerp_id, "_", "-")}-record_invoice_paid",
           # charge_saved_method says so when a charge does not land — `unpaid` is what a firm's
           # chase attaches to, and it posts nothing, so this grants no ledger reach
-          "arn:aws:lambda:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:function:${var.stack_prefix}-invoicing-${replace(var.gerp_id, "_", "-")}-mark_unpaid",
+          "arn:aws:lambda:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:function:${var.stack_prefix}-invoicing-${replace(var.gerp_id, "_", "-")}-mark_unpaid",
         ])
       },
       {
@@ -251,7 +251,7 @@ resource "aws_iam_role_policy" "lambda" {
         # verifies a delivery, and the lambdas that call a processor read the owner's key
         Effect   = "Allow"
         Action   = ["ssm:GetParameter", "ssm:PutParameter"]
-        Resource = "arn:aws:ssm:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:parameter/gradienterp/customers/${var.gerp_id}/secrets/*"
+        Resource = "arn:aws:ssm:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:parameter/gradienterp/customers/${var.gerp_id}/secrets/*"
       },
       {
         # modules/mcp: the vendor gateway's url and the firm's client — configure_webhook makes
@@ -259,20 +259,20 @@ resource "aws_iam_role_policy" "lambda" {
         Effect = "Allow"
         Action = ["ssm:GetParameter", "ssm:GetParametersByPath"]
         Resource = [
-          "arn:aws:ssm:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:parameter/gradienterp/customers/${var.gerp_id}/mcp",
-          "arn:aws:ssm:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:parameter/gradienterp/customers/${var.gerp_id}/mcp/*",
+          "arn:aws:ssm:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:parameter/gradienterp/customers/${var.gerp_id}/mcp",
+          "arn:aws:ssm:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:parameter/gradienterp/customers/${var.gerp_id}/mcp/*",
         ]
       },
       {
         Effect    = "Allow"
         Action    = "kms:Decrypt"
         Resource  = "*"
-        Condition = { StringEquals = { "kms:ViaService" = "ssm.${data.aws_region.current.id}.amazonaws.com" } }
+        Condition = { StringEquals = { "kms:ViaService" = "ssm.${data.aws_region.current.region}.amazonaws.com" } }
       },
       {
         Effect   = "Allow"
         Action   = ["logs:CreateLogGroup", "logs:CreateLogStream", "logs:PutLogEvents"]
-        Resource = "arn:aws:logs:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:*"
+        Resource = "arn:aws:logs:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:*"
       },
     ]
   })
@@ -285,9 +285,9 @@ resource "aws_iam_role_policy" "lambda" {
 # nothing of another processor's.
 
 locals {
-  secrets_arn   = "arn:aws:ssm:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:parameter/gradienterp/customers/${var.gerp_id}/secrets"
+  secrets_arn   = "arn:aws:ssm:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:parameter/gradienterp/customers/${var.gerp_id}/secrets"
   settings_arn  = var.settings_table_arn != "" ? var.settings_table_arn : aws_dynamodb_table.webhook_log.arn
-  invoicing_arn = "arn:aws:lambda:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:function:${var.stack_prefix}-invoicing-${replace(var.gerp_id, "_", "-")}"
+  invoicing_arn = "arn:aws:lambda:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:function:${var.stack_prefix}-invoicing-${replace(var.gerp_id, "_", "-")}"
 
   doors = {
     ingest_stripe = {
@@ -347,7 +347,7 @@ resource "aws_iam_role_policy" "door" {
         Effect    = "Allow"
         Action    = "kms:Decrypt"
         Resource  = "*"
-        Condition = { StringEquals = { "kms:ViaService" = "ssm.${data.aws_region.current.id}.amazonaws.com" } }
+        Condition = { StringEquals = { "kms:ViaService" = "ssm.${data.aws_region.current.region}.amazonaws.com" } }
       },
       {
         Effect   = "Allow"
@@ -357,7 +357,7 @@ resource "aws_iam_role_policy" "door" {
       {
         Effect   = "Allow"
         Action   = ["logs:CreateLogStream", "logs:PutLogEvents"]
-        Resource = "arn:aws:logs:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:log-group:/aws/lambda/${local.prefix}-${each.key}:*"
+        Resource = "arn:aws:logs:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:log-group:/aws/lambda/${local.prefix}-${each.key}:*"
       },
       ], each.value.settings ? [{
         Effect   = "Allow"

@@ -39,7 +39,7 @@ resource "aws_iam_role_policy" "issue_collector" {
         # cross-account invoke the operator gerp's tasks door (constructed name)
         Effect   = "Allow"
         Action   = "lambda:InvokeFunction"
-        Resource = "arn:aws:lambda:${data.aws_region.current.id}:*:function:${local.stack_prefix}-tasks-*-manage_tasks"
+        Resource = "arn:aws:lambda:${data.aws_region.current.region}:*:function:${local.stack_prefix}-tasks-*-manage_tasks"
       },
       {
         # an alarm's account -> its gerp
@@ -68,7 +68,7 @@ resource "aws_iam_role_policy" "issue_collector" {
           "logs:CreateLogStream",
           "logs:PutLogEvents",
         ]
-        Resource = "arn:aws:logs:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:*"
+        Resource = "arn:aws:logs:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:*"
       },
     ]
   })

@@ -75,9 +75,15 @@ resource "aws_dynamodb_table" "shipments" {
   }
 
   global_secondary_index {
-    name            = "open-shipments-index"
-    hash_key        = "open_flag"
-    range_key       = "created_at"
+    name = "open-shipments-index"
+    key_schema {
+      attribute_name = "open_flag"
+      key_type       = "HASH"
+    }
+    key_schema {
+      attribute_name = "created_at"
+      key_type       = "RANGE"
+    }
     projection_type = "ALL"
   }
 
@@ -126,7 +132,7 @@ resource "aws_iam_role_policy" "lambda" {
       {
         Effect   = "Allow"
         Action   = "dynamodb:Query"
-        Resource = "arn:aws:dynamodb:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:table/${var.schema_table_name}"
+        Resource = "arn:aws:dynamodb:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:table/${var.schema_table_name}"
       },
       {
         Effect   = "Allow"
@@ -140,7 +146,7 @@ resource "aws_iam_role_policy" "lambda" {
           "logs:CreateLogStream",
           "logs:PutLogEvents",
         ]
-        Resource = "arn:aws:logs:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:*"
+        Resource = "arn:aws:logs:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:*"
       },
     ]
   })

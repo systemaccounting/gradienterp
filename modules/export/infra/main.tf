@@ -74,7 +74,7 @@ locals {
   storage_bucket_arn = "arn:aws:s3:::${var.storage_bucket}"
   # every table in this gerp — the exporter reads across modules by design, and naming them
   # individually here would be a second policy list to drift from the one in the lambda
-  tables_arn = "arn:aws:dynamodb:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:table/${var.stack_prefix}-*-${replace(var.gerp_id, "_", "-")}*"
+  tables_arn = "arn:aws:dynamodb:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:table/${var.stack_prefix}-*-${replace(var.gerp_id, "_", "-")}*"
 }
 
 # ─── iam ───
@@ -139,7 +139,7 @@ resource "aws_iam_role_policy" "lambda" {
       {
         Effect   = "Allow"
         Action   = ["logs:CreateLogGroup", "logs:CreateLogStream", "logs:PutLogEvents"]
-        Resource = "arn:aws:logs:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:*"
+        Resource = "arn:aws:logs:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:*"
       },
     ]
   })

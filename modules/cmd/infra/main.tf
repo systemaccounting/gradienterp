@@ -98,7 +98,7 @@ resource "aws_iam_role_policy" "lambda" {
         # the owner's env — the ONE param path; platform secrets live elsewhere
         Effect   = "Allow"
         Action   = ["ssm:GetParametersByPath", "ssm:GetParameter"]
-        Resource = "arn:aws:ssm:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:parameter${local.env_param_path}*"
+        Resource = "arn:aws:ssm:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:parameter${local.env_param_path}*"
       },
       {
         # cabinet prefixes: scripts + buildspecs in, oversize outputs + layer zips out.
@@ -134,22 +134,22 @@ resource "aws_iam_role_policy" "lambda" {
         # a failed build returns its log tail — the agent wrote the spec, so it fixes it
         Effect   = "Allow"
         Action   = ["logs:GetLogEvents"]
-        Resource = "arn:aws:logs:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:log-group:/aws/codebuild/${local.prefix}-layers:*"
+        Resource = "arn:aws:logs:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:log-group:/aws/codebuild/${local.prefix}-layers:*"
       },
       {
         Effect   = "Allow"
         Action   = ["lambda:PublishLayerVersion", "lambda:GetLayerVersion"]
-        Resource = "arn:aws:lambda:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:layer:${local.prefix}-*"
+        Resource = "arn:aws:lambda:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:layer:${local.prefix}-*"
       },
       {
         Effect   = "Allow"
         Action   = ["lambda:GetFunctionConfiguration", "lambda:UpdateFunctionConfiguration"]
-        Resource = "arn:aws:lambda:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:function:${local.prefix}-cmd"
+        Resource = "arn:aws:lambda:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:function:${local.prefix}-cmd"
       },
       {
         Effect   = "Allow"
         Action   = ["logs:CreateLogGroup", "logs:CreateLogStream", "logs:PutLogEvents"]
-        Resource = "arn:aws:logs:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:*"
+        Resource = "arn:aws:logs:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:*"
       },
     ]
   })
@@ -222,7 +222,7 @@ resource "aws_iam_role_policy" "codebuild" {
       {
         Effect   = "Allow"
         Action   = ["logs:CreateLogGroup", "logs:CreateLogStream", "logs:PutLogEvents"]
-        Resource = "arn:aws:logs:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:*"
+        Resource = "arn:aws:logs:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:*"
       },
     ]
   })

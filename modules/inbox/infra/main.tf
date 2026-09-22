@@ -71,7 +71,7 @@ resource "aws_iam_role_policy" "lambda" {
           "logs:CreateLogStream",
           "logs:PutLogEvents",
         ]
-        Resource = "arn:aws:logs:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:*"
+        Resource = "arn:aws:logs:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:*"
       },
     ]
   })
@@ -134,8 +134,8 @@ resource "aws_iam_role_policy" "poke" {
         Effect = "Allow"
         Action = "bedrock-agentcore:InvokeAgentRuntime"
         Resource = [
-          "arn:aws:bedrock-agentcore:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:runtime/*",
-          "arn:aws:bedrock-agentcore:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:runtime-endpoint/*",
+          "arn:aws:bedrock-agentcore:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:runtime/*",
+          "arn:aws:bedrock-agentcore:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:runtime-endpoint/*",
         ]
       },
       {
@@ -145,7 +145,7 @@ resource "aws_iam_role_policy" "poke" {
           "logs:CreateLogStream",
           "logs:PutLogEvents",
         ]
-        Resource = "arn:aws:logs:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:*"
+        Resource = "arn:aws:logs:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:*"
       },
     ]
   })
@@ -184,7 +184,7 @@ locals {
   shipping_fn        = "${var.stack_prefix}-shipping-${local.gerp}-apply_shipment_event" # shipment.sent → our inbound custody row + ETA
   treasury_fn        = "${var.stack_prefix}-treasury-${local.gerp}-apply_inbound"        # distribution.paid → income on a holding (money, not a stamp)
   agreements_fn      = "${var.stack_prefix}-agreements-${local.gerp}-apply_inbound"      # every <kind>.proposed / <kind>.accepted → the counterparty's stamp, one handler for all kinds
-  handler_arn_prefix = "arn:aws:lambda:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:function"
+  handler_arn_prefix = "arn:aws:lambda:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:function"
 }
 
 resource "aws_iam_role" "router" {
@@ -221,7 +221,7 @@ resource "aws_iam_role_policy" "router" {
       {
         Effect   = "Allow"
         Action   = ["logs:CreateLogGroup", "logs:CreateLogStream", "logs:PutLogEvents"]
-        Resource = "arn:aws:logs:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:*"
+        Resource = "arn:aws:logs:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:*"
       },
     ]
   })
@@ -305,7 +305,7 @@ resource "aws_iam_role_policy" "get_inbound" {
       {
         Effect   = "Allow"
         Action   = ["logs:CreateLogGroup", "logs:CreateLogStream", "logs:PutLogEvents"]
-        Resource = "arn:aws:logs:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:*"
+        Resource = "arn:aws:logs:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:*"
       },
     ]
   })

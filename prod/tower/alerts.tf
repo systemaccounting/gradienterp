@@ -60,7 +60,7 @@ resource "aws_sns_topic_policy" "ops_alerts" {
         Principal = { Service = "cloudwatch.amazonaws.com" }
         Action    = "sns:Publish"
         Resource  = aws_sns_topic.ops_alerts.arn
-        Condition = { ArnLike = { "aws:SourceArn" = "arn:aws:cloudwatch:${data.aws_region.current.id}:*:alarm:gerp-*" } }
+        Condition = { ArnLike = { "aws:SourceArn" = "arn:aws:cloudwatch:${data.aws_region.current.region}:*:alarm:gerp-*" } }
       },
     ]
   })
@@ -74,7 +74,7 @@ resource "aws_sns_topic_policy" "ops_alerts" {
 resource "aws_sns_topic_subscription" "ops_alerts_collector" {
   topic_arn = aws_sns_topic.ops_alerts.arn
   protocol  = "lambda"
-  endpoint  = "arn:aws:lambda:${data.aws_region.current.id}:${local.operator_account_id}:function:${local.stack_prefix}-issue-collector"
+  endpoint  = "arn:aws:lambda:${data.aws_region.current.region}:${local.operator_account_id}:function:${local.stack_prefix}-issue-collector"
 }
 
 # ─── the build ───
@@ -416,7 +416,7 @@ resource "aws_cloudwatch_dashboard" "ops" {
         type = "metric", x = 0, y = 0, width = 12, height = 7
         properties = {
           title   = "raises — AWS/Lambda Errors, the account sums (one line per account)"
-          view    = "timeSeries", stacked = false, region = data.aws_region.current.id, period = 300, stat = "Sum"
+          view    = "timeSeries", stacked = false, region = data.aws_region.current.region, period = 300, stat = "Sum"
           metrics = [[{ expression = "SEARCH('{AWS/Lambda} MetricName=\"Errors\"', 'Sum', 300)", id = "e", label = "" }]]
         }
       },
@@ -424,7 +424,7 @@ resource "aws_cloudwatch_dashboard" "ops" {
         type = "metric", x = 12, y = 0, width = 12, height = 7
         properties = {
           title   = "caught failures — ErrorLines, one line per gerp (gerp/app/<gerp>)"
-          view    = "timeSeries", stacked = false, region = data.aws_region.current.id, period = 300, stat = "Sum"
+          view    = "timeSeries", stacked = false, region = data.aws_region.current.region, period = 300, stat = "Sum"
           metrics = [[{ expression = "SEARCH('MetricName=\"ErrorLines\"', 'Sum', 300)", id = "l", label = "" }]]
         }
       },
@@ -432,7 +432,7 @@ resource "aws_cloudwatch_dashboard" "ops" {
         type = "metric", x = 0, y = 7, width = 12, height = 7
         properties = {
           title   = "caught failures by kind (ErrorLinesByKind: function, kind, category)"
-          view    = "timeSeries", stacked = false, region = data.aws_region.current.id, period = 300, stat = "Sum"
+          view    = "timeSeries", stacked = false, region = data.aws_region.current.region, period = 300, stat = "Sum"
           metrics = [[{ expression = "SEARCH('{gerp/app,FunctionName,category,kind} MetricName=\"ErrorLinesByKind\"', 'Sum', 300)", id = "k", label = "" }]]
         }
       },
@@ -440,7 +440,7 @@ resource "aws_cloudwatch_dashboard" "ops" {
         type = "metric", x = 12, y = 7, width = 12, height = 7
         properties = {
           title = "parked stream records (the -failed queues)"
-          view  = "timeSeries", stacked = false, region = data.aws_region.current.id, period = 300, stat = "Maximum"
+          view  = "timeSeries", stacked = false, region = data.aws_region.current.region, period = 300, stat = "Maximum"
           # `failed` is a bare token (a substring match on the metric's names and values).
           # Quoted it is an exact value and matches nothing — the widget read empty until this.
           metrics = [[{ expression = "SEARCH('{AWS/SQS,QueueName} MetricName=\"ApproximateNumberOfMessagesVisible\" failed', 'Maximum', 300)", id = "q", label = "" }]]
@@ -450,7 +450,7 @@ resource "aws_cloudwatch_dashboard" "ops" {
         type = "metric", x = 0, y = 14, width = 12, height = 7
         properties = {
           title   = "the fleet: invocations (the account sums)"
-          view    = "timeSeries", stacked = false, region = data.aws_region.current.id, period = 300, stat = "Sum"
+          view    = "timeSeries", stacked = false, region = data.aws_region.current.region, period = 300, stat = "Sum"
           metrics = [[{ expression = "SEARCH('{AWS/Lambda} MetricName=\"Invocations\"', 'Sum', 300)", id = "i", label = "" }]]
         }
       },
@@ -458,7 +458,7 @@ resource "aws_cloudwatch_dashboard" "ops" {
         type = "metric", x = 12, y = 14, width = 12, height = 7
         properties = {
           title   = "the fleet: duration p95 ms (the account sums)"
-          view    = "timeSeries", stacked = false, region = data.aws_region.current.id, period = 300
+          view    = "timeSeries", stacked = false, region = data.aws_region.current.region, period = 300
           metrics = [[{ expression = "SEARCH('{AWS/Lambda} MetricName=\"Duration\"', 'p95', 300)", id = "d", label = "" }]]
         }
       },
@@ -466,7 +466,7 @@ resource "aws_cloudwatch_dashboard" "ops" {
         type = "metric", x = 0, y = 21, width = 24, height = 6
         properties = {
           title = "the gateways' 5xx (HTTP apis and the REST api, every account)"
-          view  = "timeSeries", stacked = false, region = data.aws_region.current.id, period = 300, stat = "Sum"
+          view  = "timeSeries", stacked = false, region = data.aws_region.current.region, period = 300, stat = "Sum"
           metrics = [[{ expression = "SEARCH('{AWS/ApiGateway,ApiId} MetricName=\"5xx\"', 'Sum', 300)", id = "h", label = "" }],
           [{ expression = "SEARCH('{AWS/ApiGateway,ApiName} MetricName=\"5XXError\"', 'Sum', 300)", id = "r", label = "" }]]
         }

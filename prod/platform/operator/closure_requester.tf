@@ -63,14 +63,14 @@ resource "aws_iam_role_policy" "closure_requester" {
         # management-only call
         Effect   = "Allow"
         Action   = "lambda:InvokeFunction"
-        Resource = "arn:aws:lambda:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:function:tower-close-account"
+        Resource = "arn:aws:lambda:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:function:tower-close-account"
       },
       {
         # and the build itself. One project; TF_ACTION rides in the caller's overrides, which is why
         # the build's own role is what bounds what a destroy can reach.
         Effect   = "Allow"
         Action   = "codebuild:StartBuild"
-        Resource = "arn:aws:codebuild:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:project/tower-per-customer"
+        Resource = "arn:aws:codebuild:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:project/tower-per-customer"
       },
     ]
   })

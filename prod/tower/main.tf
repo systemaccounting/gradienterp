@@ -161,7 +161,7 @@ resource "aws_iam_role_policy" "codebuild" {
           "dynamodb:PutItem",
           "dynamodb:DeleteItem",
         ]
-        Resource = "arn:aws:dynamodb:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:table/${var.tfstate_lock_table}"
+        Resource = "arn:aws:dynamodb:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:table/${var.tfstate_lock_table}"
       },
       {
         # per_customer writes the gerp's agent-email records into the operator's gradienterp.cloud
@@ -179,7 +179,7 @@ resource "aws_iam_role_policy" "codebuild" {
         Effect = "Allow"
         Action = ["cognito-idp:CreateUserPoolClient", "cognito-idp:DescribeUserPoolClient", "cognito-idp:UpdateUserPoolClient",
         "cognito-idp:DeleteUserPoolClient", "cognito-idp:DescribeUserPool", "cognito-idp:DescribeResourceServer"]
-        Resource = "arn:aws:cognito-idp:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:userpool/${local.config.COGNITO_USER_POOL_ID}"
+        Resource = "arn:aws:cognito-idp:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:userpool/${local.config.COGNITO_USER_POOL_ID}"
       },
       {
         # Stash per_customer outputs (chat_url) onto the gerp's customers row after
@@ -188,7 +188,7 @@ resource "aws_iam_role_policy" "codebuild" {
         Sid      = "GerpCustomersRowWrite"
         Effect   = "Allow"
         Action   = "dynamodb:UpdateItem"
-        Resource = "arn:aws:dynamodb:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:table/${local.stack_prefix}-customers"
+        Resource = "arn:aws:dynamodb:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:table/${local.stack_prefix}-customers"
       },
       {
         # Cross-account assume into customer sub-accounts. Scoped to org-only
@@ -223,7 +223,7 @@ resource "aws_iam_role_policy" "codebuild" {
           "logs:CreateLogStream",
           "logs:PutLogEvents",
         ]
-        Resource = "arn:aws:logs:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:log-group:/aws/codebuild/*"
+        Resource = "arn:aws:logs:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:log-group:/aws/codebuild/*"
       },
     ]
   })
@@ -412,14 +412,14 @@ resource "aws_iam_role_policy" "provision_customer" {
         Sid      = "RecordVendedAccount"
         Effect   = "Allow"
         Action   = ["dynamodb:UpdateItem", "dynamodb:GetItem"]
-        Resource = "arn:aws:dynamodb:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:table/${local.stack_prefix}-customers"
+        Resource = "arn:aws:dynamodb:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:table/${local.stack_prefix}-customers"
       },
       {
         # the directory row every gerp reads to address this one (modules/events)
         Sid      = "WriteDirectory"
         Effect   = "Allow"
         Action   = "dynamodb:PutItem"
-        Resource = "arn:aws:dynamodb:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:table/${local.stack_prefix}-directory"
+        Resource = "arn:aws:dynamodb:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:table/${local.stack_prefix}-directory"
       },
       {
         Sid    = "CloudWatchLogs"
@@ -429,7 +429,7 @@ resource "aws_iam_role_policy" "provision_customer" {
           "logs:CreateLogStream",
           "logs:PutLogEvents",
         ]
-        Resource = "arn:aws:logs:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:*"
+        Resource = "arn:aws:logs:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:*"
       },
     ]
   })
@@ -522,7 +522,7 @@ resource "aws_iam_role_policy" "cognito_post_confirmation" {
         Sid      = "MetricsHook"
         Effect   = "Allow"
         Action   = "ssm:GetParameter"
-        Resource = "arn:aws:ssm:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:parameter${local.metrics_hook_param}"
+        Resource = "arn:aws:ssm:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:parameter${local.metrics_hook_param}"
       },
       {
         Sid    = "CloudWatchLogs"
@@ -532,13 +532,13 @@ resource "aws_iam_role_policy" "cognito_post_confirmation" {
           "logs:CreateLogStream",
           "logs:PutLogEvents",
         ]
-        Resource = "arn:aws:logs:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:*"
+        Resource = "arn:aws:logs:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:*"
       },
       {
         Sid      = "SeedAccountProfile"
         Effect   = "Allow"
         Action   = "dynamodb:PutItem"
-        Resource = "arn:aws:dynamodb:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:table/${local.stack_prefix}-accounts"
+        Resource = "arn:aws:dynamodb:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:table/${local.stack_prefix}-accounts"
       },
     ]
   })
@@ -648,14 +648,14 @@ resource "aws_iam_role_policy" "bill_customer" {
         Sid      = "ReadCustomers"
         Effect   = "Allow"
         Action   = ["dynamodb:Scan", "dynamodb:GetItem", "dynamodb:UpdateItem"]
-        Resource = "arn:aws:dynamodb:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:table/${local.stack_prefix}-customers"
+        Resource = "arn:aws:dynamodb:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:table/${local.stack_prefix}-customers"
       },
       {
         # a settled balance clears on every priors row whose endings name the gerp
         Sid      = "SettlePriors"
         Effect   = "Allow"
         Action   = ["dynamodb:Scan", "dynamodb:UpdateItem"]
-        Resource = "arn:aws:dynamodb:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:table/${local.stack_prefix}-priors"
+        Resource = "arn:aws:dynamodb:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:table/${local.stack_prefix}-priors"
       },
       {
         Sid    = "CloudWatchLogs"
@@ -665,7 +665,7 @@ resource "aws_iam_role_policy" "bill_customer" {
           "logs:CreateLogStream",
           "logs:PutLogEvents",
         ]
-        Resource = "arn:aws:logs:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:*"
+        Resource = "arn:aws:logs:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:*"
       },
       {
         # the org's account count against its quota and the customers OU's
@@ -752,7 +752,7 @@ resource "aws_iam_role_policy" "close_account" {
         Sid      = "MetricsHook"
         Effect   = "Allow"
         Action   = "ssm:GetParameter"
-        Resource = "arn:aws:ssm:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:parameter${local.metrics_hook_param}"
+        Resource = "arn:aws:ssm:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:parameter${local.metrics_hook_param}"
       },
       {
         Sid      = "AssumeTowerProvisioning"
@@ -774,13 +774,13 @@ resource "aws_iam_role_policy" "close_account" {
         Sid      = "ReadAndMarkCustomers"
         Effect   = "Allow"
         Action   = ["dynamodb:GetItem", "dynamodb:UpdateItem"]
-        Resource = "arn:aws:dynamodb:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:table/${local.stack_prefix}-customers"
+        Resource = "arn:aws:dynamodb:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:table/${local.stack_prefix}-customers"
       },
       {
         Sid      = "DeleteDirectoryRow"
         Effect   = "Allow"
         Action   = "dynamodb:DeleteItem"
-        Resource = "arn:aws:dynamodb:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:table/${local.stack_prefix}-directory"
+        Resource = "arn:aws:dynamodb:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:table/${local.stack_prefix}-directory"
       },
       {
         Sid    = "CloudWatchLogs"
@@ -790,7 +790,7 @@ resource "aws_iam_role_policy" "close_account" {
           "logs:CreateLogStream",
           "logs:PutLogEvents",
         ]
-        Resource = "arn:aws:logs:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:*"
+        Resource = "arn:aws:logs:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:*"
       },
     ]
   })
@@ -872,13 +872,13 @@ resource "aws_iam_role_policy" "update_owner_email" {
         Sid      = "ReadAndMarkCustomers"
         Effect   = "Allow"
         Action   = ["dynamodb:GetItem", "dynamodb:UpdateItem"]
-        Resource = "arn:aws:dynamodb:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:table/${local.stack_prefix}-customers"
+        Resource = "arn:aws:dynamodb:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:table/${local.stack_prefix}-customers"
       },
       {
         Sid      = "DeleteDirectoryRow"
         Effect   = "Allow"
         Action   = "dynamodb:DeleteItem"
-        Resource = "arn:aws:dynamodb:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:table/${local.stack_prefix}-directory"
+        Resource = "arn:aws:dynamodb:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:table/${local.stack_prefix}-directory"
       },
       {
         Sid    = "CloudWatchLogs"
@@ -888,7 +888,7 @@ resource "aws_iam_role_policy" "update_owner_email" {
           "logs:CreateLogStream",
           "logs:PutLogEvents",
         ]
-        Resource = "arn:aws:logs:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:*"
+        Resource = "arn:aws:logs:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:*"
       },
     ]
   })
@@ -989,7 +989,7 @@ resource "aws_iam_role_policy" "update_business_info" {
         Sid      = "ReadCustomers"
         Effect   = "Allow"
         Action   = ["dynamodb:GetItem"]
-        Resource = "arn:aws:dynamodb:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:table/${local.stack_prefix}-customers"
+        Resource = "arn:aws:dynamodb:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:table/${local.stack_prefix}-customers"
       },
       {
         Sid    = "CloudWatchLogs"
@@ -999,7 +999,7 @@ resource "aws_iam_role_policy" "update_business_info" {
           "logs:CreateLogStream",
           "logs:PutLogEvents",
         ]
-        Resource = "arn:aws:logs:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:*"
+        Resource = "arn:aws:logs:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:*"
       },
     ]
   })

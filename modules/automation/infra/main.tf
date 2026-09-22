@@ -141,12 +141,12 @@ locals {
   # the two kind runners. modules is this module's own; external is modules/cmd, reached by
   # CONSTRUCTED name rather than a module reference — cmd is count-gated on CMD_ENABLED, and a
   # ref would make this module fail to plan whenever that flag is off.
-  automate_fn_arn = "arn:aws:lambda:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:function:${local.prefix}-automate"
-  cmd_fn_arn      = "arn:aws:lambda:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:function:${var.stack_prefix}-cmd-${local.gerp}-cmd"
+  automate_fn_arn = "arn:aws:lambda:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:function:${local.prefix}-automate"
+  cmd_fn_arn      = "arn:aws:lambda:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:function:${var.stack_prefix}-cmd-${local.gerp}-cmd"
 
   # outbound mail (modules/agent, mail.tf) — constructed by name for the same reason as the
   # others: a module ref would drag this module's plan behind agent's.
-  send_email_fn_arn = "arn:aws:lambda:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:function:${var.stack_prefix}-mail-${local.gerp}-send_email"
+  send_email_fn_arn = "arn:aws:lambda:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:function:${var.stack_prefix}-mail-${local.gerp}-send_email"
 
   # The firm's own credentials for systems this platform does not run — an API key for a supplier, a
   # token for a carrier. A script reads one at the moment it uses it; the name is what appears in the
@@ -227,12 +227,12 @@ resource "aws_iam_role_policy" "hooks" {
       {
         Effect   = "Allow"
         Action   = ["ssm:PutParameter", "ssm:DeleteParameter"]
-        Resource = "arn:aws:ssm:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:parameter${local.automation_env_path}/HOOK_TOKEN_*"
+        Resource = "arn:aws:ssm:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:parameter${local.automation_env_path}/HOOK_TOKEN_*"
       },
       {
         Effect   = "Allow"
         Action   = ["logs:CreateLogGroup", "logs:CreateLogStream", "logs:PutLogEvents"]
-        Resource = "arn:aws:logs:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:*"
+        Resource = "arn:aws:logs:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:*"
       },
     ]
   })
@@ -376,19 +376,19 @@ resource "aws_iam_role_policy" "automation_env" {
       # is this resource line, not a rule about which library a script may import.
       Effect   = "Allow"
       Action   = ["ssm:GetParameter", "ssm:GetParametersByPath"]
-      Resource = "arn:aws:ssm:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:parameter${local.automation_env_path}*"
+      Resource = "arn:aws:ssm:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:parameter${local.automation_env_path}*"
       }, {
       # modules/mcp: the vendors' gateway url and the firm's client, so a rule that names a
       # vendor tool calls that gateway as the firm. Its own path, beside the vault, not in it.
       Effect   = "Allow"
       Action   = ["ssm:GetParameter", "ssm:GetParametersByPath"]
-      Resource = "arn:aws:ssm:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:parameter/gradienterp/customers/${var.gerp_id}/mcp/*"
+      Resource = "arn:aws:ssm:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:parameter/gradienterp/customers/${var.gerp_id}/mcp/*"
       }, {
       # the client secret there is a SecureString under the default aws/ssm key
       Effect    = "Allow"
       Action    = "kms:Decrypt"
       Resource  = "*"
-      Condition = { StringEquals = { "kms:ViaService" = "ssm.${data.aws_region.current.id}.amazonaws.com" } }
+      Condition = { StringEquals = { "kms:ViaService" = "ssm.${data.aws_region.current.region}.amazonaws.com" } }
     }]
   })
 }
@@ -444,7 +444,7 @@ resource "aws_iam_role_policy" "automate" {
       {
         Effect   = "Allow"
         Action   = ["logs:CreateLogGroup", "logs:CreateLogStream", "logs:PutLogEvents"]
-        Resource = "arn:aws:logs:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:*"
+        Resource = "arn:aws:logs:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:*"
 
       },
       ], [
@@ -454,7 +454,7 @@ resource "aws_iam_role_policy" "automate" {
         # read a secret, or touch a table.
         Effect   = "Allow"
         Action   = "bedrock-agentcore:InvokeGateway"
-        Resource = local.gateway_arn != "" ? local.gateway_arn : "arn:aws:bedrock-agentcore:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:gateway/none"
+        Resource = local.gateway_arn != "" ? local.gateway_arn : "arn:aws:bedrock-agentcore:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:gateway/none"
       },
     ])
     # deliberately absent: lambda:InvokeFunction (the gateway is the only route), ssm:GetParameter
@@ -506,7 +506,7 @@ resource "aws_iam_role_policy" "approve" {
       {
         Effect   = "Allow"
         Action   = ["logs:CreateLogGroup", "logs:CreateLogStream", "logs:PutLogEvents"]
-        Resource = "arn:aws:logs:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:*"
+        Resource = "arn:aws:logs:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:*"
       },
     ]
   })
@@ -548,7 +548,7 @@ resource "aws_iam_role_policy" "review" {
       {
         Effect   = "Allow"
         Action   = ["logs:CreateLogGroup", "logs:CreateLogStream", "logs:PutLogEvents"]
-        Resource = "arn:aws:logs:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:*"
+        Resource = "arn:aws:logs:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:*"
       },
       ], var.register_with_agent ? [
       {
@@ -585,7 +585,7 @@ resource "aws_iam_role_policy" "schedules" {
           "scheduler:CreateSchedule", "scheduler:UpdateSchedule",
           "scheduler:DeleteSchedule", "scheduler:GetSchedule",
         ]
-        Resource = "arn:aws:scheduler:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:schedule/${local.schedule_group}/*"
+        Resource = "arn:aws:scheduler:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:schedule/${local.schedule_group}/*"
       },
       {
         # CreateSchedule hands Scheduler a role to fire with; passing one needs PassRole,
@@ -632,7 +632,7 @@ resource "aws_iam_role_policy" "schedules" {
       {
         Effect   = "Allow"
         Action   = ["logs:CreateLogGroup", "logs:CreateLogStream", "logs:PutLogEvents"]
-        Resource = "arn:aws:logs:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:*"
+        Resource = "arn:aws:logs:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:*"
       },
     ]
   })
@@ -658,14 +658,14 @@ resource "aws_iam_role_policy" "incidents" {
         # the tasks tool only — the incident is the state, so this is all it needs
         Effect   = "Allow"
         Action   = "lambda:InvokeFunction"
-        Resource = "arn:aws:lambda:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:function:${local.tasks_fn}"
+        Resource = "arn:aws:lambda:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:function:${local.tasks_fn}"
       },
       {
         # the tenant blob carries owner_email. NOT the secrets path — that stays out of
         # every role in this module.
         Effect   = "Allow"
         Action   = "ssm:GetParameter"
-        Resource = "arn:aws:ssm:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:parameter/gradienterp/customers/${var.gerp_id}"
+        Resource = "arn:aws:ssm:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:parameter/gradienterp/customers/${var.gerp_id}"
       },
       {
         # the failure notice goes out through the firm's own mail server, like every other mail
@@ -677,7 +677,7 @@ resource "aws_iam_role_policy" "incidents" {
       {
         Effect   = "Allow"
         Action   = ["logs:CreateLogGroup", "logs:CreateLogStream", "logs:PutLogEvents"]
-        Resource = "arn:aws:logs:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:*"
+        Resource = "arn:aws:logs:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:*"
       },
       ], var.register_with_agent ? [
       {
@@ -980,7 +980,7 @@ resource "aws_iam_role_policy" "owner_sub" {
     Statement = [{
       Effect   = "Allow"
       Action   = "ssm:GetParameter"
-      Resource = "arn:aws:ssm:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:parameter/gradienterp/customers/${var.gerp_id}/owner_sub"
+      Resource = "arn:aws:ssm:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:parameter/gradienterp/customers/${var.gerp_id}/owner_sub"
     }]
   })
 }

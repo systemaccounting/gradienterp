@@ -20,7 +20,7 @@ data "aws_caller_identity" "current" {}
 # one per region (prod/tower regions.tf), the first region's under the bare name and every
 # other's suffixed with the region; scripts/deploy.sh push writes them all
 locals {
-  artifact_bucket = data.aws_region.current.id == "us-east-1" ? var.artifact_bucket : "${var.artifact_bucket}-${data.aws_region.current.id}"
+  artifact_bucket = data.aws_region.current.region == "us-east-1" ? var.artifact_bucket : "${var.artifact_bucket}-${data.aws_region.current.region}"
 }
 
 data "aws_s3_object" "artifact" {

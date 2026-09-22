@@ -57,7 +57,7 @@ resource "aws_iam_role_policy" "close_handler" {
         # attached, nothing accrues: the handler doesn't know what an accrual is.
         Effect   = "Allow"
         Action   = "dynamodb:Query"
-        Resource = "arn:aws:dynamodb:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:table/${var.rule_instances_table_name}"
+        Resource = "arn:aws:dynamodb:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:table/${var.rule_instances_table_name}"
       },
       {
         # consume the time-entries stream
@@ -83,7 +83,7 @@ resource "aws_iam_role_policy" "close_handler" {
           "logs:CreateLogStream",
           "logs:PutLogEvents",
         ]
-        Resource = "arn:aws:logs:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:*"
+        Resource = "arn:aws:logs:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:*"
       },
     ]
   })
