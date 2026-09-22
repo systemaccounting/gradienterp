@@ -60,6 +60,20 @@ def test_any_origin_may_read_and_the_stream_needs_a_key():
         assert e.code == 403
 
 
+def test_a_published_firms_product_record_answers_off_the_platform():
+    """GET /gerps/gradienterp/metrics: the catalog is the partition. A card per event and kind the
+    firm has recorded, points at the day grain, a set's size and never a member, one slug read back."""
+    r, _ = _get("/gerps/gradienterp/metrics")
+    assert r["gerp_id"] == "gradienterp" and r["grain"] == "day"
+    for m in r["metrics"]:
+        assert m["key"] == f"{m['event']}.{m['kind']}" and m["kind"] in ("count", "active")
+        assert "members" not in m and all(p["period"] and p["value"] is not None for p in m["points"])
+        assert m["source"]["curl"].endswith(f"/metrics/{m['key']}?grain=day")
+    if r["metrics"]:
+        one, _ = _get(f"/gerps/gradienterp/metrics/{r['metrics'][0]['key']}?grain=month")
+        assert one["grain"] == "month" and one["key"] == r["metrics"][0]["key"]
+
+
 if __name__ == "__main__":
     for _n, _f in sorted(globals().items()):
         if _n.startswith("test_") and callable(_f):

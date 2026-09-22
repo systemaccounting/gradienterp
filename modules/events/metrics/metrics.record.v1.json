@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "modules/events/metrics/metrics.record.v1",
+  "title": "metrics.record",
+  "description": "LIVE. A product event as a firm records it (modules/metrics), on the firm's own bus and, by the second rule there, on the hub as is. The detail-type is the event's own name (`account.signed_up`, `loaf.baked`), an open vocabulary, so no channel projects it by kind; the operator's counter counts a published firm's event under its partition (count and active at day, week and month, keyed by the public metric key) and serves a set's size, never a member.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["customer_id", "zone", "ts", "properties", "via", "subject_id"],
+  "properties": {
+    "customer_id": {"type": "string", "minLength": 1, "description": "The firm the event belongs to; the partition it counts under."},
+    "zone": {"type": "string", "description": "The firm's IANA zone at record time; the periods are cut in it."},
+    "ts": {"type": "string", "description": "The instant, UTC ISO 8601 with milliseconds and a Z, as the store keys it."},
+    "properties": {"type": "object", "additionalProperties": {"type": "string"}, "description": "The event's scalars as strings, the owner's vocabulary."},
+    "via": {"type": "string", "enum": ["door", "rule", "agent"], "description": "Which producer recorded it."},
+    "subject_id": {"type": "string", "class": "subject", "description": "Who or what took the step, the firm's own contact id, account id or device id: a person reference, never published on a channel; the platform holds it to count distinct subjects and never serves it."},
+    "caller": {"type": "string", "description": "The door's source name, when the event came through the door."},
+    "rule_exec_id": {"type": "string", "description": "The rule execution, when a record_metric rule recorded it."}
+  }
+}

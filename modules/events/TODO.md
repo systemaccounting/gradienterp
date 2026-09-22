@@ -78,6 +78,7 @@ coordination (see AGENTS.md).
 
 | event | the query it fires |
 |---|---|
+| a metric event (`account.signed_up`, `loaf.baked`, any `noun.verb` a firm records) | none: the platform counts a published firm's under its partition, count and active at day, week and month; no match, no reply |
 | `purchase_request.created` | `peers WHERE stock(catalog_key) > 0, priced from catalog ORDER BY price, distance` — plus standing quotations on the item |
 | `rfq.issued` | opens a bid window — collect `quotation.submitted`, close, award on the PO rail: the platform-mediated quick auction where firms get the explicit opportunity to reprice |
 | `quotation.submitted` / `offer.published` | `open RFQs ∪ purchase_requests WHERE item matches` elsewhere |

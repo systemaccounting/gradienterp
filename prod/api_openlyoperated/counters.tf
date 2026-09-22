@@ -18,7 +18,7 @@ locals {
 # ─── tables ───
 
 # One partition per gerp, the platform's own signals under `platform`. The range key is the public
-# metric key (modules/metrics/metrics.py public_key: `<event>#<kind>[#<property>=<value>]#<grain>#<period>`)
+# metric key (modules/metrics/metric_key.py public_key: `<event>#<kind>[#<property>=<value>]#<grain>#<period>`)
 # for a firm's rows and `<signal>#<YYYY-MM>` for the platform's, each row carrying `signal` and `period`
 # as attributes too, so no reader splits a key. A firm's whole public suite is one Query on its partition.
 resource "aws_dynamodb_table" "counters" {
@@ -37,6 +37,22 @@ resource "aws_dynamodb_table" "counters" {
   }
 }
 
+# an event id, once: a bus delivers at least once, and a firm's count must not double
+resource "aws_dynamodb_table" "counters_seen" {
+  name         = "${local.stack_prefix}-counters-seen"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "id"
+
+  attribute {
+    name = "id"
+    type = "S"
+  }
+  ttl {
+    attribute_name = "expires"
+    enabled        = true
+  }
+}
+
 # ─── lambda packaging (one main.py each) ───
 
 data "archive_file" "econ" {
@@ -51,6 +67,11 @@ data "archive_file" "econ" {
   # these handlers import `aws` (modules/aws/aws.py), the local/AWS client factory. This archive is
   # a hand-listed manifest, unlike scripts/deploy.py which walks the import graph — a shared lib
   # added to an import here has to be added here too or the function ImportErrors at cold start.
+  # the public metric key, read here and built nowhere else (modules/metrics)
+  source {
+    content  = file("${path.module}/../../modules/metrics/metric_key.py")
+    filename = "metric_key.py"
+  }
   source {
     content  = file("${path.module}/../../modules/aws/aws.py")
     filename = "aws.py"
@@ -81,6 +102,11 @@ resource "aws_iam_role_policy" "econ" {
         Resource = aws_dynamodb_table.counters.arn
       },
       {
+        Effect   = "Allow"
+        Action   = ["dynamodb:PutItem"]
+        Resource = aws_dynamodb_table.counters_seen.arn
+      },
+      {
         # the gerp's account, to take a count only from the gerp the event names
         Effect   = "Allow"
         Action   = ["dynamodb:GetItem"]
@@ -106,7 +132,7 @@ module "counter" {
   source_code_hash   = data.archive_file.econ["counter"].output_base64sha256
   src_dir            = "prod/api_openlyoperated/lambdas/counter"
   timeout            = 15
-  env_vars           = { COUNTERS_TABLE = aws_dynamodb_table.counters.name, CUSTOMERS_TABLE = "${local.stack_prefix}-customers" }
+  env_vars           = { COUNTERS_TABLE = aws_dynamodb_table.counters.name, SEEN_TABLE = aws_dynamodb_table.counters_seen.name, CUSTOMERS_TABLE = "${local.stack_prefix}-customers" }
   log_retention_days = local.config.LOG_RETENTION_DAYS
 }
 
@@ -155,4 +181,27 @@ resource "aws_lambda_permission" "counters_events" {
 output "counters_table" {
   description = "Economic counters table (pk = <signal>#<period>, value under `value`)."
   value       = aws_dynamodb_table.counters.name
+}
+
+# ─── a firm's product events: the second rule on the firm's bus sends every one here as recorded ───
+resource "aws_cloudwatch_event_rule" "metrics" {
+  name           = "${local.stack_prefix}-metrics"
+  description    = "every product event a firm records, counted under its partition when its row reads published"
+  event_bus_name = data.terraform_remote_state.operator.outputs.events_bus_name
+  event_pattern  = jsonencode({ source = ["metrics"] })
+}
+
+resource "aws_cloudwatch_event_target" "metrics" {
+  rule           = aws_cloudwatch_event_rule.metrics.name
+  event_bus_name = data.terraform_remote_state.operator.outputs.events_bus_name
+  target_id      = "counter"
+  arn            = module.counter.arn
+}
+
+resource "aws_lambda_permission" "metrics_events" {
+  statement_id  = "AllowEventBridgeInvokeCounterMetrics"
+  action        = "lambda:InvokeFunction"
+  function_name = module.counter.name
+  principal     = "events.amazonaws.com"
+  source_arn    = aws_cloudwatch_event_rule.metrics.arn
 }

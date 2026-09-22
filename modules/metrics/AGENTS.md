@@ -15,7 +15,10 @@ and joined to the books. Why in `README.md`.
   checked against `^[a-z0-9_]+(\.[a-z0-9_]+)+$` and nothing else; `subject_id` a non-empty string;
   `at` ISO 8601 or epoch milliseconds, default now, stored as `ts` (UTC, milliseconds, `Z`, so
   string order is time order); `properties` flat scalars, stored as strings. The detail on the
-  bus is `{subject_id, ts, properties, via}` plus `caller` (the door) or `rule_exec_id` (the rule)
+  bus is `{customer_id, zone, subject_id, ts, properties, via}` plus `caller` (the door) or
+  `rule_exec_id` (the rule): the firm's id and its clock's zone ride on every record, so the
+  platform cuts a period on the firm's calendar without asking it. Contract:
+  modules/events/metrics/metrics.record.v1.json
 - **the door** — `POST /metrics`, `authorization_type = NONE` at the gateway; the function compares
   the bearer in constant time with every `METRICS_TOKEN_<CALLER>` under the firm's metrics env
   path (`/gradienterp/customers/<gerp>/metrics/env`). Tokens are cached `TOKEN_CACHE_S` seconds
@@ -86,7 +89,8 @@ and joined to the books. Why in `README.md`.
   dependency imported by name (`importlib.import_module`), so the deploy walk never bundles it. `tests/metrics/_helpers.py`
   seeds the bucket with the same partitioned Parquet Firehose writes
 - **reports on the portal** — prompt-tier, no tool: after a data answer the agent offers a page under `pages/reports/<slug>.html` (modules/storage `manage_storage op=put`, the link back), the standing preference `data-questions-as-reports` by `remember`, and a periodic one as an automation the calendar fires, its runs `pages/reports/<slug>/<YYYY-MM-DDTHH-MM>.html` with `latest.html` rewritten; the page and script shapes are in kb.md
-- **the public metric key** — `public_key(definition, period)` and `parse_public_key(key)` in `metrics.py`, the one place the platform's counters key is built or read: `<event>#<kind>[#<property>=<value>]#<grain>#<period>` under the firm's partition on `gerp-counters`, `kind` one of `count | active | count_by`, `grain` one of `day | week | month`, `#`, `=` and `%` in a value percent-encoded. Two firms' identical definitions share a key; the vocabulary's bucket is the metric's class, read off `metric_events`, never stored. The stamp (#47), the counter and the api import it; nothing else splits a key
+- **the public metric key** — `public_key(definition, period)`, `parse_public_key(key)` and `slug(definition)` in `metric_key.py` (import-free, bundled into the platform's counter and api archives), the one place the platform's counters key is built or read: `<event>#<kind>[#<property>=<value>]#<grain>#<period>` under the firm's partition on `gerp-counters`, `kind` one of `count | active | count_by`, `grain` one of `day | week | month`, `#`, `=` and `%` in a value percent-encoded. Two firms' identical events share a key; the vocabulary's bucket is the metric's class, read off `metric_events`, never stored. The counter and the api import it; nothing else splits a key
+- **the second rule on the firm's bus** (`infra` rule `to_hub`, role `to_hub`) — the same `source = metrics` event rule 1 stores is put on the hub's bus as recorded, no transformer (a cross-account bus target takes none) and no function; the hub forwards it to the operator, whose `metrics` rule counts it under the firm's partition when the gerp's row reads `published`, and drops it otherwise. Nothing is published: an openly operated firm's every product event counts, at day, week and month, `count` and `active`, from the event's name, `ts` and `zone`. `subject_id` crosses as recorded and is never served: the api answers a set's size, and a channel drops it by its contract class `subject`
 
 ## the row, end to end
 

@@ -152,3 +152,25 @@ def run(ctx, name, params, window, slug, title):
       timezone=America/Los_Angeles subject=weekly-sessions
       params={"name": "count", "params": {"event": "session.started", "grain": "day"}, "window": "last_week",
               "slug": "weekly-sessions", "title": "sessions last week"}
+
+## the firm's public page
+
+An openly operated firm's page on openlyoperated.biz draws a card per event and kind the firm has
+recorded: `loaf.baked` per day, week and month as a count and as distinct subjects. There is no
+publish step and nothing to name. Every record leaves on the firm's bus twice, once to the firm's
+own store and once to the platform, which counts it under the firm's partition when the firm is
+openly operated and drops it when it is not. The flag in settings is the gate; flip it off and the
+platform stops counting at the next event.
+
+What to know:
+
+- **name from the vocabulary first.** A canonical event name is the key two firms share, so the
+  site can put their numbers side by side; a firm's own name counts under its own key and
+  compares with nobody until it is promoted. `read_schema` on `metric_events` before inventing
+- **register a custom name under a bucket** (`write_schema op=extend` on `metric_events`, the
+  bucket the owner's words fit: saas, commerce, membership, labor, support), because the bucket is
+  the metric's class on the site; unregistered, the card sits under none
+- **the count starts at the flag**: events before it are in the firm's own store, and a query there
+  reads them
+- **a subject id crosses and is never served**: the platform answers how many distinct subjects,
+  never which

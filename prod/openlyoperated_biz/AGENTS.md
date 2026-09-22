@@ -16,6 +16,7 @@ CloudFront + S3 static dashboard at `openlyoperated.biz` — **live**. The publi
   `index.mock.html` loads `mock.js`, beside `app.js`. A new connection or outside asset goes in the policy first.
 
 Every read goes through `getJson` with `cache: 'no-store'`, so the page shows the api's answer now and a live repaint reads the table, not the browser's copy of a minute ago.
+- **a business's product record** — the business page (`#b/<gerp_id>`) fetches `GET /gerps/{id}/metrics` beside the catalog and draws one metric card per event and kind the firm has recorded (`metricsRow`, the cards the economy uses) under "what this business records", with the call that produced it; no per-metric code, a published firm records an event and the card appears
 
 ## what's deployed
 

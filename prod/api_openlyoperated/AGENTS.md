@@ -71,6 +71,18 @@ to answer on the custom domain; a 403 in that window is propagation.
   signals under `platform` with the range key `<signal>#<YYYY-MM>` and `signal` + `period` as
   attributes, so `/economy/counters` Queries the partition and splits nothing. A firm's rows take
   the public metric key (modules/metrics `public_key`) as their range key. Every gerp, no gate.
+- **a firm's product record** — the rule `metrics` on the operator bus (`counters.tf`, `source =
+  metrics`: the second rule on a firm's bus puts every record on its hub as recorded, the hub
+  forwards it here) sends the event to the same counter lambda, which forms six keys from the
+  event alone (`<event>#count|active#day|week|month#<period>`, the period cut in the event's
+  `zone`, through modules/metrics `metric_key.py`) and ADDs them under the firm's partition of
+  `gerp-counters`, a number for `count`, a set of `subject_id` for `active`, once per event id
+  (`gerp-counters-seen`, TTL a day); from the gerp's own account only, and only while the gerp's
+  row reads `published` (the same bit the directory reads, a minute stale). `GET
+  /gerps/{gerp_id}/metrics[/{slug}]?grain=` (`api/v1/gerps_metrics`) Queries the partition,
+  parses the keys and answers one metric per `<event>.<kind>` in the metric shape, points at the
+  asked grain, `class` from the bundled vocabulary, a set's size and never a member, cached a
+  minute; no gerp answers the public and no query runs for it.
 - **the meter** — usage plan `gerp-api-keyed` (200/400, 1M a month) and one hand-made key for
   gradienterp's reads and the tests. Anonymous reads share the stage throttle (20/40).
 - **the archive** (`main.tf`) — the bus → firehose → S3 path from the first cut, still applied,

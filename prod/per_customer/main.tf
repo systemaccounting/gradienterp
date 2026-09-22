@@ -836,6 +836,7 @@ module "metrics" {
   stack_prefix             = local.stack_prefix
   timezone                 = var.timezone
   internal_bus_name        = module.events.internal_bus_name
+  op_event_bus_arn         = local.op_event_bus_arn
   internal_bus_arn         = module.events.internal_bus_arn
   server_api_id            = module.server.api_id
   server_api_execution_arn = module.server.api_execution_arn
