@@ -23,17 +23,22 @@ PUBLIC_BASE = os.environ.get("PUBLIC_BASE", "https://api.openlyoperated.biz/v1")
 SIGNALS = json.load(open(os.path.join(os.path.dirname(__file__), "signals.json")))
 
 
+PLATFORM = "platform"   # the partition the platform's own signals live under
+
+
 def _counters():
-    """{key: {period: Decimal}} off the whole table — it is small: one row per signal per month."""
-    ddb, kw, out = _aws("dynamodb"), {"TableName": COUNTERS_TABLE}, {}
+    """{signal: {period: Decimal}} off the platform's partition — small: one row per signal per month.
+    Each row carries `signal` and `period` as attributes; the key is never split."""
+    ddb, out = _aws("dynamodb"), {}
+    kw = {"TableName": COUNTERS_TABLE, "KeyConditionExpression": "gerp_id = :p",
+          "ExpressionAttributeValues": {":p": {"S": PLATFORM}}}
     while True:
-        page = ddb.scan(**kw)
+        page = ddb.query(**kw)
         for it in page.get("Items", []):
-            pk = it.get("counter", {}).get("S", "")
-            if "#" not in pk:
+            signal, period = it.get("signal", {}).get("S", ""), it.get("period", {}).get("S", "")
+            if not signal or not period:
                 continue
-            key, period = pk.rsplit("#", 1)
-            out.setdefault(key, {})[period] = Decimal(it.get("value", {}).get("N", "0"))
+            out.setdefault(signal, {})[period] = Decimal(it.get("value", {}).get("N", "0"))
         if not page.get("LastEvaluatedKey"):
             return out
         kw["ExclusiveStartKey"] = page["LastEvaluatedKey"]

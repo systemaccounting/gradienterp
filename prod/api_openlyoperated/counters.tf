@@ -17,13 +17,22 @@ locals {
 
 # ─── tables ───
 
+# One partition per gerp, the platform's own signals under `platform`. The range key is the public
+# metric key (modules/metrics/metrics.py public_key: `<event>#<kind>[#<property>=<value>]#<grain>#<period>`)
+# for a firm's rows and `<signal>#<YYYY-MM>` for the platform's, each row carrying `signal` and `period`
+# as attributes too, so no reader splits a key. A firm's whole public suite is one Query on its partition.
 resource "aws_dynamodb_table" "counters" {
   name         = "${local.stack_prefix}-counters"
   billing_mode = "PAY_PER_REQUEST"
-  hash_key     = "counter" # "<signal>#<YYYY-MM>", value under attribute `value`
+  hash_key     = "gerp_id"
+  range_key    = "key"
 
   attribute {
-    name = "counter"
+    name = "gerp_id"
+    type = "S"
+  }
+  attribute {
+    name = "key"
     type = "S"
   }
 }

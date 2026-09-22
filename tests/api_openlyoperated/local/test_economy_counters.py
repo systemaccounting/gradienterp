@@ -22,8 +22,8 @@ def _counters_table():
     from aws import client
     name = unique("counters")
     client("dynamodb").create_table(TableName=name, BillingMode="PAY_PER_REQUEST",
-                                    AttributeDefinitions=[{"AttributeName": "counter", "AttributeType": "S"}],
-                                    KeySchema=[{"AttributeName": "counter", "KeyType": "HASH"}])
+                                    AttributeDefinitions=[{"AttributeName": "gerp_id", "AttributeType": "S"}, {"AttributeName": "key", "AttributeType": "S"}],
+                                    KeySchema=[{"AttributeName": "gerp_id", "KeyType": "HASH"}, {"AttributeName": "key", "KeyType": "RANGE"}])
     return name
 
 
@@ -31,7 +31,8 @@ def _load(rows):
     os.environ["COUNTERS_TABLE"] = _counters_table()
     from aws import client
     for pk, v in rows.items():
-        client("dynamodb").put_item(TableName=os.environ["COUNTERS_TABLE"], Item={"counter": {"S": pk}, "value": {"N": str(v)}})
+        signal, period = pk.rsplit("#", 1)
+        client("dynamodb").put_item(TableName=os.environ["COUNTERS_TABLE"], Item={"gerp_id": {"S": "platform"}, "key": {"S": pk}, "signal": {"S": signal}, "period": {"S": period}, "value": {"N": str(v)}})
     spec = importlib.util.spec_from_file_location("api_counters", REPO / "prod/api_openlyoperated/api/v1/economy_counters/handler.py")
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
