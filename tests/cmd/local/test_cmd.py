@@ -14,7 +14,12 @@ from _helpers import load_lambda, scratch_env
 
 
 def _invoke(lam, body):
-    resp = lam.handler({"body": json.dumps(body)}, None)
+    """The tool streams every output line to stdout as it runs (CloudWatch, live); here that is the
+    test's stdout, so it is captured, or a 20000-line script is 20000 lines of log."""
+    import io
+    from contextlib import redirect_stdout
+    with redirect_stdout(io.StringIO()):
+        resp = lam.handler({"body": json.dumps(body)}, None)
     return resp["statusCode"], json.loads(resp["body"])
 
 
