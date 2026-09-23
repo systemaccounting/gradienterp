@@ -61,7 +61,7 @@ no lambdas. one resource (the firm's OWN event bus) and one shared library. this
 | `post_journal_entry` (direct PutEvents) | `accounting` / `journal_entry.posted` | `gerp-events` bus |
 | `write_schema (op: extend)` (direct PutEvents) | `platform` / `registry.extended` | `gerp-events` bus |
 | bus publication rule (`detail.openly_operated=true`) | — | Kinesis Firehose → S3 archive `gerp-events-archive-<op>` (date-partitioned, gzip); read by nothing |
-| the second rule on the firm's bus (`source = metrics`, modules/metrics `to_hub`) | `metrics` / the event's own name | the hub's bus, the event as recorded (`customer_id`, `zone` stamped by `metrics.record`); the operator's counter counts a published firm's under its partition |
+| the second rule on the firm's bus (`source = metrics`, modules/metrics `to_operator`) | `metrics` / the event's own name | the operator's bus, the event as recorded (`customer_id`, `zone` stamped by `metrics.record`); the operator's counter counts a published firm's under its partition |
 | operator `publisher` rule (`detail.customer_id` set, no `detail.to`) | — | the Events API: `/oob/counters` (every counter delta) and `/oob/<gerp_id>/<kind>` (a published gerp's events, projected through their contracts); `GET /v1/events` relays a channel as SSE |
 
 ### the cross-invoke hub

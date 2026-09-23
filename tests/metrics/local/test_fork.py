@@ -1,5 +1,5 @@
 """The second rule on the firm's bus (issue #47, revised): a metric event is put once, stamped with
-the partition it counts under and the clock its periods are cut in, and rule 2 sends it to the hub
+the partition it counts under and the clock its periods are cut in, and rule 2 sends it to the operator's bus
 as recorded, through a role, with no transformer and no lambda between."""
 import json
 import re
@@ -30,16 +30,16 @@ def test_a_record_carries_the_partition_and_the_zone_beside_what_it_carried():
 
 
 def test_rule_two_is_a_bus_target_with_a_role_and_nothing_between():
-    """Read off the terraform: the rule matches `source = metrics` alone, its target is the hub's
+    """Read off the terraform: the rule matches `source = metrics` alone, its target is the operator's bus (never the hub: a bus target is taken once per event, and the hub's forward edge would be the second), through a role, the
     bus through a role, no transformer, and no forwarding function exists."""
-    rule = re.search(r'resource "aws_cloudwatch_event_rule" "to_hub" \{(.*?)\n\}', TF, re.S).group(1)
+    rule = re.search(r'resource "aws_cloudwatch_event_rule" "to_operator" \{(.*?)\n\}', TF, re.S).group(1)
     assert 'event_pattern  = jsonencode({ source = ["metrics"] })' in rule
     assert "event_bus_name = var.internal_bus_name" in rule
-    target = re.search(r'resource "aws_cloudwatch_event_target" "to_hub" \{(.*?)\n\}', TF, re.S).group(1)
-    assert "arn            = var.op_event_bus_arn" in target and "role_arn       = aws_iam_role.to_hub.arn" in target
+    target = re.search(r'resource "aws_cloudwatch_event_target" "to_operator" \{(.*?)\n\}', TF, re.S).group(1)
+    assert "arn            = var.operator_bus_arn" in target and "role_arn       = aws_iam_role.to_operator.arn" in target
     assert "input_transformer" not in target, "an event bus in another account takes none"
-    policy = re.search(r'resource "aws_iam_role_policy" "to_hub" \{(.*?)\n\}', TF, re.S).group(1)
-    assert '"events:PutEvents"' in policy and "var.op_event_bus_arn" in policy
+    policy = re.search(r'resource "aws_iam_role_policy" "to_operator" \{(.*?)\n\}', TF, re.S).group(1)
+    assert '"events:PutEvents"' in policy and "var.operator_bus_arn" in policy
     assert not (REPO / "modules" / "metrics" / "lambdas" / "forward").exists()
     functions = re.search(r"functions = \{(.*?)\n  \}", TF, re.S).group(1)
     assert sorted(re.findall(r"^\s*(\w+)\s*=", functions, re.M)) == ["manage_metrics", "record"]

@@ -32,6 +32,9 @@ locals {
   org_ids = concat([data.aws_organizations_organization.this.id], local.config.ORG_IDS)
   # the hub this gerp is a spoke of: the bus every event that leaves the firm goes to. HUBS in
   # config.json names one per region (prod/hub); until this region has one, the operator's bus
+  # the operator's own bus, in the operator's region: where a firm's metrics events go (modules/metrics
+  # rule 2). A bus target is taken once per event, so they cannot go through the hub
+  operator_bus_arn = "arn:aws:events:us-east-1:${local.operator_account_id}:event-bus/${local.stack_prefix}-operator"
   op_event_bus_arn = try(local.config.HUBS[var.aws_region].bus_arn,
   "arn:aws:events:${var.aws_region}:${local.operator_account_id}:event-bus/${local.stack_prefix}-events")
   # the model is the region's: the best profile that keeps inference in the geography
@@ -836,7 +839,7 @@ module "metrics" {
   stack_prefix             = local.stack_prefix
   timezone                 = var.timezone
   internal_bus_name        = module.events.internal_bus_name
-  op_event_bus_arn         = local.op_event_bus_arn
+  operator_bus_arn         = local.operator_bus_arn
   internal_bus_arn         = module.events.internal_bus_arn
   server_api_id            = module.server.api_id
   server_api_execution_arn = module.server.api_execution_arn
