@@ -1,7 +1,7 @@
 {
   "openapi": "3.0.3",
   "info": {
-    "title": "openlyoperated.biz — the read api",
+    "title": "openlyoperated.biz \u2014 the read api",
     "version": "1",
     "description": "The openly-operated data, the same JSON the pages render. /v1 is the stage; each path names its backend folder (x-backend) and whether it streams (x-stream). Anonymous reads share the stage throttle; a key in the keyed plan lifts it and is metered."
   },
@@ -202,6 +202,93 @@
           },
           "403": {
             "description": "no key"
+          }
+        }
+      }
+    },
+    "/gerps/{gerp_id}/metrics": {
+      "get": {
+        "operationId": "readMetrics",
+        "summary": "The firm's product record as the platform counted it: one metric per event and kind it recorded, count and active, in the metric shape. Nothing is asked of the gerp.",
+        "x-backend": "gerps_metrics",
+        "x-stream": false,
+        "parameters": [
+          {
+            "name": "gerp_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "grain",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "day",
+                "week",
+                "month"
+              ]
+            },
+            "description": "the points' grain, day by default"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "{gerp_id, grain, metrics: [{key (<event>.<kind>), label, unit, grain, class, headline, points, definition, source}]}"
+          },
+          "404": {
+            "description": "no such published gerp"
+          }
+        }
+      }
+    },
+    "/gerps/{gerp_id}/metrics/{slug}": {
+      "get": {
+        "operationId": "readMetric",
+        "summary": "One metric of the firm, by <event>.<kind>.",
+        "x-backend": "gerps_metrics",
+        "x-stream": false,
+        "parameters": [
+          {
+            "name": "gerp_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "<event>.<kind>, e.g. account.signed_up.count"
+          },
+          {
+            "name": "grain",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "day",
+                "week",
+                "month"
+              ]
+            },
+            "description": "the points' grain, day by default"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "the metric shape"
+          },
+          "404": {
+            "description": "no such published gerp, or no such metric"
           }
         }
       }

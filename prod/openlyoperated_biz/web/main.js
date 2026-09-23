@@ -276,7 +276,10 @@ mount({ root: document.getElementById('root'), regions: { ticker, kpi, opps, lef
   async function renderPage(gid) {
     page.style.display = 'block'; document.body.style.overflow = 'hidden'; page.scrollTop = 0;
     page.innerHTML = shell('<div style="' + L + '">loading ' + esc(gid) + '…</div>');
-    const [dir, cat] = await Promise.all([getJson('/gerps'), getJson('/gerps/' + encodeURIComponent(gid) + '/sources')]);
+    // the firm's public metrics come off the platform's own counters (GET /gerps/{id}/metrics), not a gerp door;
+    // the catalog's sources are the gerp's own doors, read through
+    const [dir, cat, pub] = await Promise.all([getJson('/gerps'), getJson('/gerps/' + encodeURIComponent(gid) + '/sources'),
+      getJson('/gerps/' + encodeURIComponent(gid) + '/metrics')]);
     const g = ((dir || {}).gerps || []).find(x => x.gerp_id === gid);
     if (!g || !cat || cat.error) { page.innerHTML = shell('<div style="color:#b04a3f;">' + esc(gid) + ' does not publish</div>' + curlLine(curlOf('/gerps'))); return; }
     // the page is a thin client: fetch each published source in parallel, then render it by kind
@@ -289,8 +292,10 @@ mount({ root: document.getElementById('root'), regions: { ticker, kpi, opps, lef
       curlLine(curlOf('/gerps/' + encodeURIComponent(gid) + '/sources'));
     // metrics are the header, the statement and the rest the detail — whatever order the catalog lists
     const order = sources.map((s, i) => [s, datas[i], curlOf(paths[i])]).sort((a, b) => (a[0].kind === 'metrics' ? 0 : 1) - (b[0].kind === 'metrics' ? 0 : 1));
-    const body = order.map(([s, d, c]) => renderSource(s, d, c)).join('') ||
-      '<div style="' + L + 'margin-top:24px;">this business publishes no sources yet.</div>';
+    const published = (pub && pub.metrics) || [];
+    const cards = published.length ? sec('what this business records', metricsRow(published), curlOf('/gerps/' + encodeURIComponent(gid) + '/metrics')) : '';
+    const body = cards + (order.map(([s, d, c]) => renderSource(s, d, c)).join('') ||
+      (published.length ? '' : '<div style="' + L + 'margin-top:24px;">this business has recorded nothing yet.</div>'));
     const live = sec('as it happens', '<div id="oo-live" style="font-size:13px;">' + awaiting('subscribed to /oob/' + gid + '/journal-entry-posted — the next posted entry lands here') + '</div>',
       'curl -N -H "x-api-key: …" "' + API + '/events?channel=/oob/' + gid + '/journal_entry.posted"');
     page.innerHTML = shell(header + body + live);

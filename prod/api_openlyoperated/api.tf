@@ -74,12 +74,27 @@ data "archive_file" "api" {
       filename = source.value
     }
   }
-  # python handlers use the shared local/AWS client factory
+  # python handlers use the shared local/AWS client factory and read the public metric key
   dynamic "source" {
     for_each = each.value.node ? [] : [1]
     content {
       content  = file("${path.module}/../../modules/aws/aws.py")
       filename = "aws.py"
+    }
+  }
+  dynamic "source" {
+    for_each = each.value.node ? [] : [1]
+    content {
+      content  = file("${path.module}/../../modules/metrics/metric_key.py")
+      filename = "metric_key.py"
+    }
+  }
+  # the vocabulary, for a metric's class: the bucket its event sits in
+  dynamic "source" {
+    for_each = each.key == "gerps_metrics" ? [1] : []
+    content {
+      content  = file("${path.module}/../../modules/schemas/data/metric_events.json")
+      filename = "metric_events.json"
     }
   }
 }
@@ -107,7 +122,7 @@ resource "aws_iam_role_policy" "api" {
         Resource = [
           "arn:aws:dynamodb:${data.aws_region.current.region}:${local.operator_account_id}:table/${local.stack_prefix}-customers",
           "arn:aws:dynamodb:${data.aws_region.current.region}:${local.operator_account_id}:table/${local.stack_prefix}-profiles",
-          aws_dynamodb_table.counters.arn, # the economy's counters
+          aws_dynamodb_table.counters.arn, # the economy's counters and every firm's product counts
         ]
       },
       {

@@ -44,6 +44,11 @@ variable "internal_bus_name" {
   type        = string
 }
 
+variable "op_event_bus_arn" {
+  description = "The hub's shared bus: the second rule on the firm's bus sends every product event there as recorded."
+  type        = string
+}
+
 variable "internal_bus_arn" {
   description = "The same bus, for the events:PutEvents grant and the rule."
   type        = string
@@ -342,6 +347,55 @@ resource "aws_iam_role_policy" "events_to_store" {
       Resource = aws_kinesis_firehose_delivery_stream.store.arn
     }]
   })
+}
+
+# ─── the second rule: the same event to the platform ───
+#
+# The emitter puts once; the bus delivers to every rule that matches. Rule 1 (store) is the firm's
+# record; this rule sends the same `source = metrics` event to the hub's bus as recorded, through a
+# role with PutEvents on it, the way the hub's own forward edge targets the operator bus. An event
+# bus in another account takes no input transformer, and none is needed: the operator counts only
+# a published gerp's events, off the flag's mirror on its row, and serves a set's size, never a
+# member. Every firm's events cross; a firm that is not openly operated counts nothing there.
+resource "aws_iam_role" "to_hub" {
+  name = "${local.prefix}-to-hub"
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Action    = "sts:AssumeRole"
+      Effect    = "Allow"
+      Principal = { Service = "events.amazonaws.com" }
+      Condition = { StringEquals = { "aws:SourceAccount" = local.account_id } }
+    }]
+  })
+}
+
+resource "aws_iam_role_policy" "to_hub" {
+  name = "${local.prefix}-to-hub"
+  role = aws_iam_role.to_hub.id
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect   = "Allow"
+      Action   = "events:PutEvents"
+      Resource = var.op_event_bus_arn
+    }]
+  })
+}
+
+resource "aws_cloudwatch_event_rule" "to_hub" {
+  name           = "${local.prefix}-to-hub"
+  description    = "every product event on the firm's own bus, to the hub as recorded; the platform counts a published firm's"
+  event_bus_name = var.internal_bus_name
+  event_pattern  = jsonencode({ source = ["metrics"] })
+}
+
+resource "aws_cloudwatch_event_target" "to_hub" {
+  rule           = aws_cloudwatch_event_rule.to_hub.name
+  event_bus_name = var.internal_bus_name
+  target_id      = "hub"
+  arn            = var.op_event_bus_arn
+  role_arn       = aws_iam_role.to_hub.arn
 }
 
 resource "aws_cloudwatch_event_rule" "store" {
