@@ -72,8 +72,8 @@ to answer on the custom domain; a 403 in that window is propagation.
   attributes, so `/economy/counters` Queries the partition and splits nothing. A firm's rows take
   the public metric key (modules/metrics `public_key`) as their range key. Every gerp, no gate.
 - **a firm's product record** — the rule `metrics` on the operator bus (`counters.tf`, `source =
-  metrics`: the second rule on a firm's bus puts every record on its hub as recorded, the hub
-  forwards it here) sends the event to the same counter lambda, which forms six keys from the
+  metrics`: the second rule on a firm's bus puts every record here as recorded; a bus
+  target is taken once per event, so not through the hub) sends the event to the same counter lambda, which forms six keys from the
   event alone (`<event>#count|active#day|week|month#<period>`, the period cut in the event's
   `zone`, through modules/metrics `metric_key.py`) and ADDs them under the firm's partition of
   `gerp-counters`, a number for `count`, a set of `subject_id` for `active`, once per event id
