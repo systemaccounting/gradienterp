@@ -481,6 +481,12 @@ resource "aws_iam_role_policy" "record" {
         Resource = var.internal_bus_arn
       },
       {
+        # the clock's read: `GERP#timezone`, the zone every record is stamped with (modules/clock)
+        Effect   = "Allow"
+        Action   = "dynamodb:GetItem"
+        Resource = "arn:aws:dynamodb:${local.region}:${local.account_id}:table/${local.settings_table}"
+      },
+      {
         Effect   = "Allow"
         Action   = ["logs:CreateLogGroup", "logs:CreateLogStream", "logs:PutLogEvents"]
         Resource = "arn:aws:logs:${local.region}:${local.account_id}:*"
