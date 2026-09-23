@@ -41,8 +41,12 @@ events each; 20 domains is ~500 entries). Two things give before storage does:
   entries every name check the agent makes pulls a tool result the size of a prompt. It takes a
   `bucket` argument; the registry key is `bucket#name`, so a bucket is a prefix query.
 - **one file per registry.** Every domain contribution edits `metric_events.json`, so review diffs
-  and conflicts land on one file. A registry with buckets becomes a directory,
-  `metric_events/saas.json`, `metric_events/books.json`; the seed lists the data dir already and
-  lists a subdirectory the same way. A contributor owns a file, and a domain's spec is one PR.
+  and conflicts land on one file. Five readers take the merged shape `{bucket: {name: entry}}`:
+  tower's upload of the file as the S3 object `metric_events.json`, seed_schema and read_schema
+  off that object or the local data dir, the api's bundle of it into the gerps_metrics archive,
+  and `lint_schemas.py`. So the directory is the source form, `metric_events/saas.json`,
+  `metric_events/books.json`, and the merged file stays the served form: the lint step writes the
+  merge and fails when it is stale. Every reader is untouched; a contributor owns a file, and a
+  domain's spec is one PR.
 
 Do both when the second domain lands.
