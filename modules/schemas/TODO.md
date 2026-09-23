@@ -31,3 +31,18 @@ when the pull is fixed, or re-enable the seed on its own first.
 
 DONE-TEST: the pull is two tool calls, finishes well inside the timeout, and a failed run reaches a
 person (the alerting doc).
+
+## the vocabulary at hundreds of entries
+
+`metric_events` grows a bucket per functional domain (segment's per-domain specs run 20 to 30
+events each; 20 domains is ~500 entries). Two things give before storage does:
+
+- **`read_schema` returns the whole registry.** Its grouping loop takes no bucket, so at 500
+  entries every name check the agent makes pulls a tool result the size of a prompt. It takes a
+  `bucket` argument; the registry key is `bucket#name`, so a bucket is a prefix query.
+- **one file per registry.** Every domain contribution edits `metric_events.json`, so review diffs
+  and conflicts land on one file. A registry with buckets becomes a directory,
+  `metric_events/saas.json`, `metric_events/books.json`; the seed lists the data dir already and
+  lists a subdirectory the same way. A contributor owns a file, and a domain's spec is one PR.
+
+Do both when the second domain lands.
