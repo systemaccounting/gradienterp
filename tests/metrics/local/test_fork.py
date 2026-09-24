@@ -1,24 +1,45 @@
-"""The second rule on the firm's bus (issue #47, revised): a metric event is put once, stamped with
-the partition it counts under and the clock its periods are cut in, and rule 2 sends it to the operator's bus
-as recorded, through a role, with no transformer and no lambda between."""
+"""The platform copy of a metrics event (issues #47, #52): `metrics.record` puts the event once on the
+firm's own bus, stamped with the partition it counts under and the clock its periods are cut in,
+and calls `events.publish` for the platform copy, which sends only when the firm is openly
+operated. No rule, no role, no function between the firm's bus and the hub."""
 import json
+import os
 import re
 import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from _helpers import drained, load_lambda, scratch_env  # noqa: E402
+from helpers.localaws import drain, make_bus, make_table  # noqa: E402
 
 REPO = Path(__file__).resolve().parents[3]
-TF = (REPO / "modules" / "metrics" / "infra" / "main.tf").read_text()
+TF = {m: (REPO / "modules" / m / "infra" / "main.tf").read_text() for m in ("metrics", "labor", "inventory", "invoicing")}
+LABOR_VARS = (REPO / "modules" / "labor" / "infra" / "variables.tf").read_text()
+PER_CUSTOMER = (REPO / "prod" / "per_customer" / "main.tf").read_text()
 
 
-def test_a_record_carries_the_partition_and_the_zone_beside_what_it_carried():
+def _openly_operated(value: bool):
+    """The firm's flag, the settings row `events.publish` reads per invoke."""
+    from aws import client
+    os.environ["SETTINGS_TABLE"] = make_table("settings")
+    gerp = os.environ.get("GERP_ID") or os.environ["CUSTOMER_ID"]
+    client("dynamodb").put_item(TableName=os.environ["SETTINGS_TABLE"],
+                                Item={"gerp_id": {"S": gerp}, "sk": {"S": "GERP#openly_operated"}, "value": {"BOOL": value}})
+
+
+def _record(tool):
+    return tool.handler({"body": json.dumps({"op": "record", "event": "account.signed_up", "subject_id": "ada",
+                                             "at": "2026-09-22T06:30:00.000Z", "properties": {"source": "web"}})}, None)
+
+
+def test_a_private_firms_record_stays_on_its_own_bus():
     with scratch_env():
+        _openly_operated(False)
+        shared, q = make_bus("fork-shared")
+        os.environ["OP_EVENT_BUS_ARN"] = shared
         tool = load_lambda("manage_metrics")
-        r = tool.handler({"body": json.dumps({"op": "record", "event": "account.signed_up", "subject_id": "ada",
-                                              "at": "2026-09-22T06:30:00.000Z", "properties": {"source": "web"}})}, None)
-        assert r["statusCode"] == 200
+        assert _record(tool)["statusCode"] == 200
         [ev] = drained(expected=1)
         d = ev["detail"]
         assert ev["detail_type"] == "account.signed_up"
@@ -26,23 +47,43 @@ def test_a_record_carries_the_partition_and_the_zone_beside_what_it_carried():
         assert d["zone"] == "America/Los_Angeles", "the firm's clock, so the platform cuts the same day the owner sees"
         assert d["subject_id"] == "ada" and d["ts"] == "2026-09-22T06:30:00.000Z" and d["via"] == "agent"
         assert d["properties"] == {"source": "web"}
-        assert "subject_key" not in d and "counters" not in d, "the event as recorded, nothing stamped for a reader"
+        assert "openly_operated" not in d, "the firm's own bus owes no envelope"
+        assert drain(q, expected=0, tries=2) == [], "nothing left the firm"
 
 
-def test_rule_two_is_a_bus_target_with_a_role_and_nothing_between():
-    """Read off the terraform: the rule matches `source = metrics` alone, its target is the operator's bus (never the hub: a bus target is taken once per event, and the hub's forward edge would be the second), through a role, the
-    bus through a role, no transformer, and no forwarding function exists."""
-    rule = re.search(r'resource "aws_cloudwatch_event_rule" "to_operator" \{(.*?)\n\}', TF, re.S).group(1)
-    assert 'event_pattern  = jsonencode({ source = ["metrics"] })' in rule
-    assert "event_bus_name = var.internal_bus_name" in rule
-    target = re.search(r'resource "aws_cloudwatch_event_target" "to_operator" \{(.*?)\n\}', TF, re.S).group(1)
-    assert "arn            = var.operator_bus_arn" in target and "role_arn       = aws_iam_role.to_operator.arn" in target
-    assert "input_transformer" not in target, "an event bus in another account takes none"
-    policy = re.search(r'resource "aws_iam_role_policy" "to_operator" \{(.*?)\n\}', TF, re.S).group(1)
-    assert '"events:PutEvents"' in policy and "var.operator_bus_arn" in policy
+def test_a_published_firms_record_reaches_the_shared_bus_with_the_envelope():
+    with scratch_env():
+        _openly_operated(True)
+        shared, q = make_bus("fork-shared")
+        os.environ["OP_EVENT_BUS_ARN"] = shared
+        tool = load_lambda("manage_metrics")
+        assert _record(tool)["statusCode"] == 200
+        [own] = drained(expected=1)
+        [ev] = drain(q, expected=1)
+        d = ev["detail"]
+        assert ev["detail_type"] == "account.signed_up"
+        assert d["openly_operated"] is True and d["schema_version"] == 1 and d["customer_id"] == "gradienterp"
+        assert d["subject_id"] == "ada" and d["zone"] == "America/Los_Angeles", "the event as recorded, the envelope beside it"
+        assert own["detail"]["subject_id"] == "ada"
+
+
+def test_the_platform_copy_is_a_function_call_and_every_recorder_may_make_it():
+    """Read off the terraform: no rule, target or role for the platform copy in modules/metrics; every
+    function that records carries the hub's bus and the settings read `publish` needs."""
+    assert "to_operator" not in TF["metrics"] and "operator_bus_arn" not in TF["metrics"]
     assert not (REPO / "modules" / "metrics" / "lambdas" / "forward").exists()
-    functions = re.search(r"functions = \{(.*?)\n  \}", TF, re.S).group(1)
-    assert sorted(re.findall(r"^\s*(\w+)\s*=", functions, re.M)) == ["manage_metrics", "record"]
+    assert "OP_EVENT_BUS_ARN  = var.op_event_bus_arn" in TF["metrics"] and "SETTINGS_TABLE    = local.settings_table" in TF["metrics"]
+    assert TF["metrics"].count("Resource = [var.internal_bus_arn, var.op_event_bus_arn]") == 2, "the door's role and the tool's"
+    for m in ("labor", "inventory"):
+        assert re.search(r"OP_EVENT_BUS_ARN\s+= var.op_event_bus_arn", TF[m]), m
+        assert "Resource = [var.internal_bus_arn, var.op_event_bus_arn]" in TF[m], m
+        assert re.search(r"SETTINGS_TABLE\s+=", TF[m]), m
+    assert 'variable "op_event_bus_arn"' in LABOR_VARS and 'variable "op_event_bus_arn"' in TF["inventory"]
+    assert re.search(r"SETTINGS_TABLE\s+= \"\$\{var.stack_prefix\}-settings-", TF["invoicing"]), "invoicing's shared role reads the flag"
+    assert "OP_EVENT_BUS_ARN      = var.op_event_bus_arn" in TF["invoicing"]
+    for m in ("metrics", "labor", "inventory"):
+        block = re.search(r'module "%s" \{.*?\n\}\n' % m, PER_CUSTOMER, re.S).group(0)
+        assert re.search(r"op_event_bus_arn\s+= local.op_event_bus_arn", block), m
 
 
 if __name__ == "__main__":

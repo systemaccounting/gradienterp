@@ -7,6 +7,7 @@ from datetime import datetime, timezone
 from decimal import Decimal
 
 from aws import client as _aws, table as _table, log as alog
+import events
 
 log = logging.getLogger()
 
@@ -26,23 +27,6 @@ def registry_table():
 
 def settings_table():
     return _table(os.environ["SETTINGS_TABLE"])
-
-
-def _customer_id() -> str:
-    return os.environ.get("CUSTOMER_ID", "local")
-
-
-def _openly_operated() -> bool:
-    """Current publication consent, read PER INVOKE, never cached.
-
-    It is consent, and consent is a reference: a cold-start cache is a snapshot of a mutable fact,
-    so a gerp turning publication off kept stamping `true` until the container recycled — and the
-    `gerp-publication` rule routes flagged events to a firehose ARCHIVE, which is unrecoverable.
-    One GetItem against the settings table is the price of that being right."""
-    row = settings_table().get_item(
-        Key={"gerp_id": _customer_id(), "sk": "GERP#openly_operated"}
-    ).get("Item") or {}
-    return bool(row.get("value", False))
 
 
 # ─── chart-of-accounts predicate ───
@@ -195,10 +179,9 @@ def _economic_counters(line_items):
 
 
 def _emit_journal_entry_posted(entry_id, timestamp_ms, origin, line_items):
+    """The platform copy through `events.publish`: the envelope (`openly_operated`, `customer_id`,
+    `schema_version`) is stamped there, and a private firm's posting is withheld there."""
     detail = {
-        "schema_version": 1,
-        "openly_operated": _openly_operated(),
-        "customer_id": _customer_id(),
         "entry_id": entry_id,
         "posted_at_ms": timestamp_ms,
         "origin": origin,
@@ -207,18 +190,10 @@ def _emit_journal_entry_posted(entry_id, timestamp_ms, origin, line_items):
     counters = _economic_counters(line_items)  # economic-index signals; platform ADDs them (dumb)
     if counters:
         detail["counters"] = counters  # only stamp when there's a signal → only these route to the counter lambda
-
-    try:
-        _aws("events").put_events(Entries=[{
-            "EventBusName": os.environ["OP_EVENT_BUS_ARN"],
-            "Source": "accounting",
-            "DetailType": "journal_entry.posted",
-            "Detail": json.dumps(detail),
-        }])
-    except Exception:
-        alog.exception("journal_entry.posted not published; the entry stands", entry_id=entry_id)
-        return False
-    return True
+    res = events.publish("accounting", "journal_entry.posted", detail)
+    if res.get("error"):
+        alog.error("journal_entry.posted not published; the entry stands", entry_id=entry_id, error=res["error"])
+    return bool(res.get("emitted"))
 
 
 def _decompose_to_pairs(line_items):

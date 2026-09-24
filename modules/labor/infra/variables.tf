@@ -90,3 +90,8 @@ variable "internal_bus_arn" {
   description = "The same bus, for the events:PutEvents grant."
   type        = string
 }
+
+variable "op_event_bus_arn" {
+  description = "The hub's bus: `events.publish` puts the platform copy of a metrics event there when the firm is openly operated."
+  type        = string
+}

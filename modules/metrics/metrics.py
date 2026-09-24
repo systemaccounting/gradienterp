@@ -92,4 +92,7 @@ def record(raw: dict, via: str, **extra) -> dict:
     detail = {"subject_id": d["subject_id"], "ts": d["ts"], "properties": d["properties"], "via": via,
               "customer_id": events._gerp_id(), "zone": clock.zone_name(), **extra}
     events.emit(SOURCE, d["event"], detail)
-    return {"event": d["event"], "subject_id": d["subject_id"], "ts": d["ts"]}
+    # the platform copy, when the firm is openly operated: `publish` reads the flag per invoke and
+    # withholds otherwise, so a private firm's record never leaves its own bus
+    platform = events.publish(SOURCE, d["event"], detail)
+    return {"event": d["event"], "subject_id": d["subject_id"], "ts": d["ts"], "published": platform.get("emitted")}

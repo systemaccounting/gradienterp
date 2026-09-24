@@ -38,7 +38,7 @@ log.setLevel(logging.INFO)
 from botocore.exceptions import ClientError
 
 from aws import client as _aws, table as _ddb_table, log as alog, refuse_non_owner
-from events import publish
+from events import put_shared
 
 CUSTOMER_ID = os.environ.get("CUSTOMER_ID", "local")
 TENANT_PARAM = os.environ.get("TENANT_PARAM", f"/gradienterp/customers/{CUSTOMER_ID}")
@@ -76,7 +76,8 @@ def _announce_published(val: bool) -> bool:
     is written first; a bus that is not wired (local) or refuses is logged, and the write stands —
     the operator row stays stale until the next flip, so the response says it was not announced."""
     try:
-        publish("settings", "gerp.published" if val else "gerp.unpublished",
+        # a control message, not a publication: the off-flip leaves when the flag is already off
+        put_shared("settings", "gerp.published" if val else "gerp.unpublished",
                 {"gerp_id": CUSTOMER_ID, "at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())})
         return True
     except Exception as e:  # noqa: BLE001 — a notice that did not go out must not fail the setting

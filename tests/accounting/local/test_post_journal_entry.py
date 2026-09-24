@@ -1,4 +1,5 @@
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -208,6 +209,29 @@ def test_the_economic_counters_stamp_revenue_and_expense():
         assert mod._economic_counters(lines) == [{"op": "add", "key": "revenue", "magnitude": 100.0},
                                                  {"op": "add", "key": "expense", "magnitude": 50.0}]
         assert mod._economic_counters(lines[:1]) == []
+
+
+def test_a_posting_is_published_on_condition():
+    """The platform copy goes through events.publish: a private firm's posting is withheld, a
+    published firm's carries the envelope and the economy's counters."""
+    with scratch_env() as (tmp, _):
+        mod = load_lambda("post_journal_entry")
+        os.environ["OP_EVENT_BUS_ARN"] = "arn:aws:events:::event-bus/gerp-events"
+        os.environ["LOCAL_EVENTS"] = str(Path(tmp) / "e.jsonl")
+        lines = [{"account": "CASH", "accountType": "ASSET", "side": "DEBIT", "amount": 100},
+                 {"account": "SALES_REVENUE", "accountType": "REVENUE", "side": "CREDIT", "amount": 100}]
+        real = mod.events._openly_operated
+        try:
+            mod.events._openly_operated = lambda: False
+            assert mod._emit_journal_entry_posted("je-1", 1, "test", lines) is False
+            assert not Path(os.environ["LOCAL_EVENTS"]).exists(), "a private firm's posting leaves nothing"
+            mod.events._openly_operated = lambda: True
+            assert mod._emit_journal_entry_posted("je-1", 1, "test", lines) is True
+            d = json.loads(Path(os.environ["LOCAL_EVENTS"]).read_text().splitlines()[0])["detail"]
+            assert d["openly_operated"] is True and d["schema_version"] == 1 and d["entry_id"] == "je-1"
+            assert d["counters"] == [{"op": "add", "key": "revenue", "magnitude": 100.0}]
+        finally:
+            mod.events._openly_operated = real
 
 
 if __name__ == "__main__":

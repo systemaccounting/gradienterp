@@ -27,10 +27,12 @@ token, which the authorizer validates → `tenant_settings` reads the caller's `
     unvalidated typo would surface at period close instead of when someone typed it. Read by
     `modules/clock` (and the agent container) at cold start, with the `GERP_TIMEZONE` env var as the
     fallback; unset means UTC, which is the behaviour that predates the clock module.
-  - **`GERP#openly_operated`** (bool) — gates publication. The agent + accounting/treasury/schemas
-    read it at cold start, so a flip **propagates at the readers' next cold start**, not instantly.
-    New gerps default to private (`false`). A flip also publishes `gerp.published` /
-    `gerp.unpublished` `{gerp_id, at}` on the shared bus (`OP_EVENT_BUS_ARN`), which the operator
+  - **`GERP#openly_operated`** (bool) — gates publication: `events.publish` reads it per invoke
+    and withholds when off. The agent + treasury/schemas read it at cold start, so a flip
+    **propagates at those readers' next cold start**, not instantly.
+    New gerps default to private (`false`). A flip also puts `gerp.published` /
+    `gerp.unpublished` `{gerp_id, at}` on the shared bus through `events.put_shared`, the envelope
+    without `publish`'s condition (the off-flip leaves when the flag is already off), which the operator
     stamps as `published` on the gerp's `gerp-customers` row — what the directory, the read-through
     and the stream's publisher read.
 - **`USER#<account_id>`** — per-user settings, one row per user.

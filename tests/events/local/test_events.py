@@ -159,6 +159,27 @@ def test_publish_stamps_the_publication_envelope():
         assert d["schema_version"] == 1 and d["customer_id"] == "ken-cafe"
 
 
+def test_publish_withholds_a_private_firms_event_and_put_shared_sends_regardless():
+    """`if oob: send`. The flag is read per invoke; off means nothing is put and the caller is told.
+    `put_shared` is the envelope without the condition, for the flip itself."""
+    with scratch_env() as env:
+        os.environ["OP_EVENT_BUS_ARN"] = "arn:aws:events:::event-bus/gerp-events"
+        os.environ["GERP_ID"] = "ken-cafe"
+        os.environ["LOCAL_EVENTS"] = str(Path(env) / "e.jsonl")
+        real = events._openly_operated
+        events._openly_operated = lambda: False
+        try:
+            out = events.publish("accounting", "journal_entry.posted", {"entry_id": "je-1"})
+            assert out == {"emitted": None, "withheld": "openly_operated"}
+            assert not Path(os.environ["LOCAL_EVENTS"]).exists(), "nothing left the firm"
+            out = events.put_shared("settings", "gerp.unpublished", {"gerp_id": "ken-cafe"})
+            assert out["emitted"] == "gerp.unpublished"
+            d = _lines(os.environ["LOCAL_EVENTS"])[0]["detail"]
+            assert d["openly_operated"] is False and d["customer_id"] == "ken-cafe", "the envelope says what the flag says"
+        finally:
+            events._openly_operated = real
+
+
 def test_a_bus_failure_never_raises_and_files_one_incident():
     """The durable write already happened. A failure to ANNOUNCE it must not report it as failed,
     and the line is keyed so a bus failing every emit of a type collapses into one incident."""
@@ -194,6 +215,7 @@ def test_a_missing_bus_is_a_configuration_error_not_a_silent_drop():
     whole module's events for as long as nobody looked."""
     with scratch_env():
         os.environ.pop("INTERNAL_BUS_NAME", None)
+        events._openly_operated = lambda: True  # publish reaches the bus only for a published firm
         for fn, args in ((events.emit, ("invoicing", "x.y", {})),
                          (events.emit_to, ("invoicing", "them", "x.y", {})),
                          (events.publish, ("invoicing", "x.y", {}))):

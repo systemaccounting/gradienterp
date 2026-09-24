@@ -44,8 +44,8 @@ variable "internal_bus_name" {
   type        = string
 }
 
-variable "operator_bus_arn" {
-  description = "The operator's bus (prod/platform/operator gerp-operator): rule 2 puts every metrics event on it. A bus target is taken once per event, so the hub, whose forward edge is a second bus target, is not on this path."
+variable "op_event_bus_arn" {
+  description = "The hub's bus: where `events.publish` puts the platform copy of a metrics event when the firm is openly operated (modules/events)."
   type        = string
 }
 
@@ -349,54 +349,6 @@ resource "aws_iam_role_policy" "events_to_store" {
   })
 }
 
-# ─── the second rule: the same event to the platform ───
-#
-# The emitter puts once; the bus delivers to every rule that matches. Rule 1 (store) is the firm's
-# record; this rule sends the same `source = metrics` event to the hub's bus as recorded, through a
-# role with PutEvents on it, the way the hub's own forward edge targets the operator bus. An event
-# bus in another account takes no input transformer, and none is needed: the operator counts only
-# a published gerp's events, off the flag's mirror on its row, and serves a set's size, never a
-# member. Every firm's events cross; a firm that is not openly operated counts nothing there.
-resource "aws_iam_role" "to_operator" {
-  name = "${local.prefix}-to-operator"
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [{
-      Action    = "sts:AssumeRole"
-      Effect    = "Allow"
-      Principal = { Service = "events.amazonaws.com" }
-      Condition = { StringEquals = { "aws:SourceAccount" = local.account_id } }
-    }]
-  })
-}
-
-resource "aws_iam_role_policy" "to_operator" {
-  name = "${local.prefix}-to-operator"
-  role = aws_iam_role.to_operator.id
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [{
-      Effect   = "Allow"
-      Action   = "events:PutEvents"
-      Resource = var.operator_bus_arn
-    }]
-  })
-}
-
-resource "aws_cloudwatch_event_rule" "to_operator" {
-  name           = "${local.prefix}-to-operator"
-  description    = "every product event on the firm's own bus, to the hub as recorded; the platform counts a published firm's"
-  event_bus_name = var.internal_bus_name
-  event_pattern  = jsonencode({ source = ["metrics"] })
-}
-
-resource "aws_cloudwatch_event_target" "to_operator" {
-  rule           = aws_cloudwatch_event_rule.to_operator.name
-  event_bus_name = var.internal_bus_name
-  target_id      = "hub"
-  arn            = var.operator_bus_arn
-  role_arn       = aws_iam_role.to_operator.arn
-}
 
 resource "aws_cloudwatch_event_rule" "store" {
   name           = "${local.prefix}-store"
@@ -478,7 +430,7 @@ resource "aws_iam_role_policy" "record" {
       {
         Effect   = "Allow"
         Action   = "events:PutEvents"
-        Resource = var.internal_bus_arn
+        Resource = [var.internal_bus_arn, var.op_event_bus_arn] # the firm's own bus, and the hub for the platform copy (`events.publish`)
       },
       {
         # the clock's read: `GERP#timezone`, the zone every record is stamped with (modules/clock)
@@ -528,7 +480,7 @@ resource "aws_iam_role_policy" "manage" {
       {
         Effect   = "Allow"
         Action   = "events:PutEvents"
-        Resource = var.internal_bus_arn
+        Resource = [var.internal_bus_arn, var.op_event_bus_arn] # the firm's own bus, and the hub for the platform copy (`events.publish`)
       },
       {
         # the reads: this workgroup and no other
@@ -616,6 +568,7 @@ locals {
     GLUE_TABLE        = aws_glue_catalog_table.metrics.name
     GERP_TIMEZONE     = var.timezone
     SETTINGS_TABLE    = local.settings_table
+    OP_EVENT_BUS_ARN  = var.op_event_bus_arn
     SCHEMA_TABLE      = local.schema_table
     CANONICAL_BUCKET  = var.canonical_bucket
   }

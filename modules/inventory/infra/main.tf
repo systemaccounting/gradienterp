@@ -237,6 +237,7 @@ locals {
     POST_JOURNAL_ENTRY_FN = var.post_journal_entry_fn_name
     CUSTOMER_ID           = var.gerp_id
     INTERNAL_BUS_NAME     = var.internal_bus_name # a record_metric row announces a product event here (modules/metrics)
+    OP_EVENT_BUS_ARN      = var.op_event_bus_arn  # `publish`: the platform copy of that event
     # an `auto_order` row on REORDER#<item> turns a gap into a PO through the shared agreements
     # request service, by CONSTRUCTED name (the inbox-router convention): agreements reads this
     # module's items table, so a module ref here would cycle
@@ -437,6 +438,11 @@ variable "internal_bus_arn" {
   type        = string
 }
 
+variable "op_event_bus_arn" {
+  description = "The hub's bus: `events.publish` puts the platform copy of a metrics event there when the firm is openly operated."
+  type        = string
+}
+
 # a firm's record_metric row on this module's callsites announces on the firm's OWN bus
 # (modules/metrics)
 resource "aws_iam_role_policy" "internal-bus" {
@@ -447,7 +453,7 @@ resource "aws_iam_role_policy" "internal-bus" {
     Statement = [{
       Effect   = "Allow"
       Action   = "events:PutEvents"
-      Resource = var.internal_bus_arn
+      Resource = [var.internal_bus_arn, var.op_event_bus_arn] # the firm's own bus, and the hub for the platform copy
     }]
   })
 }
