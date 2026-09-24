@@ -157,9 +157,9 @@ def run(ctx, name, params, window, slug, title):
 
 An openly operated firm's page on openlyoperated.biz draws a card per event and kind the firm has
 recorded: `loaf.baked` per day, week and month as a count and as distinct subjects. There is no
-publish step and nothing to name. Every record leaves on the firm's bus twice, once to the firm's
-own store and once to the platform, which counts it under the firm's partition when the firm is
-openly operated and drops it when it is not. The flag in settings is the gate; flip it off and the
+publish step and nothing to name. Every record goes to the firm's own store and, when the firm is
+openly operated, to the platform, which counts it under the firm's partition; a private firm's
+record never leaves its account. The flag in settings is the gate; flip it off and the
 platform stops counting at the next event.
 
 What to know:

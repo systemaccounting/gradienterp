@@ -174,6 +174,7 @@ locals {
     SCHEMA_TABLE          = var.schema_table_name
     POST_JOURNAL_ENTRY_FN = var.post_journal_entry_fn_name
     CUSTOMER_ID           = var.gerp_id
+    OP_EVENT_BUS_ARN      = var.op_event_bus_arn  # `publish`: the platform copy of a metrics event
     INTERNAL_BUS_NAME     = var.internal_bus_name # a record_metric row announces a product event here (modules/metrics)
     # the delete op removes a worker_legal row's referenced doc blobs from here first.
     UPLOADS_BUCKET = local.uploads_bucket
@@ -329,7 +330,7 @@ resource "aws_iam_role_policy" "internal-bus" {
     Statement = [{
       Effect   = "Allow"
       Action   = "events:PutEvents"
-      Resource = var.internal_bus_arn
+      Resource = [var.internal_bus_arn, var.op_event_bus_arn] # the firm's own bus, and the hub for the platform copy
     }]
   })
 }

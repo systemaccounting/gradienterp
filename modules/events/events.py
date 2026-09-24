@@ -205,9 +205,20 @@ def emit_to(source: str, recipient: str, detail_type: str, detail: dict) -> dict
 
 
 def publish(source: str, detail_type: str, detail: dict) -> dict:
-    """To everyone, on the shared bus. Stamps the publication envelope — `openly_operated` is the
-    filter the publication rule matches, so an emitter that omits it silently withholds the event
-    from the public archive, which for a firm that opted in is the whole product."""
+    """To everyone, on the shared bus, when the firm is openly operated: `if oob: send`. The
+    flag is read per invoke (`_openly_operated`); a firm whose flag is off puts nothing and gets
+    `{"emitted": None, "withheld": "openly_operated"}` back. Every platform copy of a firm's
+    event goes through here."""
+    if _openly_operated():
+        return put_shared(source, detail_type, detail)
+    return {"emitted": None, "withheld": "openly_operated"}
+
+
+def put_shared(source: str, detail_type: str, detail: dict) -> dict:
+    """On the shared bus with the publication envelope, whatever the flag says. For the one
+    control message that must leave when the flag is off: the flip itself, `gerp.unpublished`
+    (modules/settings). The envelope's `openly_operated` is what the operator's publication rule
+    matches, so an emitter that omits it withholds the event from the public archive."""
     return _send(_shared_bus(), source, detail_type, {
         "schema_version": SCHEMA_VERSION,
         "openly_operated": _openly_operated(),

@@ -21,6 +21,14 @@ def _events():
     return _SEEN[q]
 
 
+def _openly_operated(value: bool):
+    """The firm's flag, the row `events.publish` reads per invoke: a posting leaves only when it is on."""
+    from aws import client
+    gerp = os.environ.get("GERP_ID") or os.environ.get("CUSTOMER_ID", "local")
+    client("dynamodb").put_item(TableName=os.environ["SETTINGS_TABLE"],
+                                Item={"gerp_id": {"S": gerp}, "sk": {"S": "GERP#openly_operated"}, "value": {"BOOL": value}})
+
+
 REPO_ROOT = Path(__file__).resolve().parents[3]
 SCHEMA = REPO_ROOT / "modules" / "events" / "accounting" / "journal_entry.posted.v1.json"
 
@@ -40,6 +48,7 @@ def _entry(entry_id="e1", timestamp="1700000000000"):
 
 def test_classified_post_emits_validating_event():
     with scratch_env() as (tmp, _):
+        _openly_operated(True)
         pje = load_lambda("post_journal_entry")
         r = pje.handler(_entry(), None)
         assert r["statusCode"] == 200
@@ -54,8 +63,17 @@ def test_classified_post_emits_validating_event():
         assert ev["posted_at_ms"] == 1700000000000
         assert ev["origin"] == "stripe"
         assert ev["schema_version"] == 1
-        assert ev["openly_operated"] is False
+        assert ev["openly_operated"] is True, "the envelope: publish sends only a published firm's"
         assert len(ev["line_items"]) == 2
+
+
+def test_a_private_firms_post_emits_nothing():
+    """`events.publish` sends on condition: with the flag off the entry stands and no event leaves."""
+    with scratch_env() as (tmp, _):
+        _openly_operated(False)
+        pje = load_lambda("post_journal_entry")
+        assert pje.handler(_entry(entry_id="private1"), None)["statusCode"] == 200
+        assert _events() == []
 
 
 def test_pending_post_does_not_emit():
@@ -71,6 +89,7 @@ def test_pending_post_does_not_emit():
 
 def test_duplicate_post_does_not_emit_twice():
     with scratch_env() as (tmp, _):
+        _openly_operated(True)
         pje = load_lambda("post_journal_entry")
         pje.handler(_entry(entry_id="dup1"), None)
         events = _events()
@@ -100,6 +119,7 @@ def test_revenue_credit_stamps_the_economic_counter():
     stopped firing — the ledger was correct and the public index simply never moved. Nothing
     covered it, which is how it survived. Assert on the casing the ledger actually stores."""
     with scratch_env() as (tmp, _):
+        _openly_operated(True)
         pje = load_lambda("post_journal_entry")
         assert pje.handler(_entry(), None)["statusCode"] == 200
 
@@ -114,6 +134,7 @@ def test_an_expense_entry_stamps_the_expense_counter_and_a_transfer_stamps_none(
     balance-sheet accounts carries no counters key at all, so the dumb counter lambda is never
     invoked for it."""
     with scratch_env() as (tmp, _):
+        _openly_operated(True)
         pje = load_lambda("post_journal_entry")
         entry = _entry(entry_id="e2")
         entry["lineItems"] = [

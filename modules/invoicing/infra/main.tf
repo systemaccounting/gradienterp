@@ -171,6 +171,12 @@ resource "aws_iam_role_policy" "lambda" {
     Version = "2012-10-17"
     Statement = [
       {
+        # the settings rows the clock and `events.publish` read: `GERP#timezone`, `GERP#openly_operated`
+        Effect   = "Allow"
+        Action   = "dynamodb:GetItem"
+        Resource = "arn:aws:dynamodb:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:table/${var.stack_prefix}-settings-${replace(var.gerp_id, "_", "-")}"
+      },
+      {
         Effect = "Allow"
         Action = [
           "dynamodb:GetItem",
@@ -289,7 +295,8 @@ locals {
   env_vars = {
     INVOICES_TABLE        = aws_dynamodb_table.invoices.name
     INVOICE_LINES_TABLE   = aws_dynamodb_table.invoice_lines.name
-    GERP_TIMEZONE         = var.timezone # the business's clock (modules/clock)
+    GERP_TIMEZONE         = var.timezone                                                     # the business's clock (modules/clock)
+    SETTINGS_TABLE        = "${var.stack_prefix}-settings-${replace(var.gerp_id, "_", "-")}" # the clock's `GERP#timezone`, and `publish`'s `GERP#openly_operated`
     TRANSITIONS_TABLE     = aws_dynamodb_table.transitions.name
     AGREEMENTS_TABLE      = aws_dynamodb_table.agreements.name
     RULE_INSTANCES_TABLE  = var.rule_instances_table_name # the rules ATTACHED to what's being sold (a tax, a fee)
