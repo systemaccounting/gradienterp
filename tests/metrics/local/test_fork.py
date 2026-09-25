@@ -74,6 +74,7 @@ def test_the_platform_copy_is_a_function_call_and_every_recorder_may_make_it():
     assert not (REPO / "modules" / "metrics" / "lambdas" / "forward").exists()
     assert "OP_EVENT_BUS_ARN  = var.op_event_bus_arn" in TF["metrics"] and "SETTINGS_TABLE    = local.settings_table" in TF["metrics"]
     assert TF["metrics"].count("Resource = [var.internal_bus_arn, var.op_event_bus_arn]") == 2, "the door's role and the tool's"
+    assert "${var.canonical_bucket}/metric_definitions.json" in TF["metrics"], "the tool reads the catalogue off the canonical bucket (found live: AccessDenied on the first catalogue query)"
     for m in ("labor", "inventory"):
         assert re.search(r"OP_EVENT_BUS_ARN\s+= var.op_event_bus_arn", TF[m]), m
         assert "Resource = [var.internal_bus_arn, var.op_event_bus_arn]" in TF[m], m
