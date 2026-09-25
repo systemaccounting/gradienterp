@@ -63,6 +63,9 @@ each usually carries (`lead.captured`, `member.joined`, `member.checked_in`, `or
 `shift.worked`, `account.signed_up`, …). Read it before naming a new event; a name the firm's
 product needs that is not there is `write_schema {op: extend, registry: metric_events, bucket,
 name, schema: {description, properties}, reason}`. The door records any name either way.
+A bucket is a functional domain the words fit (saas, commerce, membership, labor, support), and a
+domain the vocabulary has never seen is a new bucket named for it: a clinic's `visit.booked`
+goes under `clinic`, not under support. The operator promotes a bucket a second firm lands on.
 
 ## reading it
 
@@ -96,8 +99,35 @@ unit_cost, margin), each a ratio of legs named in the vocabulary's words. Run on
     manage_metrics op=query name=saas.margin params={"grain": "week"} window=last_90_days
     manage_metrics op=pin name=saas.unit_cost
 
+The six are one recipe, and a domain the catalogue has never seen gets its six by naming the
+same legs; the money legs are `revenue.posted` and `expense.posted` for every firm:
+
+| ratio | numerator | denominator |
+|---|---|---|
+| conversion | the step that pays (`subscription.started`, `order.placed`, `visit.completed`) | the step before it (`checkout.started`, `lead.captured`, `visit.booked`) |
+| churn | the leaving event (`subscription.cancelled`, `member.cancelled`, `patient.left`) | the stock at period start: joined minus left |
+| engagement | distinct subjects on the use event (`session.started`, `member.checked_in`, `visit.completed`) | the stock at period end |
+| unit revenue | `revenue.posted` sum | the stock, or the paid step's count |
+| unit cost | `expense.posted` sum | the same |
+| margin | `revenue.posted` minus `expense.posted` | `revenue.posted` |
+
 A definition the catalogue lacks is `write_schema op=extend` on `metric_definitions`, the firm's
-own until promoted. A question none of these answers: `read_schema {source: local, registry: metric_queries}` lists
+own until promoted. An entry is a ratio of legs, each leg an event and a measure from the
+vocabulary (`count`, `count_distinct`, `sum` of the amount property), or a stock (`cumulative`:
+an in-event minus an out-event, `at` the period's `start` or `end`); legs add with their signs.
+Collections, cash received over revenue posted, for a firm that asked:
+
+    write_schema op=extend registry=metric_definitions bucket=books name=collections
+      schema={"type": "ratio", "unit": "ratio", "grain": "month",
+              "description": "cash received over revenue posted",
+              "numerator":   [{"event": "asset.posted", "measure": "sum"}],
+              "denominator": [{"event": "revenue.posted", "measure": "sum"}]}
+    manage_metrics op=query name=books.collections window=last_month
+
+A leg subtracting: `{"event": "expense.posted", "measure": "sum", "sign": -1}` beside revenue is
+net income. A stock as a leg: `{"cumulative": {"in_event": "member.joined", "out_event":
+"member.cancelled", "measure": "count"}, "at": "start"}`. An event a leg names has to be in
+the vocabulary first. A question none of these answers: `read_schema {source: local, registry: metric_queries}` lists
 this firm's own rows; `search_guides` finds a canonical one by what it answers. None fits: write
 the SQL over the table `metrics` (`event, subject_id, ts` as a UTC ISO string, `via`,
 `properties` a map: `element_at(properties, 'plan')`; Athena syntax, `?` for each parameter

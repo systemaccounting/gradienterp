@@ -123,7 +123,7 @@
     },
     "status": {
       "type": "string",
-      "description": "get: draft|issued|paid."
+      "description": "get: draft|issued|unpaid|paid."
     },
     "incomplete": {
       "type": "boolean",
