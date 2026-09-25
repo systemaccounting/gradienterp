@@ -101,3 +101,24 @@ that already exists, and the apply then sets the retention. One gerp at a time i
 dir (`prod/per_customer`, `prod/init_customer`): the script's init points the dir's backend at
 that gerp's state. A fresh account needs no import. A function that moves from a bare
 `aws_lambda_function` onto this module moves by a `moved` block in the calling module.
+
+## the fleet deploy
+
+Every gerp at once is `bash scripts/deploy.sh fleet [--report] [--gerp a,b] [--dirs …]`, a pipe
+over `scripts/fleet.py`'s pieces, each one AWS call shape with tab-separated lines on stdout:
+`listzipversions` (the bucket's latest version and sha256 per zip, read once: the run's target),
+`listgerps` (every active row with an account), `listzipfnsconf --gerp X` (the gerp's functions
+by the `gerp:src-dir` tag with their `CodeSha256`, through the `gerp-X` profile), `status
+<snapshot>` (the join: `in-sync`, `behind` with the snapshot's version to move to, `left` for a
+function with no artifact or a src_dir another gerp carries and this one does not), `update` (one
+`UpdateFunctionCode` per `behind` line, a gerp outside us-east-1 from its region's replica),
+`push <dir>` (build and put with provenance, the only piece that zips). Ten gerps run at once
+through `xargs -P`; a failed move is a line and the exit code, and the others finish; the report
+is `.build/fleet.tsv`. A loop is one artifact type paired with one resource type, zip × lambda
+function here; another deployable is another loop after it, not a column in these lines.
+
+The workflow yaml runs the same pipe on a runner. **Keep the two compositions identical in
+logic**: the same pieces in the same order with the same flags. A runner thing (`parallel` in
+the xargs slot, `::group::`, the step summary) is written in the yaml and never in a script, so
+no script under scripts/ reads `GITHUB_ACTIONS`. Two copies of a pipe are a hazard for people
+and a small one with agents reading both; the test that reads both holds them together.

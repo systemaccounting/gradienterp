@@ -1,7 +1,7 @@
 """deploy.sh points live functions and runtimes at what a bucket or registry holds, with stubbed AWS.
 
 `push --deploy` builds nothing, the BFF included; a push builds and puts a changed function once and
-updates it once; `--all` reaches each gerp through its own profile and pushes the BFF once; and an
+updates it once; a push names one gerp (every gerp at once is fleet.py's pipe); and an
 image deploy reaches a gerp in its own region, from that region's copy of the image — Dublin's
 runtime runs the eu-west-1 copy, and a session with no region is denied in us-east-1."""
 
@@ -117,29 +117,6 @@ def test_push_deploy_updates_a_function_without_building_it():
     assert s3.puts == [] and [u["S3ObjectVersion"] for u in lam.updates] == ["ver4"]
 
 
-def test_push_all_reaches_each_gerp_through_its_own_profile_and_the_bff_once():
-    seen, fleets, bff = [], [], []
-
-    def target(args):
-        seen.append((args.gerp, args.profile))
-        return args.gerp
-
-    rows = [{"gerp_id": "a", "account": "1", "region": "us-east-1"},
-            {"gerp_id": "b", "account": "2", "region": "eu-west-1"}]
-    with _patched(_boto=lambda p: None, _active_rows=lambda op: rows, _target_session=target,
-                  _push_webapp=lambda args: bff.append(1), _push_fleet=lambda args, s, d: fleets.append(s)):
-        deploy.cmd_push(Namespace(dirs=None, all=True, profile=None, gerp="gradienterp",
-                                  operator_profile="op", deploy=False, notes=""))
-    assert seen == [("a", None), ("b", None)] and fleets == ["a", "b"] and bff == [1]
-    try:
-        deploy.cmd_push(Namespace(dirs=None, all=True, profile="p", gerp="g", operator_profile="op",
-                                  deploy=False, notes=""))
-    except SystemExit as e:
-        assert "gerp-<id>" in str(e)
-    else:
-        raise AssertionError("--all with --profile names one profile for every gerp")
-
-
 def test_an_image_deploy_reaches_a_gerp_in_its_own_region_from_that_regions_copy():
     class DDB:
         def scan(self, **kw):
@@ -228,10 +205,10 @@ def test_a_pull_requests_image_is_pushed_under_its_own_tag_and_westwood_moves_on
     assert docker[1][0] == "--push" and docker[1][1].endswith(":pr-20-abcdef0")
     assert moved == ["sha256:pr-20-abcdef0"]
 
-def test_a_tower_dir_pushes_in_the_operator_account_names_no_gerp_and_takes_no_all():
+def test_a_tower_dir_pushes_in_the_operator_account_and_names_no_gerp():
     """tower's functions live in the operator account, outside every gerp's tag query: a tower dir
-    goes through the operator session, a gerp dir through the gerp's, a bare push leaves tower
-    alone, and --all is refused since there is one tower."""
+    goes through the operator session, a gerp dir through the gerp's, and a bare push leaves tower
+    alone."""
     calls, asked = [], []
 
     def target(args):
@@ -247,13 +224,6 @@ def test_a_tower_dir_pushes_in_the_operator_account_names_no_gerp_and_takes_no_a
         deploy.cmd_push(Namespace(dirs=["prod/tower/lambdas/notify_owner"], all=False, profile=None,
                                   gerp="gradienterp", operator_profile="op", deploy=False, notes=""))
         assert calls == [("session:op", ["prod/tower/lambdas/notify_owner"])] and asked == [], "no gerp is named or checked"
-        calls.clear()
-        try:
-            deploy.cmd_push(Namespace(dirs=["prod/tower/lambdas/notify_owner"], all=True, profile=None,
-                                      gerp="gradienterp", operator_profile="op", deploy=False, notes=""))
-            raise AssertionError("--all with a tower dir must refuse")
-        except SystemExit as e:
-            assert "operator account" in str(e) and calls == []
 
 
 if __name__ == "__main__":
