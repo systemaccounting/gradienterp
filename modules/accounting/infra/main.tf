@@ -38,6 +38,16 @@ variable "reporting_standard" {
   default     = true
 }
 
+variable "internal_bus_name" {
+  description = "The firm's own bus: post_journal_entry records each posting there as a metrics event (modules/metrics)."
+  type        = string
+}
+
+variable "internal_bus_arn" {
+  description = "The same bus, for the events:PutEvents grant."
+  type        = string
+}
+
 variable "op_event_bus_arn" {
   description = "ARN of the operator's shared EventBridge bus. Default targets the live operator account; per_customer/ may override."
   type        = string
@@ -309,7 +319,7 @@ resource "aws_iam_role_policy" "lambda" {
       {
         Effect   = "Allow"
         Action   = "events:PutEvents"
-        Resource = var.op_event_bus_arn
+        Resource = [var.op_event_bus_arn, var.internal_bus_arn] # the hub for the platform copy, the firm's own bus for the posting's metrics event
       },
       {
         # post_journal_entry reads GERP#openly_operated from the settings config table at cold start.
@@ -390,6 +400,7 @@ locals {
     REPORTING_STANDARD    = tostring(var.reporting_standard)
     CUSTOMER_ID           = var.gerp_id
     OP_EVENT_BUS_ARN      = var.op_event_bus_arn
+    INTERNAL_BUS_NAME     = var.internal_bus_name # a posting's metrics event lands here first
     SCHEMA_TABLE          = var.schema_table_name
     SETTINGS_TABLE        = var.settings_table_name
     EXTEND_SCHEMA_FN      = var.extend_schema_fn_name

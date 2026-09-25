@@ -18,7 +18,7 @@ class Invalid(ValueError):
     """A shape the caller can fix: the message names the field."""
 
 
-KINDS = ("count", "active", "count_by")
+KINDS = ("count", "count_distinct", "sum", "count_by")   # a measure's aggregation: MetricFlow's names
 GRAINS = ("day", "week", "month")
 PLATFORM = "platform"   # the partition the platform's own signals live under
 

@@ -12,7 +12,8 @@ import metrics  # noqa: E402
 def test_every_kind_and_grain_round_trips_and_a_value_with_the_delimiters_survives():
     cases = [
         ({"event": "account.signed_up", "kind": "count", "grain": "day"}, "2026-09-21"),
-        ({"event": "session.started", "kind": "active", "grain": "week"}, "2026-W38"),
+        ({"event": "session.started", "kind": "count_distinct", "grain": "week"}, "2026-W38"),
+        ({"event": "revenue.posted", "kind": "sum", "grain": "month"}, "2026-09"),
         ({"event": "member.joined", "kind": "count", "grain": "month"}, "2026-09"),
         ({"event": "order.placed", "kind": "count_by", "property": "plan", "value": "a#b=c%d e", "grain": "day"}, "2026-09-21"),
         ({"event": "loaf.baked", "kind": "count_by", "property": "kind", "value": "", "grain": "day"}, "2026-09-21"),
@@ -22,14 +23,14 @@ def test_every_kind_and_grain_round_trips_and_a_value_with_the_delimiters_surviv
         back = metrics.parse_public_key(k)
         assert back["event"] == d["event"] and back["kind"] == d["kind"] and back["grain"] == d["grain"] and back["period"] == p, k
         assert back["property"] == d.get("property") and back["value"] == d.get("value"), k
-    assert metrics.public_key(cases[3][0], "2026-09-21") == "order.placed#count_by#plan=a%23b%3Dc%25d e#day#2026-09-21"
+    assert metrics.public_key(cases[4][0], "2026-09-21") == "order.placed#count_by#plan=a%23b%3Dc%25d e#day#2026-09-21"
 
 
 def test_two_firms_identical_definitions_share_a_key_and_a_changed_part_never_does():
     d = {"event": "account.signed_up", "kind": "count", "grain": "day"}
     assert metrics.public_key(dict(d), "2026-09-21") == metrics.public_key(dict(d), "2026-09-21")
     base = metrics.public_key(d, "2026-09-21")
-    for change in ({"kind": "active"}, {"grain": "month"}, {"event": "account.closed"}):
+    for change in ({"kind": "count_distinct"}, {"grain": "month"}, {"event": "account.closed"}):
         assert metrics.public_key({**d, **change}, "2026-09-21" if change.get("grain") != "month" else "2026-09") != base
     a = metrics.public_key({"event": "order.placed", "kind": "count_by", "property": "plan", "value": "pro", "grain": "day"}, "2026-09-21")
     b = metrics.public_key({"event": "order.placed", "kind": "count_by", "property": "plan", "value": "team", "grain": "day"}, "2026-09-21")
@@ -45,14 +46,14 @@ def test_points_of_one_key_sort_in_time_by_the_range_key_alone():
 
 
 def test_a_bad_definition_is_refused_and_nothing_else_splits_the_key():
-    for bad in ({"event": "Signup#x", "kind": "count", "grain": "day"}, {"event": "a.b", "kind": "sum", "grain": "day"},
+    for bad in ({"event": "Signup#x", "kind": "count", "grain": "day"}, {"event": "a.b", "kind": "avg", "grain": "day"},
                 {"event": "a.b", "kind": "count", "grain": "hour"}, {"event": "a.b", "kind": "count_by", "property": "p#q", "value": "v", "grain": "day"}):
         try:
             metrics.public_key(bad, "2026-09-21")
             raise AssertionError(bad)
         except metrics.Invalid:
             pass
-    for bad_key in ("revenue#2026-09", "a.b#count#day", "a.b#count_by#day#2026-09-21", "a.b#sum#day#2026-09-21"):
+    for bad_key in ("revenue#2026-09", "a.b#count#day", "a.b#count_by#day#2026-09-21", "a.b#avg#day#2026-09-21"):
         try:
             metrics.parse_public_key(bad_key)
             raise AssertionError(bad_key)

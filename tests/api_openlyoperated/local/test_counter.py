@@ -69,7 +69,7 @@ def _publish(gerp, on=True):
 
 def test_a_published_firms_event_counts_six_keys_from_the_event_and_an_event_counts_once():
     """#47/#48 (revised): the platform forms every key from the event: its name, its ts in the
-    firm's zone, count and active at three grains, under the firm's partition. 06:30Z on the 22nd
+    firm's zone, count, count_distinct and, with an amount, sum at three grains, under the firm's partition. 06:30Z on the 22nd
     is the 21st in Los Angeles. A set counts subjects; a redelivery counts nothing; an unpublished
     firm's event counts nothing; another account is refused."""
     with scratch_env():
@@ -85,17 +85,28 @@ def test_a_published_firms_event_counts_six_keys_from_the_event_and_an_event_cou
         assert Decimal(str(got["account.signed_up#count#day#2026-09-23"]["value"])) == 1
         assert Decimal(str(got["account.signed_up#count#week#2026-W39"]["value"])) == 3
         assert Decimal(str(got["account.signed_up#count#month#2026-09"]["value"])) == 3
-        assert set(got["account.signed_up#active#day#2026-09-21"]["members"]) == {"ada", "bo"}
-        assert set(got["account.signed_up#active#month#2026-09"]["members"]) == {"ada", "bo"}, "ada twice, one member"
+        assert set(got["account.signed_up#count_distinct#day#2026-09-21"]["members"]) == {"ada", "bo"}
+        assert set(got["account.signed_up#count_distinct#month#2026-09"]["members"]) == {"ada", "bo"}, "ada twice, one member"
         assert got["account.signed_up#count#day#2026-09-21"]["event"] == "account.signed_up" and got["account.signed_up#count#day#2026-09-21"]["grain"] == "day"
-        assert not [k for k in got if k.startswith("revenue")], "a firm's events never reach the platform's signals"
+        assert not [k for k in got if k.startswith("revenue#")], "a firm's events never reach the platform's signals"
+        assert not [k for k in got if "#sum#" in k], "no amount, no sum"
+        for eid, amount in (("e7", "12.50"), ("e8", "-2.5")):
+            ev = _metric(eid, name="revenue.posted", subject="je-1")
+            ev["detail"]["properties"] = {"account": "SALES_REVENUE", "side": "CREDIT", "amount": amount}
+            assert mod.handler(ev, None)["keys"] == 9, "count, count_distinct and sum at three grains"
+        got = {r["key"]: r for r in rows(os.environ["COUNTERS_TABLE"]) if r["gerp_id"] == "cafe"}
+        assert Decimal(str(got["revenue.posted#sum#day#2026-09-21"]["value"])) == Decimal("10.00"), "the amounts added, signs kept"
+        assert Decimal(str(got["revenue.posted#count#day#2026-09-21"]["value"])) == 2
+        assert set(got["revenue.posted#count_distinct#month#2026-09"]["members"]) == {"je-1"}
+        ev = _metric("e9", name="revenue.posted", subject="je-2"); ev["detail"]["properties"] = {"amount": "lots"}
+        assert mod.handler(ev, None)["keys"] == 6, "a word in the amount slot is not a sum"
 
         assert mod.handler(_metric("e6", name="Signup#x"), None)["refused"], "a name outside the layout is refused, never a key"
         assert mod.handler(_metric("e5", account=ACCT["mallory"]), None)["refused"]
         _publish("cafe", on=False); mod._rows.clear()
         assert mod.handler(_metric("e4"), None)["skipped"] == "not published"
-        assert len([r for r in rows(os.environ["COUNTERS_TABLE"]) if r["gerp_id"] == "cafe"]) == 8, \
-            "count and active, each at day 21, day 23, week 39 and month: eight rows, and nothing from the refused or unpublished"
+        assert len([r for r in rows(os.environ["COUNTERS_TABLE"]) if r["gerp_id"] == "cafe"]) == 17, \
+            "signups: count and count_distinct at day 21, day 23, week 39 and month (8); postings: count, count_distinct and sum at three grains (9); nothing from the refused or unpublished"
 
 
 if __name__ == "__main__":

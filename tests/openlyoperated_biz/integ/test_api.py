@@ -66,7 +66,8 @@ def test_a_published_firms_product_record_answers_off_the_platform():
     r, _ = _get("/gerps/gradienterp/metrics")
     assert r["gerp_id"] == "gradienterp" and r["grain"] == "day"
     for m in r["metrics"]:
-        assert m["key"] == f"{m['event']}.{m['kind']}" and m["kind"] in ("count", "active")
+        assert m["kind"] in ("count", "count_distinct", "sum", "ratio")
+        assert m["kind"] == "ratio" or m["key"] == f"{m['event']}.{m['kind']}"
         assert "members" not in m and all(p["period"] and p["value"] is not None for p in m["points"])
         assert m["source"]["curl"].endswith(f"/metrics/{m['key']}?grain=day")
     if r["metrics"]:

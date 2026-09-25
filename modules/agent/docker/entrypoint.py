@@ -1582,25 +1582,28 @@ RECENT_QUERIES_DEFAULT = 10
 
 
 def _query_rows() -> list:
-    """Every `metric_queries` row in the registry table — a gerp holds tens — as
-    `{name, description, params, pinned}`. One Query."""
+    """Every `metric_queries` and `metric_definitions` row in the registry table — a gerp holds
+    tens — as `{name, description, params, pinned}`. One Query per registry."""
     if not SCHEMA_TABLE:
         return []
     import boto3
     from boto3.dynamodb.conditions import Key
-    kwargs = {"KeyConditionExpression": Key("registry").eq("metric_queries")}
     rows = []
     table = boto3.resource("dynamodb").Table(SCHEMA_TABLE)
-    while True:
-        resp = table.query(**kwargs)
-        for item in resp.get("Items", []):
-            schema = _ddb_decode(item.get("schema")) or {}
-            rows.append({"name": item.get("name"), "description": schema.get("description", ""),
-                         "params": [p.get("name") for p in schema.get("params", []) if isinstance(p, dict)],
-                         "pinned": bool(item.get("pinned"))})
-        if "LastEvaluatedKey" not in resp:
-            break
-        kwargs["ExclusiveStartKey"] = resp["LastEvaluatedKey"]
+    # the query rows, and the catalogue's definitions (metric_definitions), which take `grain` alone
+    for registry in ("metric_queries", "metric_definitions"):
+        kwargs = {"KeyConditionExpression": Key("registry").eq(registry)}
+        while True:
+            resp = table.query(**kwargs)
+            for item in resp.get("Items", []):
+                schema = _ddb_decode(item.get("schema")) or {}
+                params = [p.get("name") for p in schema.get("params", []) if isinstance(p, dict)] if registry == "metric_queries" else ["grain"]
+                name = item.get("name") if registry == "metric_queries" else f"{item.get('bucket')}.{item.get('name')}"
+                rows.append({"name": name, "description": schema.get("description", ""),
+                             "params": params, "pinned": bool(item.get("pinned"))})
+            if "LastEvaluatedKey" not in resp:
+                break
+            kwargs["ExclusiveStartKey"] = resp["LastEvaluatedKey"]
     return rows
 
 

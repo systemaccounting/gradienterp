@@ -97,6 +97,14 @@ data "archive_file" "api" {
       filename = "metric_events.json"
     }
   }
+  # the catalogue, for the ratio cards composed from the leaves (modules/schemas metric_definitions)
+  dynamic "source" {
+    for_each = each.key == "gerps_metrics" ? [1] : []
+    content {
+      content  = file("${path.module}/../../modules/schemas/data/metric_definitions.json")
+      filename = "metric_definitions.json"
+    }
+  }
 }
 
 resource "aws_iam_role" "api" {

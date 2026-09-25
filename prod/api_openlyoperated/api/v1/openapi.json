@@ -209,7 +209,7 @@
     "/gerps/{gerp_id}/metrics": {
       "get": {
         "operationId": "readMetrics",
-        "summary": "The firm's product record as the platform counted it: one metric per event and kind it recorded, count and active, in the metric shape. Nothing is asked of the gerp.",
+        "summary": "The firm's product record as the platform counted it: one metric per event and measure it recorded (count, count_distinct, sum), plus one per catalogue ratio whose legs it has recorded, in the metric shape. Nothing is asked of the gerp.",
         "x-backend": "gerps_metrics",
         "x-stream": false,
         "parameters": [
@@ -248,7 +248,7 @@
     "/gerps/{gerp_id}/metrics/{slug}": {
       "get": {
         "operationId": "readMetric",
-        "summary": "One metric of the firm, by <event>.<kind>.",
+        "summary": "One metric of the firm, by <event>.<measure> or <bucket>.<name>.",
         "x-backend": "gerps_metrics",
         "x-stream": false,
         "parameters": [
@@ -267,7 +267,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "<event>.<kind>, e.g. account.signed_up.count"
+            "description": "<event>.<measure> (account.signed_up.count, revenue.posted.sum) or a catalogue ratio <bucket>.<name> (membership.churn)"
           },
           {
             "name": "grain",

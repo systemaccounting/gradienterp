@@ -8,6 +8,7 @@ from decimal import Decimal
 
 from aws import client as _aws, table as _table, log as alog
 import events
+import metrics
 
 log = logging.getLogger()
 
@@ -176,6 +177,32 @@ def _economic_counters(line_items):
     if expense > 0:
         counters.append({"op": "add", "key": "expense", "magnitude": float(expense)})
     return counters
+
+
+# the side that grows an account of each type: a line on that side is a positive amount
+NORMAL_SIDE = {"ASSET": "DEBIT", "EXPENSE": "DEBIT", "LIABILITY": "CREDIT", "EQUITY": "CREDIT", "REVENUE": "CREDIT"}
+
+
+def _record_postings(entry_id, timestamp_ms, line_items):
+    """The ledger's flow in the metric shape: one `<type>.posted` event per line, the entry the
+    subject, `amount` signed by the type's normal balance, on the firm's own bus and, for an openly
+    operated firm, the platform (modules/metrics `record`). A line of an unclassified type records
+    nothing; a bus that refuses is logged and the entry stands."""
+    n = 0
+    for li in line_items:
+        kind = str(li.get("accountType") or "").upper()
+        if kind not in NORMAL_SIDE:
+            continue
+        sign = 1 if li.get("side") == NORMAL_SIDE[kind] else -1
+        amount = Decimal(str(li["amount"])) * sign
+        try:
+            metrics.record({"event": f"{kind.lower()}.posted", "subject_id": entry_id, "at": timestamp_ms,
+                            "properties": {"account": li.get("account", ""), "side": li.get("side", ""), "amount": str(amount)}},
+                           via="ledger")
+            n += 1
+        except Exception as e:  # noqa: BLE001 — the entry is written; the record is an announcement
+            alog.error("posting not recorded as a metric", entry_id=entry_id, error=str(e))
+    return n
 
 
 def _emit_journal_entry_posted(entry_id, timestamp_ms, origin, line_items):
@@ -412,6 +439,7 @@ def handler(event, context):
         origin=source,
         line_items=line_items,
     )
+    _record_postings(entry_id, int(timestamp), line_items)
 
     return {
         "statusCode": 200,

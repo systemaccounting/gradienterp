@@ -185,6 +185,34 @@ def test_a_bad_argument_names_itself():
             assert code == 400 and body["error"].startswith(expected), (kwargs, body)
 
 
+MONEY = [
+    {"event": "member.joined",    "subject_id": "m_1", "ts": "2026-08-15T15:00:00.000Z", "properties": {}},
+    {"event": "member.joined",    "subject_id": "m_2", "ts": f"{SEP}08T15:00:00.000Z", "properties": {}},
+    {"event": "member.cancelled", "subject_id": "m_1", "ts": f"{SEP}20T15:00:00.000Z", "properties": {}},
+    {"event": "revenue.posted",   "subject_id": "je-1", "ts": f"{SEP}03T15:00:00.000Z", "properties": {"account": "SALES_REVENUE", "side": "CREDIT", "amount": "120.50"}},
+    {"event": "revenue.posted",   "subject_id": "je-2", "ts": f"{SEP}10T15:00:00.000Z", "properties": {"account": "SALES_REVENUE", "side": "DEBIT", "amount": "-20.50"}},
+    {"event": "expense.posted",   "subject_id": "je-3", "ts": f"{SEP}10T15:00:00.000Z", "properties": {"account": "RENT_EXPENSE", "side": "DEBIT", "amount": "40"}},
+]
+
+
+def test_sum_adds_the_amount_per_period_and_cumulative_is_the_stock_at_start_and_end():
+    """The money measure and the stock: `sum` adds the signed `amount` per period; `cumulative`
+    runs in minus out over the whole history to the window's end, `at_start` before the period and
+    `at_end` after it, a balance when the measure is sum."""
+    with scratch_env():
+        seed_store(MONEY)
+        tool = load_lambda("manage_metrics")
+        code, body = _q(tool, "sum", params={"event": "revenue.posted", "grain": "month"}, **SEPT)
+        assert code == 200, body
+        assert body["rows"] == [{"period": "2026-09-01", "total": 100.0}], "signed amounts added"
+        code, body = _q(tool, "cumulative", params={"in_event": "member.joined", "out_event": "member.cancelled", "measure": "count", "grain": "month"}, **SEPT)
+        assert code == 200, body
+        assert body["rows"] == [{"period": "2026-09-01", "at_start": 1.0, "at_end": 1.0}], "August's member at the start; one joined, one left"
+        code, body = _q(tool, "cumulative", params={"in_event": "revenue.posted", "out_event": "", "measure": "sum", "grain": "month"}, **SEPT)
+        assert code == 200, body
+        assert body["rows"] == [{"period": "2026-09-01", "at_start": 0.0, "at_end": 100.0}], "a balance: the posted sum to date"
+
+
 if __name__ == "__main__":
     import inspect
     tests = [(n, f) for n, f in sorted(globals().items()) if n.startswith("test_") and inspect.isfunction(f)]

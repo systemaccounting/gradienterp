@@ -24,10 +24,12 @@ metered per call.
   a firm's own tables, read from its own account, never copied.
 
 - GET /gerps/{gerp_id}/metrics?grain= — the firm's product record as the platform counted it:
-  one metric per event and kind the firm recorded (`<event>.<kind>`: `account.signed_up.count`,
-  `session.started.active`), in the metric shape {key, label, unit, grain, class, headline,
+  one metric per event and measure the firm recorded (`<event>.<kind>`: `account.signed_up.count`,
+  `session.started.count_distinct`, `revenue.posted.sum`), in the metric shape {key, label, unit, grain, class, headline,
   points, definition, source}, points at the asked grain (day by default; week; month). `class`
-  is the vocabulary's bucket for the event. Every published firm's every product event counts;
+  is the vocabulary's bucket for the event. Beside them, one card per catalogue ratio
+  (`<bucket>.<name>`: `membership.churn`, `saas.margin`; unit ratio or USD) whose every leg the
+  firm has recorded, composed from the leaves. Every published firm's every product event counts;
   nothing is asked of the gerp, and a set's size is served, never a member. 404 when the gerp
   does not publish.
 - GET /gerps/{gerp_id}/metrics/{slug}?grain= — one of them.

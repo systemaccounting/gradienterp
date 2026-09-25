@@ -22,6 +22,7 @@ import secrets
 from botocore.exceptions import ClientError
 
 from aws import client as _aws, json_default as _json_default, log as alog
+import definitions
 import engines
 import metrics
 import rows
@@ -143,12 +144,39 @@ def _pin(body):
     dynamic tail reads every turn (modules/agent). No cap: the prompt's size is the owner's."""
     if "pinned" in body and not isinstance(body["pinned"], bool):
         return err("pinned: true or false")
-    return ok(rows.pin(body.get("name"), body.get("pinned", True)))
+    name = body.get("name")
+    if not (isinstance(name, str) and "." in name):
+        try:
+            return ok(rows.pin(name, body.get("pinned", True)))
+        except rows.NoSuchQuery:
+            pass
+    try:
+        return ok(definitions.pin(name, body.get("pinned", True)))
+    except definitions.NoSuchDefinition:
+        raise rows.NoSuchQuery(name) from None
+    except definitions.Bad as e:
+        return err(str(e))
+
+
+def _query_definition(name, body):
+    """A catalogue entry (metric_definitions) runs as its legs' rows, joined per period."""
+    try:
+        out = definitions.run(name, body.get("params"), body.get("window"), body.get("start"), body.get("end"), usage=_usage)
+    except definitions.NoSuchDefinition:
+        raise rows.NoSuchQuery(name) from None
+    except definitions.Bad as e:
+        return err(str(e))
+    return ok({**out, "row_count": len(out["rows"])})
 
 
 def _query(body):
     name = body.get("name")
-    row = rows.read(name)
+    if isinstance(name, str) and "." in name:
+        return _query_definition(name, body)   # <bucket>.<name> names the catalogue
+    try:
+        row = rows.read(name)
+    except rows.NoSuchQuery:
+        return _query_definition(name, body)
     literals, w = rows.bind(row, body.get("params"), body.get("window"), body.get("start"), body.get("end"))
     result = engines.run(row["engine"], row["sql"], literals)
     _usage(name, row["engine"], result)
