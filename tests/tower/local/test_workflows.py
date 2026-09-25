@@ -111,6 +111,12 @@ def test_playbooks_runs_on_a_kb_change_by_dispatch_or_by_call_and_finds_the_know
     for needle in ("list-knowledge-bases", 'playbooks-${GERP//_/-}', "list-data-sources", '"repo-playbooks"'):
         assert needle in script, needle
     assert 'bash scripts/sync_playbooks.sh "$GERP" "$kb" "$ds" "gerp-$GERP" "$region"' in script
+    # selective: the commit each gerp last synced is a settings row; the diff from it is the ingest set
+    for needle in ("GERP#playbooks_commit", "git merge-base --is-ancestor", 'git diff --name-only "$stamp" -- modules', "export ONLY", "put-item"):
+        assert needle in script, needle
+    assert "ONLY" in (REPO / "scripts" / "sync_playbooks.sh").read_text(), "the sync ingests ONLY when set and prunes off the whole repo"
+    checkout = next(st for st in wf["jobs"]["sync"]["steps"] if st.get("uses", "").startswith("actions/checkout"))
+    assert checkout["with"]["fetch-depth"] == 0, "the diff from a stamp needs the history"
     assert "strategy" not in wf["jobs"]["sync"], "one job over the fleet"
     sync = next(st for st in wf["jobs"]["sync"]["steps"] if st.get("name") == "sync")["run"]
     for needle in ("parallel -k -j 10 --halt never --joblog", "bash scripts/sync_gerp_playbooks.sh {}", "::group::{}", "GITHUB_STEP_SUMMARY", "exit 1"):
