@@ -13,7 +13,7 @@ verbs (run via `bash scripts/deploy.sh …`):
       states: in-sync / artifact-ahead (pushed, not deployed) / repo-ahead
       (local zip differs from artifact — push needed) / no-artifact.
 
-  push [--gerp G | --all] [--dirs modules/x/lambdas/y ...] [--notes "..."] [--deploy] [--profile P]
+  push [--gerp G] [--dirs modules/x/lambdas/y ...] [--notes "..."] [--deploy] [--profile P]
       build each function's zip from its src dir (no terraform), then for each
       fleet function whose zip sha differs from the artifact's latest version:
       put-object (new version, sha256 checksum) + provenance annotation
@@ -21,10 +21,9 @@ verbs (run via `bash scripts/deploy.sh …`):
       agent-readable "what's in this version") + update-function-code from
       that exact version, then wait for LastUpdateStatus. `--deploy` builds and
       puts nothing: the functions (and the BFF) take the artifacts already in
-      the bucket. `--all` pushes every active gerp through its gerp-<id> profile,
-      the BFF once.
+      the bucket. Every gerp at once is the fleet pipe, `deploy.sh fleet` (scripts/fleet.py).
 
-  image [--gerp G | --all] [--no-build [--tag vNN] | --tag pr-<n>-<sha>]
+  image [--gerp G] [--no-build [--tag vNN] | --tag pr-<n>-<sha>]
       build, `upload image`, then each gerp's runtimes onto the digest from its
       own region's copy of the image, named endpoints re-pinned.
 
@@ -76,7 +75,7 @@ def bucket_for(region: str) -> str:
 # `build_artifact` routes to `build_webapp`.
 WEBAPP_DIR = "prod/gradienterp_cloud/bff"
 # tower's own functions: the same bundle and bucket as the fleet's, in the OPERATOR account, so
-# they answer to no gerp's tag query. Pushed when named by `--dirs`, never by a bare push or --all
+# they answer to no gerp's tag query. Pushed when named by `--dirs`, never by a bare push
 TOWER_DIR = "prod/tower/lambdas/"
 WEBAPP_ROOT = os.path.dirname(WEBAPP_DIR)
 BFF_FN = f"{CONFIG['STACK_PREFIX']}-cloud-bff"
@@ -527,22 +526,13 @@ def _push_webapp(args):
 
 
 def cmd_push(args):
-    """The BFF, once, then the named gerp's fleet — or with `--all`, every active gerp's in turn."""
+    """The BFF, once, then the named gerp's fleet. Every gerp at once is the fleet pipe (fleet.py)."""
     dirs = list(args.dirs) if args.dirs else None
-    if args.all and args.profile:
-        sys.exit("--all reaches each gerp through its own gerp-<id> profile; --profile names one")
     tower_dirs = [d for d in (dirs or []) if d.startswith(TOWER_DIR)]
-    if tower_dirs and args.all:
-        sys.exit("tower's functions live in the operator account and take no --all; push them by --dirs alone")
-    # the gerps are checked before anything builds or uploads, the BFF included; a push of the BFF
+    # the gerp is checked before anything builds or uploads, the BFF included; a push of the BFF
     # or of tower alone reaches only the operator account and names no gerp
     fleet_dirs = None if dirs is None else [d for d in dirs if d != WEBAPP_DIR and not d.startswith(TOWER_DIR)]
-    gerps = ([r["gerp_id"] for r in _active_rows(_boto(args.operator_profile))] if args.all else [args.gerp]) \
-        if fleet_dirs != [] else []
-    sessions = []
-    for g in gerps:
-        args.gerp, args.profile = g, (None if args.all else args.profile)
-        sessions.append((g, _target_session(args)))
+    sessions = [(args.gerp, _target_session(args))] if fleet_dirs != [] else []
     # The owner web app is outside the fleet enumeration below — `fleet()` is a tag query scoped to
     # the session's account and the BFF lives in the operator's, and its bundle needs the web/ files
     # `build_py` knows nothing about. So a bare push has to reach it EXPLICITLY: without this it
@@ -552,9 +542,7 @@ def cmd_push(args):
     if tower_dirs:
         # the same push as a fleet's, in the operator session: build, put, update-function-code
         _push_fleet(args, _boto(args.operator_profile), tower_dirs)
-    for g, session in sessions:
-        if args.all:
-            print(f"==> {g}")
+    for _g, session in sessions:
         _push_fleet(args, session, fleet_dirs)
 
 
@@ -777,9 +765,9 @@ def cmd_image(args):
     of any gerp agrees with what this just did.
 
     Which gerp: the operator's own by default (`--gerp gradienterp`) — an image lands on the
-    dogfood first, then `--gerp westwood-…` for the staging pair, then `--all` for every active
-    gerp. A fleet-wide push is said, never implied. `--no-build` skips the build and moves the
-    named gerps onto the image already at the top of ECR."""
+    dogfood first, then `--gerp westwood-…` for the staging pair. The fleet at once is the
+    runner's (deploy.yaml `runtimes`) until the image × runtime loop joins fleet.py. `--no-build`
+    skips the build and moves the named gerp onto the image already at the top of ECR."""
     op = _boto(args.operator_profile)
     ecr = op.client("ecr")
     if args.tag and not args.no_build and re.fullmatch(r"v\d+", args.tag):
@@ -797,13 +785,13 @@ def cmd_image(args):
     print(f"==> {tag} = {digest}")
 
     walked = 0
-    for gerp_id, account, region, ses in _gerp_sessions(op, only=None if args.all else args.gerp):
+    for gerp_id, account, region, ses in _gerp_sessions(op, only=args.gerp):
         print(f"==> {gerp_id} ({account}, {region})")
         if not image_replicated(op, region, digest):
             sys.exit(f"{gerp_id}: {tag} has not replicated to {region} yet — run again with --no-build")
         _update_runtimes(ses.client("bedrock-agentcore-control"), digest, gerp_id, region)
         walked += 1
-    if not args.all and not walked:
+    if not walked:
         sys.exit(f"no active gerp named {args.gerp} with an account")
     print(f"deployed {tag} to {walked} gerp(s) — a warm chat session stays on the old container; fresh sessions get {tag}")
 
@@ -1054,13 +1042,11 @@ def main():
     ps.add_argument("--deploy", action="store_true",
                     help="no build: point the live functions at the bucket's current artifacts (build + put alone is zip.sh then upload.sh)")
     ps.add_argument("--gerp", default="gradienterp", help="the gerp whose functions take the push (default: the operator's own)")
-    ps.add_argument("--all", action="store_true", help="every active gerp, each through gerp-<id> — said, never implied")
     ps.add_argument("--profile", default=None, help="the profile reaching it (default: gerp-<gerp>)")
     ps.add_argument("--operator-profile", default="operator-org")
     ps.set_defaults(fn=cmd_push)
     im = sub.add_parser("image")
     im.add_argument("--gerp", default="gradienterp", help="the gerp whose runtime takes the image (default: the operator's own)")
-    im.add_argument("--all", action="store_true", help="every active gerp — said, never implied")
     im.add_argument("--no-build", action="store_true", help="no build: move the named gerps onto the image already at the top of ECR")
     im.add_argument("--tag", help="with --no-build: the pushed vNN to move onto, rather than the top of ECR; "
                                   "with a build: push under this tag instead of the next vNN (a pull request's pr-<n>-<sha>)")

@@ -171,7 +171,7 @@ westwood's runtime moved onto it, one tool-calling turn through `scripts/chat.sh
 posted on the pull request; then westwood back onto the latest `vNN` and the `pr-` tag deleted,
 since the runtime's terraform pins the newest image in ECR and a `pr-` tag must never be it. The
 environment, its secret and the deploy role's subject stay in place for it. Merge, then
-`bash scripts/deploy.sh image --all` from main moves the fleet onto the next `vNN`.
+`bash scripts/deploy.sh image --gerp <id>` moves one gerp onto the next `vNN`; the fleet at once is deploy.yaml's `runtimes` job (`-f image=build`), until the image × runtime loop joins scripts/fleet.py.
 
 ## tearing down
 
