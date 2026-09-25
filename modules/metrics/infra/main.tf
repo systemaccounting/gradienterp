@@ -89,7 +89,7 @@ variable "storage_kms_key_arn" {
 }
 
 variable "canonical_bucket" {
-  description = "The operator's canonical registry bucket (modules/schemas): manage_metrics reads metric_queries.json from it to copy a canonical query into the gerp's table on first use. Deliberate literal default, the schemas module's."
+  description = "The operator's canonical registry bucket (modules/schemas): manage_metrics reads metric_queries.json and metric_definitions.json from it to copy a canonical query or definition into the gerp's table on first use. Deliberate literal default, the schemas module's."
   type        = string
   default     = "gerp-canonical-185369506315"
 }
@@ -540,10 +540,10 @@ resource "aws_iam_role_policy" "manage" {
         Resource = "arn:aws:dynamodb:${local.region}:${local.account_id}:table/${local.schema_table}"
       },
       {
-        # the canonical query file, for the copy on first use
+        # the canonical query file and the catalogue, for the copy on first use and the refresh
         Effect   = "Allow"
         Action   = "s3:GetObject"
-        Resource = "arn:aws:s3:::${var.canonical_bucket}/metric_queries.json"
+        Resource = ["arn:aws:s3:::${var.canonical_bucket}/metric_queries.json", "arn:aws:s3:::${var.canonical_bucket}/metric_definitions.json"]
       },
       {
         Effect   = "Allow"
