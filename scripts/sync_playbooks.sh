@@ -19,6 +19,9 @@
 #                    credentials (CodeBuild, after assuming OperatorOrchestration in the account)
 #   region           default = us-east-1
 #   --dry-run        print what would be ingested and pruned; call nothing that writes
+#   ONLY             (env) newline-separated repo paths: ingest these alone, the changed ones since
+#                    the gerp's stamp (sync_gerp_playbooks.sh); unset ingests every playbook. The
+#                    prune always reads the whole repo, so an untouched playbook is never deleted
 #
 # Profile / creds:
 #   The default profile gerp-<gerp_id> chains
@@ -104,9 +107,19 @@ if [ "${#FILES[@]}" -eq 0 ]; then
 fi
 echo "==> found ${#FILES[@]} playbook(s)"
 
+# the ingest set: every playbook, or the ones ONLY names that the repo holds
+INGEST=("${FILES[@]}")
+if [ -n "${ONLY+x}" ]; then
+  INGEST=()
+  for REL in "${FILES[@]}"; do
+    if grep -qxF "$REL" <<< "$ONLY"; then INGEST+=("$REL"); fi
+  done
+  echo "==> ingesting ${#INGEST[@]} changed since the stamp"
+fi
+
 OK=0
 FAIL=0
-for REL in "${FILES[@]}"; do
+for REL in "${INGEST[@]}"; do
   ABS="$REPO_ROOT/$REL"
 
   if [ "$DRY_RUN" -eq 1 ]; then
@@ -157,9 +170,9 @@ for REL in "${FILES[@]}"; do
 done
 
 if [ "$DRY_RUN" -eq 1 ]; then
-  echo "==> would ingest ${#FILES[@]} playbook(s)"
+  echo "==> would ingest ${#INGEST[@]} playbook(s)"
 else
-  echo "==> ingested: $OK ok, $FAIL failed (of ${#FILES[@]})"
+  echo "==> ingested: $OK ok, $FAIL failed (of ${#INGEST[@]})"
 fi
 # Status lands directly for CUSTOM/inline docs; no start-ingestion-job needed.
 

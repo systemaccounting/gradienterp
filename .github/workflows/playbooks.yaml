@@ -1,6 +1,8 @@
 # Ingests the repo's playbooks — every modules/**/kb.md — into each gerp's Bedrock knowledge base with
-# scripts/sync_playbooks.sh, one job per gerp: on a push to main that touches a kb.md (every active
-# gerp), by dispatch (`-f gerp=<id>|all`), or called from deploy.yaml (`-f playbooks=true`). The
+# scripts/sync_gerp_playbooks.sh, one job over the fleet, ten gerps at a time through GNU parallel: on
+# a push to main that touches a kb.md (every active gerp), by dispatch (`-f gerp=<id>|all`), or called
+# from deploy.yaml (`-f playbooks=true`). One log group and one summary section per gerp; every gerp
+# runs, and the job fails at the end naming the ones that failed. The
 # knowledge base and its data source are found by name in the gerp's account, so no id is stored.
 # It runs on its checkout: no source upload. The per-customer build syncs at provisioning too.
 name: playbooks
@@ -34,6 +36,7 @@ jobs:
     timeout-minutes: 10
     outputs:
       list: ${{ steps.gerps.outputs.list }}
+      timeout: ${{ steps.gerps.outputs.timeout }}
     steps:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/aws
@@ -53,34 +56,31 @@ jobs:
             list="$(jq -Rc 'split(",") | map(gsub("^ +| +$"; "")) | map(select(length > 0))' <<< "$GERP")"
           fi
           echo "list=$list" >> "$GITHUB_OUTPUT"
+          echo "timeout=$(( 20 + $(jq length <<< "$list") ))" >> "$GITHUB_OUTPUT"   # a minute a gerp, ten at a time
           echo "gerps: $(jq -r 'join(", ")' <<< "$list")" >> "$GITHUB_STEP_SUMMARY"
 
   sync:
     needs: gerps
     runs-on: ubuntu-latest
     environment: prod
-    timeout-minutes: 20
-    strategy:
-      fail-fast: false
-      matrix:
-        gerp: ${{ fromJSON(needs.gerps.outputs.list) }}
+    timeout-minutes: ${{ fromJSON(needs.gerps.outputs.timeout) }}
     steps:
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0   # the diff from each gerp's stamp needs the history
       - uses: ./.github/actions/aws
         with:
           role: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
       - name: sync
         env:
-          GERP: ${{ matrix.gerp }}
+          LIST: ${{ needs.gerps.outputs.list }}
         run: |
-          # the gerp's region off its row, then its knowledge base and data source by name in its account
-          region="$(aws dynamodb get-item --table-name gerp-customers --profile operator-org --no-cli-pager \
-            --key "{\"gerp_id\": {\"S\": \"$GERP\"}}" --projection-expression '#r' --expression-attribute-names '{"#r": "region"}' \
-            --output json | jq -r '.Item.region.S // "us-east-1"')"
-          kb="$(aws bedrock-agent list-knowledge-bases --profile "gerp-$GERP" --region "$region" --no-cli-pager --output json \
-            | jq -r --arg n "playbooks-${GERP//_/-}" '.knowledgeBaseSummaries[] | select(.name == $n) | .knowledgeBaseId')"
-          ds="$(aws bedrock-agent list-data-sources --knowledge-base-id "$kb" --profile "gerp-$GERP" --region "$region" --no-cli-pager --output json \
-            | jq -r '.dataSourceSummaries[] | select(.name == "repo-playbooks") | .dataSourceId')"
-          [ -n "$kb" ] && [ -n "$ds" ] || { echo "no playbooks knowledge base for $GERP in $region" >&2; exit 1; }
-          bash scripts/sync_playbooks.sh "$GERP" "$kb" "$ds" "gerp-$GERP" "$region" | tee "$RUNNER_TEMP/sync.out"
-          { echo "### $GERP"; echo '```'; tail -1 "$RUNNER_TEMP/sync.out"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+          # the runner's composition of scripts/sync_gerp_playbooks.sh: the list through GNU parallel, ten
+          # at a time, `-k` so the log groups come in list order and never interleave, `--halt never` so
+          # every gerp runs; each task writes its summary section to a file, concatenated in order after
+          rc=0
+          jq -r '.[]' <<< "$LIST" | parallel -k -j 10 --halt never --joblog "$RUNNER_TEMP/jobs.log" \
+            'echo "::group::{}"; bash scripts/sync_gerp_playbooks.sh {} > "$RUNNER_TEMP/{}.md" || { echo {} >> "$RUNNER_TEMP/failed"; false; }; rc=$?; echo "::endgroup::"; exit $rc' \
+            || rc=$?
+          for gerp in $(jq -r '.[]' <<< "$LIST"); do cat "$RUNNER_TEMP/$gerp.md" 2>/dev/null || true; done >> "$GITHUB_STEP_SUMMARY"
+          [ "$rc" -eq 0 ] || { echo "failed: $(tr '\n' ' ' < "$RUNNER_TEMP/failed")" >&2; exit 1; }
