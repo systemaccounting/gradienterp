@@ -184,6 +184,34 @@ for path in ("modules/schemas/data/metric_events.json", "modules/schemas/data/me
                 elif isinstance(params, list) and sql.count("?") != len(params):
                     bad.append((path, f"`{bucket}.{name}` has {sql.count('?')} `?` markers and {len(params)} params"))
 
+# the catalogue: definitions whose legs name vocabulary events and the three measures
+MEASURES = {"count", "count_distinct", "sum"}
+try:
+    vocabulary = {name for entries in json.load(open("modules/schemas/data/metric_events.json")).values() for name in entries}
+    catalogue = json.load(open("modules/schemas/data/metric_definitions.json"))
+except Exception as e:  # noqa: BLE001
+    bad.append(("modules/schemas/data/metric_definitions.json", f"unparseable ({e})"))
+    catalogue = {}
+for bucket, entries in catalogue.items():
+    for name, entry in entries.items():
+        n_metric += 1
+        where = f"metric_definitions `{bucket}.{name}`"
+        if not isinstance(entry, dict) or entry.get("type") != "ratio" or not str(entry.get("description", "")).strip():
+            bad.append(("modules/schemas/data/metric_definitions.json", f"{where} must be a ratio with a description")); continue
+        if entry.get("unit") not in ("ratio", "USD", "count") or entry.get("grain") not in ("day", "week", "month"):
+            bad.append(("modules/schemas/data/metric_definitions.json", f"{where} unit ratio|USD|count and grain day|week|month"))
+        for side in ("numerator", "denominator"):
+            legs = entry.get(side)
+            if not isinstance(legs, list) or not legs:
+                bad.append(("modules/schemas/data/metric_definitions.json", f"{where} {side} must be a list of legs")); continue
+            for leg in legs:
+                if "cumulative" in leg:
+                    c = leg["cumulative"]
+                    if c.get("in_event") not in vocabulary or (c.get("out_event") and c["out_event"] not in vocabulary) or c.get("measure", "count") not in ("count", "sum") or leg.get("at", "start") not in ("start", "end"):
+                        bad.append(("modules/schemas/data/metric_definitions.json", f"{where} {side} cumulative leg: in/out events in the vocabulary, measure count|sum, at start|end"))
+                elif leg.get("event") not in vocabulary or leg.get("measure") not in MEASURES or leg.get("sign", 1) not in (1, -1):
+                    bad.append(("modules/schemas/data/metric_definitions.json", f"{where} {side} leg `{leg.get('event')}`: an event in the vocabulary, a measure in {sorted(MEASURES)}, sign 1 or -1"))
+
 if bad:
     print(f"schema lint: {len(bad)} problem(s)")
     for f, why in bad:

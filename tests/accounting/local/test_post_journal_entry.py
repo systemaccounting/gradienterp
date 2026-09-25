@@ -5,6 +5,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from _helpers import scratch_env, load_lambda, ledger_rows, pending_rows
+from helpers.localaws import drain, make_bus
 
 
 def _entry(classified=True, amount=10.00, entry_id="e1", timestamp="1700000000000"):
@@ -232,6 +233,30 @@ def test_a_posting_is_published_on_condition():
             assert d["counters"] == [{"op": "add", "key": "revenue", "magnitude": 100.0}]
         finally:
             mod.events._openly_operated = real
+            os.environ.pop("LOCAL_EVENTS", None)
+
+
+def test_a_posting_records_one_metrics_event_per_line_signed_by_normal_balance():
+    """The ledger's flow in the metric shape: `<type>.posted` per line, the entry the subject,
+    `amount` positive on the type's normal side; a reversal nets the sum to zero."""
+    with scratch_env() as (tmp, _):
+        bus, q = make_bus("pje-internal")
+        os.environ["INTERNAL_BUS_NAME"] = bus
+        os.environ.pop("LOCAL_EVENTS", None)
+        mod = load_lambda("post_journal_entry")
+        lines = [{"account": "CASH", "accountType": "ASSET", "side": "DEBIT", "amount": 100},
+                 {"account": "SALES_REVENUE", "accountType": "REVENUE", "side": "CREDIT", "amount": 100}]
+        assert mod._record_postings("je-1", 1700000000000, lines) == 2
+        got = {(e["detail_type"], e["detail"]["properties"]["account"]): e["detail"] for e in drain(q, expected=2)}
+        cash, rev = got[("asset.posted", "CASH")], got[("revenue.posted", "SALES_REVENUE")]
+        assert cash["properties"]["amount"] == "100" and rev["properties"]["amount"] == "100", "both on their normal side"
+        assert cash["subject_id"] == "je-1" and cash["via"] == "ledger" and cash["ts"] == "2023-11-14T22:13:20.000Z"
+        reversal = [{"account": "CASH", "accountType": "ASSET", "side": "CREDIT", "amount": 100},
+                    {"account": "SALES_REVENUE", "accountType": "REVENUE", "side": "DEBIT", "amount": 100}]
+        assert mod._record_postings("je-2", 1700000000000, reversal) == 2
+        amounts = sorted(e["detail"]["properties"]["amount"] for e in drain(q, expected=2))
+        assert amounts == ["-100", "-100"], "off the normal side, negative: the pair nets to zero"
+        assert mod._record_postings("je-3", 1700000000000, [{"account": "X", "accountType": "", "side": "DEBIT", "amount": 1}]) == 0
 
 
 if __name__ == "__main__":

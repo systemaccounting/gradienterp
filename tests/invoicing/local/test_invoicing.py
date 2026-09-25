@@ -228,8 +228,10 @@ def test_get_invoices_filters():
 
 def _announced():
     """Everything a firm's INVOICE#issued rules put on the firm's own bus. Payments subscribes to it
-    in prod; here a capture queue stands in, since EventBridge has no read API."""
-    return drain(os.environ["_INTERNAL_QUEUE_URL"], expected=1, tries=3)
+    in prod; here a capture queue stands in, since EventBridge has no read API. The ledger's own
+    metrics events (`<type>.posted`, via `ledger`, one per journal line) ride the same bus and are
+    not a rule's announcement, so they are left out."""
+    return [e for e in drain(os.environ["_INTERNAL_QUEUE_URL"], expected=1, tries=3) if (e.get("detail") or {}).get("via") != "ledger"]
 
 
 def _attach_collection(status="issued"):

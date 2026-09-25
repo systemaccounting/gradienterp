@@ -74,15 +74,18 @@ to answer on the custom domain; a 403 in that window is propagation.
 - **a firm's product record** — the rule `metrics` on the operator bus (`counters.tf`, `source =
   metrics`: `events.publish` puts a published firm's record on its hub as recorded, the hub
   forwards it here) sends the event to the same counter lambda, which forms six keys from the
-  event alone (`<event>#count|active#day|week|month#<period>`, the period cut in the event's
+  event alone (`<event>#count|count_distinct|sum#day|week|month#<period>`, the period cut in the event's
   `zone`, through modules/metrics `metric_key.py`) and ADDs them under the firm's partition of
-  `gerp-counters`, a number for `count`, a set of `subject_id` for `active`, once per event id
+  `gerp-counters`, a number for `count`, a set of `subject_id` for `count_distinct`, the `amount` property ADDed for `sum` when the event carries one, once per event id
   (`gerp-counters-seen`, TTL a day); from the gerp's own account only, and only while the gerp's
   row reads `published` (the same bit the directory reads, a minute stale). `GET
   /gerps/{gerp_id}/metrics[/{slug}]?grain=` (`api/v1/gerps_metrics`) Queries the partition,
   parses the keys and answers one metric per `<event>.<kind>` in the metric shape, points at the
   asked grain, `class` from the bundled vocabulary, a set's size and never a member, cached a
-  minute; no gerp answers the public and no query runs for it.
+  minute; and one card per catalogue ratio (`<bucket>.<name>`, the bundled
+  `metric_definitions.json`) whose every leg is on the catalog at that grain, composed from the
+  leaves at read time (a cumulative leg the running total of in minus out from the flag on);
+  no gerp answers the public and no query runs for it.
 - **the meter** — usage plan `gerp-api-keyed` (200/400, 1M a month) and one hand-made key for
   gradienterp's reads and the tests. Anonymous reads share the stage throttle (20/40).
 - **the archive** (`main.tf`) — the bus → firehose → S3 path from the first cut, still applied,

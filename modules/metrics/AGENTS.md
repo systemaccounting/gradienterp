@@ -63,9 +63,32 @@ and joined to the books. Why in `README.md`.
   (`metric_queries.json`, the operator's canonical bucket; `modules/schemas/data` locally) and
   copies it into the table as a canonical row on that first use, and refreshes a canonical row
   from the file on a later call when the file changed; a name in neither is a 404 that says how
-  to list, search and save. The canonical set: `active`, `count`, `count_by`,
-  `funnel_3`, `retention`. A gerp's own row is one the agent saved with `write_schema op=extend`;
+  to list, search and save. The canonical set: `active`, `count`, `count_by`, `sum` (the
+  `amount` property added per period), `cumulative` (a stock: the running total of an in-event
+  minus an out-event over the whole history to the window's end, `at_start` and `at_end` per
+  period, measure count or sum), `funnel_3`, `retention`. A gerp's own row is one the agent saved with `write_schema op=extend`;
   the registry is listed and readable but never seeded (`NOT_SEEDED` in the schemas module)
+- **the catalogue** — `metric_definitions` in the gerp's registry table (`modules/schemas`,
+  seeded from `metric_definitions.json`, promoted like the vocabulary), bucket the domain, name
+  the metric: a definition in dbt MetricFlow's words. Every event is a semantic model (entity
+  `subject_id`, dimensions the properties, aggregation time `ts`); the measures are `count`,
+  `count_distinct` and `sum` of `amount`; the types `simple` (the rows `count`, `active`, `sum`),
+  `cumulative` (the row), `ratio` (an entry: `{type, unit, grain, description, numerator: [leg…],
+  denominator: [leg…]}`, a leg `{event, measure, sign?}` or `{cumulative: {in_event, out_event,
+  measure}, at: start | end}`, legs summed with their signs, so margin is revenue minus expense
+  over revenue), `conversion` (the rows `funnel_3`, `retention`); `derived` is not a row. Six
+  entries per bucket: conversion, churn, engagement, unit_revenue, unit_cost, margin for saas,
+  commerce and membership. `definitions.py` reads a name (`<bucket>.<name>`, `membership.churn`;
+  a bare name when one bucket holds it), copies it in on first use, and runs it as its legs' rows
+  joined per period: `manage_metrics op=query name=membership.churn window=last_month` takes
+  `grain` alone and answers `{period, numerator, denominator, ratio}` rows, a period whose
+  denominator is zero with no ratio, a leg over an unrecorded event contributing nothing.
+  `op=pin` takes the same name; the prompt's tail lists a pinned definition as `<bucket>.<name>`.
+  The lint (`scripts/lint_schemas.py`) refuses a leg naming an event outside the vocabulary
+- **the money measure** — `post_journal_entry` (modules/accounting) records one metrics event
+  per journal line, `<type>.posted` for the five account types (`revenue.posted` …, the `books`
+  bucket of the vocabulary), the entry the subject, `amount` signed by the type's normal balance,
+  `via: ledger`; the platform's counter forms the `sum` key from it and the api's card says `USD`
 - **the binding** — Athena substitutes `ExecutionParameters` into the SQL as text before planning,
   so the declared type is the boundary: a `string` becomes a single-quoted literal with quotes
   doubled, a `number` only if it parses, a `timestamp` in the store's format
@@ -89,7 +112,7 @@ and joined to the books. Why in `README.md`.
   dependency imported by name (`importlib.import_module`), so the deploy walk never bundles it. `tests/metrics/_helpers.py`
   seeds the bucket with the same partitioned Parquet Firehose writes
 - **reports on the portal** — prompt-tier, no tool: after a data answer the agent offers a page under `pages/reports/<slug>.html` (modules/storage `manage_storage op=put`, the link back), the standing preference `data-questions-as-reports` by `remember`, and a periodic one as an automation the calendar fires, its runs `pages/reports/<slug>/<YYYY-MM-DDTHH-MM>.html` with `latest.html` rewritten; the page and script shapes are in kb.md
-- **the public metric key** — `public_key(definition, period)`, `parse_public_key(key)` and `slug(definition)` in `metric_key.py` (import-free, bundled into the platform's counter and api archives), the one place the platform's counters key is built or read: `<event>#<kind>[#<property>=<value>]#<grain>#<period>` under the firm's partition on `gerp-counters`, `kind` one of `count | active | count_by`, `grain` one of `day | week | month`, `#`, `=` and `%` in a value percent-encoded. Two firms' identical events share a key; the vocabulary's bucket is the metric's class, read off `metric_events`, never stored. The counter and the api import it; nothing else splits a key
+- **the public metric key** — `public_key(definition, period)`, `parse_public_key(key)` and `slug(definition)` in `metric_key.py` (import-free, bundled into the platform's counter and api archives), the one place the platform's counters key is built or read: `<event>#<kind>[#<property>=<value>]#<grain>#<period>` under the firm's partition on `gerp-counters`, `kind` the measure's aggregation, `count | count_distinct | sum | count_by`, `grain` one of `day | week | month`, `#`, `=` and `%` in a value percent-encoded. Two firms' identical events share a key; the vocabulary's bucket is the metric's class, read off `metric_events`, never stored. The counter and the api import it; nothing else splits a key
 - **the platform copy** — `metrics.record` calls `events.publish` beside `emit`: when the firm is openly operated the event goes to the hub with the publication envelope and the hub forwards it to the operator, whose `metrics` rule counts it under the firm's partition when the gerp's row reads `published`; a private firm's record stays on its own bus (`published: None` in the return). Every function that records carries `OP_EVENT_BUS_ARN`, `SETTINGS_TABLE` and the grants for both: the door and `manage_metrics` here, and the callsite functions that run `record_metric` in labor, inventory and invoicing. Nothing is published by name: an openly operated firm's every product event counts, at day, week and month, `count` and `active`, from the event's name, `ts` and `zone`. `subject_id` crosses as recorded and is never served: the api answers a set's size, and a channel drops it by its contract class `subject`
 
 ## the row, end to end

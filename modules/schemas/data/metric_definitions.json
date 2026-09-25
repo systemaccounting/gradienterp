@@ -1,0 +1,383 @@
+{
+  "saas": {
+    "conversion": {
+      "type": "ratio",
+      "unit": "ratio",
+      "grain": "month",
+      "description": "subscription.started over checkout.started: the step that pays, per the step before it",
+      "numerator": [
+        {
+          "event": "subscription.started",
+          "measure": "count"
+        }
+      ],
+      "denominator": [
+        {
+          "event": "checkout.started",
+          "measure": "count"
+        }
+      ]
+    },
+    "churn": {
+      "type": "ratio",
+      "unit": "ratio",
+      "grain": "month",
+      "description": "subscription.cancelled over the stock at period start (subscription.started - subscription.cancelled)",
+      "numerator": [
+        {
+          "event": "subscription.cancelled",
+          "measure": "count"
+        }
+      ],
+      "denominator": [
+        {
+          "cumulative": {
+            "in_event": "subscription.started",
+            "out_event": "subscription.cancelled",
+            "measure": "count"
+          },
+          "at": "start"
+        }
+      ]
+    },
+    "engagement": {
+      "type": "ratio",
+      "unit": "ratio",
+      "grain": "month",
+      "description": "distinct subjects on session.started over accounts at period end (signed_up, nothing closes one yet)",
+      "numerator": [
+        {
+          "event": "session.started",
+          "measure": "count_distinct"
+        }
+      ],
+      "denominator": [
+        {
+          "cumulative": {
+            "in_event": "account.signed_up",
+            "out_event": "",
+            "measure": "count"
+          },
+          "at": "end"
+        }
+      ]
+    },
+    "unit_revenue": {
+      "type": "ratio",
+      "unit": "USD",
+      "grain": "month",
+      "description": "revenue posted over active subscriptions at period end (started - cancelled)",
+      "numerator": [
+        {
+          "event": "revenue.posted",
+          "measure": "sum"
+        }
+      ],
+      "denominator": [
+        {
+          "cumulative": {
+            "in_event": "subscription.started",
+            "out_event": "subscription.cancelled",
+            "measure": "count"
+          },
+          "at": "end"
+        }
+      ]
+    },
+    "unit_cost": {
+      "type": "ratio",
+      "unit": "USD",
+      "grain": "month",
+      "description": "expense posted over active subscriptions at period end (started - cancelled)",
+      "numerator": [
+        {
+          "event": "expense.posted",
+          "measure": "sum"
+        }
+      ],
+      "denominator": [
+        {
+          "cumulative": {
+            "in_event": "subscription.started",
+            "out_event": "subscription.cancelled",
+            "measure": "count"
+          },
+          "at": "end"
+        }
+      ]
+    },
+    "margin": {
+      "type": "ratio",
+      "unit": "ratio",
+      "grain": "month",
+      "description": "revenue posted minus expense posted, over revenue posted",
+      "numerator": [
+        {
+          "event": "revenue.posted",
+          "measure": "sum"
+        },
+        {
+          "event": "expense.posted",
+          "measure": "sum",
+          "sign": -1
+        }
+      ],
+      "denominator": [
+        {
+          "event": "revenue.posted",
+          "measure": "sum"
+        }
+      ]
+    }
+  },
+  "commerce": {
+    "conversion": {
+      "type": "ratio",
+      "unit": "ratio",
+      "grain": "month",
+      "description": "order.placed over lead.captured: the step that pays, per the step before it",
+      "numerator": [
+        {
+          "event": "order.placed",
+          "measure": "count"
+        }
+      ],
+      "denominator": [
+        {
+          "event": "lead.captured",
+          "measure": "count"
+        }
+      ]
+    },
+    "churn": {
+      "type": "ratio",
+      "unit": "ratio",
+      "grain": "month",
+      "description": "orders refunded over orders placed",
+      "numerator": [
+        {
+          "event": "order.refunded",
+          "measure": "count"
+        }
+      ],
+      "denominator": [
+        {
+          "event": "order.placed",
+          "measure": "count"
+        }
+      ]
+    },
+    "engagement": {
+      "type": "ratio",
+      "unit": "ratio",
+      "grain": "month",
+      "description": "distinct subjects placing an order over leads captured to date",
+      "numerator": [
+        {
+          "event": "order.placed",
+          "measure": "count_distinct"
+        }
+      ],
+      "denominator": [
+        {
+          "cumulative": {
+            "in_event": "lead.captured",
+            "out_event": "",
+            "measure": "count"
+          },
+          "at": "end"
+        }
+      ]
+    },
+    "unit_revenue": {
+      "type": "ratio",
+      "unit": "USD",
+      "grain": "month",
+      "description": "revenue posted over orders placed",
+      "numerator": [
+        {
+          "event": "revenue.posted",
+          "measure": "sum"
+        }
+      ],
+      "denominator": [
+        {
+          "event": "order.placed",
+          "measure": "count"
+        }
+      ]
+    },
+    "unit_cost": {
+      "type": "ratio",
+      "unit": "USD",
+      "grain": "month",
+      "description": "expense posted over orders placed",
+      "numerator": [
+        {
+          "event": "expense.posted",
+          "measure": "sum"
+        }
+      ],
+      "denominator": [
+        {
+          "event": "order.placed",
+          "measure": "count"
+        }
+      ]
+    },
+    "margin": {
+      "type": "ratio",
+      "unit": "ratio",
+      "grain": "month",
+      "description": "revenue posted minus expense posted, over revenue posted",
+      "numerator": [
+        {
+          "event": "revenue.posted",
+          "measure": "sum"
+        },
+        {
+          "event": "expense.posted",
+          "measure": "sum",
+          "sign": -1
+        }
+      ],
+      "denominator": [
+        {
+          "event": "revenue.posted",
+          "measure": "sum"
+        }
+      ]
+    }
+  },
+  "membership": {
+    "conversion": {
+      "type": "ratio",
+      "unit": "ratio",
+      "grain": "month",
+      "description": "member.joined over lead.captured: the step that pays, per the step before it",
+      "numerator": [
+        {
+          "event": "member.joined",
+          "measure": "count"
+        }
+      ],
+      "denominator": [
+        {
+          "event": "lead.captured",
+          "measure": "count"
+        }
+      ]
+    },
+    "churn": {
+      "type": "ratio",
+      "unit": "ratio",
+      "grain": "month",
+      "description": "member.cancelled over the stock at period start (member.joined - member.cancelled)",
+      "numerator": [
+        {
+          "event": "member.cancelled",
+          "measure": "count"
+        }
+      ],
+      "denominator": [
+        {
+          "cumulative": {
+            "in_event": "member.joined",
+            "out_event": "member.cancelled",
+            "measure": "count"
+          },
+          "at": "start"
+        }
+      ]
+    },
+    "engagement": {
+      "type": "ratio",
+      "unit": "ratio",
+      "grain": "month",
+      "description": "distinct subjects on member.checked_in over the stock at period end (member.joined - member.cancelled)",
+      "numerator": [
+        {
+          "event": "member.checked_in",
+          "measure": "count_distinct"
+        }
+      ],
+      "denominator": [
+        {
+          "cumulative": {
+            "in_event": "member.joined",
+            "out_event": "member.cancelled",
+            "measure": "count"
+          },
+          "at": "end"
+        }
+      ]
+    },
+    "unit_revenue": {
+      "type": "ratio",
+      "unit": "USD",
+      "grain": "month",
+      "description": "revenue posted over members at period end (joined - cancelled)",
+      "numerator": [
+        {
+          "event": "revenue.posted",
+          "measure": "sum"
+        }
+      ],
+      "denominator": [
+        {
+          "cumulative": {
+            "in_event": "member.joined",
+            "out_event": "member.cancelled",
+            "measure": "count"
+          },
+          "at": "end"
+        }
+      ]
+    },
+    "unit_cost": {
+      "type": "ratio",
+      "unit": "USD",
+      "grain": "month",
+      "description": "expense posted over members at period end (joined - cancelled)",
+      "numerator": [
+        {
+          "event": "expense.posted",
+          "measure": "sum"
+        }
+      ],
+      "denominator": [
+        {
+          "cumulative": {
+            "in_event": "member.joined",
+            "out_event": "member.cancelled",
+            "measure": "count"
+          },
+          "at": "end"
+        }
+      ]
+    },
+    "margin": {
+      "type": "ratio",
+      "unit": "ratio",
+      "grain": "month",
+      "description": "revenue posted minus expense posted, over revenue posted",
+      "numerator": [
+        {
+          "event": "revenue.posted",
+          "measure": "sum"
+        },
+        {
+          "event": "expense.posted",
+          "measure": "sum",
+          "sign": -1
+        }
+      ],
+      "denominator": [
+        {
+          "event": "revenue.posted",
+          "measure": "sum"
+        }
+      ]
+    }
+  }
+}

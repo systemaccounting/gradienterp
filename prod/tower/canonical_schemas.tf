@@ -127,14 +127,23 @@ resource "aws_s3_object" "canonical_contact_fields" {
 # extend into; no tag ships canonical, because shipping one industry's vocabulary as everyone's
 # default is the way to get this wrong. Canonical is a PROMOTION: `registry.extended` announces every
 # firm-authored tag, so a tag becomes canonical when n firms independently arrived at it.
-# the two metric registries (modules/metrics): the event vocabulary, seeded like the field
-# registries, and the queries, never seeded — a canonical query lands in a gerp's table on first
+# the three metric registries (modules/metrics): the event vocabulary and the catalogue of
+# definitions, seeded like the field registries, and the queries, never seeded — a canonical query lands in a gerp's table on first
 # use (manage_metrics op=query), so the set can grow past what any one gerp uses
 resource "aws_s3_object" "canonical_metric_events" {
   bucket = aws_s3_bucket.canonical_schemas.id
   key    = "metric_events.json"
   source = "${path.module}/../../modules/schemas/data/metric_events.json"
   etag   = filemd5("${path.module}/../../modules/schemas/data/metric_events.json")
+
+  content_type = "application/json"
+}
+
+resource "aws_s3_object" "canonical_metric_definitions" {
+  bucket = aws_s3_bucket.canonical_schemas.id
+  key    = "metric_definitions.json"
+  source = "${path.module}/../../modules/schemas/data/metric_definitions.json"
+  etag   = filemd5("${path.module}/../../modules/schemas/data/metric_definitions.json")
 
   content_type = "application/json"
 }

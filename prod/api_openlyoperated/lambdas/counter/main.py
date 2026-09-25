@@ -7,9 +7,10 @@ attributes beside the value so no reader splits the key.
 
 A firm's product event (`source = metrics`, the second rule on the firm's bus sends every one here as
 recorded) counts under the firm's partition when the firm's row reads `published`, from the event
-alone: its name, its `ts` cut in `detail.zone`, six keys through metric_key.public_key — `count` and
-`active` at day, week and month — a number ADDed for a count, `subject_id` joining the period's set
-for an active. The api serves a set's size, never a member. A bus delivers at least once, so with
+alone: its name, its `ts` cut in `detail.zone`, keys through metric_key.public_key — `count`,
+`count_distinct` when it names a subject, `sum` when it carries an `amount`, each at day, week and
+month — a number ADDed for a count or a sum, `subject_id` joining the period's set for a
+count_distinct. The api serves a set's size, never a member. A bus delivers at least once, so with
 SEEN_TABLE set an event id counts once. No domain knowledge: the emitter decided the key + magnitude (translate at the
 boundary); this just does the math. Extensible by op — today `add` (atomic ADD); new ops are new match
 limbs, still dumb. The counter takes every business's events (aggregate = terms-of-use baseline), so there
@@ -79,7 +80,9 @@ def _period(ts, grain, zone):
 
 
 def _count_metric(event):
-    """One product event of a published firm: six ADDs under its partition, keyed from the event."""
+    """One product event of a published firm, ADDed under its partition, keyed from the event: `count`
+    always, `count_distinct` when it names a subject, `sum` when `properties.amount` is a number,
+    each at day, week and month."""
     detail = event.get("detail") or {}
     gerp_id, name = detail.get("customer_id") or "", event.get("detail-type") or ""
     ts, zone, subject = detail.get("ts") or "", detail.get("zone") or "UTC", str(detail.get("subject_id") or "")
@@ -94,26 +97,36 @@ def _count_metric(event):
         return {"skipped": "not published", "gerp_id": gerp_id}
     if not _first_time(event.get("id")):
         return {"skipped": "seen", "id": event.get("id")}
+    amount = _amount((detail.get("properties") or {}).get("amount"))
+    measures = [("count", "ADD #v :n", {":n": Decimal(1)}, {"#v": "value"})]
+    if subject:
+        measures.append(("count_distinct", "ADD #s :m", {":m": {subject}}, {"#s": "members"}))
+    if amount is not None:
+        measures.append(("sum", "ADD #v :n", {":n": amount}, {"#v": "value"}))
     try:
-        keys = {grain: (public_key({"event": name, "kind": "count", "grain": grain}, _period(ts, grain, zone)),
-                        public_key({"event": name, "kind": "active", "grain": grain}, _period(ts, grain, zone)))
-                for grain in GRAINS}
+        keys = [(kind, grain, public_key({"event": name, "kind": kind, "grain": grain}, _period(ts, grain, zone)))
+                for kind, _, _, _ in measures for grain in GRAINS]
     except ValueError as e:
         log.warning("metric refused: not a key", gerp_id=gerp_id, name=name, error=str(e))
         return {"refused": str(e), "gerp_id": gerp_id}
-    for grain, (count_key, active_key) in keys.items():
-        period = _period(ts, grain, zone)
-        meta_names = {"#p": "period", "#e": "event", "#k": "kind", "#g": "grain"}
-        _table.update_item(Key={"gerp_id": gerp_id, "key": count_key},
-                           UpdateExpression="ADD #v :one SET #p = :p, #e = :e, #k = :count, #g = :g",
-                           ExpressionAttributeNames={"#v": "value", **meta_names},
-                           ExpressionAttributeValues={":one": Decimal(1), ":p": period, ":e": name, ":count": "count", ":g": grain})
-        if subject:
-            _table.update_item(Key={"gerp_id": gerp_id, "key": active_key},
-                               UpdateExpression="ADD #s :m SET #p = :p, #e = :e, #k = :active, #g = :g",
-                               ExpressionAttributeNames={"#s": "members", **meta_names},
-                               ExpressionAttributeValues={":m": {subject}, ":p": period, ":e": name, ":active": "active", ":g": grain})
-    return {"counted": name, "gerp_id": gerp_id, "keys": 6 if subject else 3}
+    by_kind = {kind: (expr, values, names) for kind, expr, values, names in measures}
+    for kind, grain, key in keys:
+        expr, values, names = by_kind[kind]
+        _table.update_item(Key={"gerp_id": gerp_id, "key": key},
+                           UpdateExpression=f"{expr} SET #p = :p, #e = :e, #k = :k, #g = :g",
+                           ExpressionAttributeNames={**names, "#p": "period", "#e": "event", "#k": "kind", "#g": "grain"},
+                           ExpressionAttributeValues={**values, ":p": _period(ts, grain, zone), ":e": name, ":k": kind, ":g": grain})
+    return {"counted": name, "gerp_id": gerp_id, "keys": len(keys)}
+
+
+def _amount(raw):
+    """The `amount` property as a Decimal, or None when the event carries none or not a number."""
+    if raw is None or raw == "":
+        return None
+    try:
+        return Decimal(str(raw))
+    except Exception:  # noqa: BLE001 — a word in the amount slot is not a sum
+        return None
 
 
 def _first_time(event_id):

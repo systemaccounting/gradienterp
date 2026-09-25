@@ -75,6 +75,8 @@ A read is a query by name, a `metric_queries` row, with its parameters. The cano
 | `count_by` | event, grain, property | events per period split by one property |
 | `funnel_3` | e1, e2, e3 | subjects reaching each of three steps, in order |
 | `retention` | event, grain | cohorts by first period, subjects per period since |
+| `sum` | event, grain | the `amount` property added per period: `revenue.posted` is revenue per period |
+| `cumulative` | in_event, out_event, measure, grain | a stock: the running total of in minus out, `at_start` and `at_end` per period; members = joined − cancelled, a balance = `revenue.posted` with measure sum |
 
 `window`: today | this_week | this_month | last_month | this_year | last_7_days | last_30_days |
 last_90_days (default this_month), or `start` + `end`; all on the firm's own calendar. `grain`
@@ -85,7 +87,17 @@ defaults to day.
     manage_metrics op=query name=funnel_3 params={"e1": "lead.captured", "e2": "member.joined", "e3": "member.checked_in"} window=this_year
     manage_metrics op=query name=retention params={"event": "member.checked_in", "grain": "week"} window=last_90_days
 
-A question none of these answers: `read_schema {source: local, registry: metric_queries}` lists
+The catalogue answers the standard questions by name: `read_schema {registry: metric_definitions}`
+lists it by bucket (saas, commerce, membership: conversion, churn, engagement, unit_revenue,
+unit_cost, margin), each a ratio of legs named in the vocabulary's words. Run one as
+`<bucket>.<name>`, `grain` the only parameter:
+
+    manage_metrics op=query name=membership.churn window=last_month                  ← cancelled over members at period start
+    manage_metrics op=query name=saas.margin params={"grain": "week"} window=last_90_days
+    manage_metrics op=pin name=saas.unit_cost
+
+A definition the catalogue lacks is `write_schema op=extend` on `metric_definitions`, the firm's
+own until promoted. A question none of these answers: `read_schema {source: local, registry: metric_queries}` lists
 this firm's own rows; `search_guides` finds a canonical one by what it answers. None fits: write
 the SQL over the table `metrics` (`event, subject_id, ts` as a UTC ISO string, `via`,
 `properties` a map: `element_at(properties, 'plan')`; Athena syntax, `?` for each parameter
@@ -174,3 +186,6 @@ What to know:
   reads them
 - **a subject id crosses and is never served**: the platform answers how many distinct subjects,
   never which
+- **the catalogue's ratios draw too**: a card per definition whose every leg the firm has
+  recorded, composed by the platform from the counts it holds. two published firms' churn sit
+  side by side because the legs share names

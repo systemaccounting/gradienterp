@@ -316,6 +316,8 @@ module "accounting" {
   gerp_id                  = var.gerp_id
   stack_prefix             = local.stack_prefix
   op_event_bus_arn         = local.op_event_bus_arn
+  internal_bus_name        = module.events.internal_bus_name # a posting's metrics event (modules/metrics)
+  internal_bus_arn         = module.events.internal_bus_arn
   sender_email             = var.sender_email
   chat_base_url            = var.chat_base_url
   schema_table_name        = module.schemas.schema_table_name

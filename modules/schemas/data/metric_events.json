@@ -129,5 +129,47 @@
         "reason"
       ]
     }
+  },
+  "books": {
+    "revenue.posted": {
+      "description": "a journal line posted to a revenue account; `amount` signed by the type's normal balance, the property the `sum` measure adds",
+      "properties": [
+        "account",
+        "side",
+        "amount"
+      ]
+    },
+    "expense.posted": {
+      "description": "a journal line posted to an expense account; `amount` signed by the type's normal balance, the property the `sum` measure adds",
+      "properties": [
+        "account",
+        "side",
+        "amount"
+      ]
+    },
+    "asset.posted": {
+      "description": "a journal line posted to an asset account; `amount` signed by the type's normal balance, the property the `sum` measure adds",
+      "properties": [
+        "account",
+        "side",
+        "amount"
+      ]
+    },
+    "liability.posted": {
+      "description": "a journal line posted to a liability account; `amount` signed by the type's normal balance, the property the `sum` measure adds",
+      "properties": [
+        "account",
+        "side",
+        "amount"
+      ]
+    },
+    "equity.posted": {
+      "description": "a journal line posted to an equity account; `amount` signed by the type's normal balance, the property the `sum` measure adds",
+      "properties": [
+        "account",
+        "side",
+        "amount"
+      ]
+    }
   }
 }

@@ -39,7 +39,7 @@
     },
     "name": {
       "type": "string",
-      "description": "query, pin: the query's name \u2014 a metric_queries row of this firm's, or a canonical one (active, count, count_by, funnel_3, retention), copied in on first use. No inline SQL: save one with write_schema op=extend, then call it."
+      "description": "query, pin: the query's name \u2014 a metric_queries row of this firm's, or a canonical one (active, count, count_by, funnel_3, retention), copied in on first use — or a catalogue entry (metric_definitions: churn, margin, unit_cost…), which takes grain alone. No inline SQL: save a row with write_schema op=extend, then call it."
     },
     "params": {
       "type": "object",
