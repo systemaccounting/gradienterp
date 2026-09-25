@@ -9,7 +9,8 @@ An event is `<resource>.<action_past>`: `lead.captured`, `member.joined`, `membe
 `loaf.sold`, `shift.worked`, `cancellation.requested`. Lowercase letters, digits and `_`, dots
 between the parts. The subject is who or what took the step: a contact_id for a person, the
 firm's own id for anything else. Properties are flat scalars that ride along (`plan`, `location`,
-`qty`).
+`qty`). A `location` is the ordinal from `manage_locations` (`"2"`, never the branch's name), the
+value the ledger stamps, so a per-location count and a per-location statement read side by side.
 
 ## an app or a device posts
 
@@ -19,7 +20,7 @@ returns a url and a bearer, once. The owner hands both to their app, POS, websit
 which posts one event or a list:
 
     curl -X POST <url> -H "Authorization: Bearer <token>" -H "content-type: application/json" \
-      -d '[{"event": "member.checked_in", "subject_id": "c_8812", "properties": {"location": "pier"}}]'
+      -d '[{"event": "member.checked_in", "subject_id": "c_8812", "properties": {"location": "2"}}]'
 
 `202 {accepted: 1, source: pos}`. A bad event refuses the whole batch and names the index and the
 field. Publishing again for the same caller rotates the token; `unpublish_source` closes it;

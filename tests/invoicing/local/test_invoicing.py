@@ -499,6 +499,28 @@ def test_a_processor_tax_posts_to_sales_tax_payable():
                                               "SALES_TAX_PAYABLE": 7.25}
 
 
+def test_a_branch_sale_leads_the_id_and_posts_to_its_location():
+    """The row's `location` is what every posting path copies — set once at create, never parsed
+    off the id and never re-read from settings. Omitted, the sale is at #1 (main)."""
+    _fresh()
+    code, inv = _inv(CREATE, {"customer": "cafe", "location": "2", "lines": [
+        {"account": "SERVICE_REVENUE", "accountType": "REVENUE", "amount": 40}]})
+    assert code == 200 and inv["invoice_id"].startswith("2#"), inv
+    branch = inv["invoice_id"]
+    assert _inv(ISSUE, {"invoice_id": branch})[0] == 200
+    assert _inv(PAYMENT, {"invoice_id": branch})[0] == 200
+    posted = [e for e in _journal() if branch in e["entryId"]]
+    assert len(posted) == 2 and all(e["dimensions"]["location"] == "2" for e in posted), posted
+
+    code, inv = _inv(CREATE, {"customer": "cafe", "lines": [
+        {"account": "SERVICE_REVENUE", "accountType": "REVENUE", "amount": 40}]})
+    assert code == 200 and inv["invoice_id"].startswith("1#"), inv
+    main = inv["invoice_id"]
+    assert _inv(ISSUE, {"invoice_id": main})[0] == 200
+    posted = [e for e in _journal() if main in e["entryId"]]
+    assert len(posted) == 1 and posted[0]["dimensions"]["location"] == "1", posted
+
+
 if __name__ == "__main__":
     for _n in [k for k in dir() if k.startswith("test_")]:
         globals()[_n]()

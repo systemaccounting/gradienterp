@@ -4,6 +4,10 @@ Inventory can do more than count: an item can carry a **recipe**, sell as **made
 (materials burn at the moment of sale), and end-of-day counts value their variance automatically. Each of
 these is set up once, conversationally, and runs from then on.
 
+An item lives at one location: `create_item` with `location` (the ordinal from `manage_locations`)
+makes `<n>#<sku>`, default `1#`, and every movement of it posts to that location. A second branch
+gets its own items, and a recipe never crosses locations.
+
 ## an item with a recipe (a composite)
 
 When something the business sells is *made from* other things it stocks — a candle from wax + wick +

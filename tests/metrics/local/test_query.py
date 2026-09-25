@@ -19,12 +19,12 @@ SEP = "2026-09-"
 ROWS = [
     {"event": "lead.captured",     "subject_id": "c_1", "ts": f"{SEP}01T15:00:00.000Z", "properties": {"plan": "monthly"}},
     {"event": "member.joined",     "subject_id": "c_1", "ts": f"{SEP}01T16:00:00.000Z", "properties": {"plan": "monthly"}},
-    {"event": "member.checked_in", "subject_id": "c_1", "ts": f"{SEP}02T06:30:00.000Z", "properties": {"location": "pier"}},   # 09-01 in LA
-    {"event": "member.checked_in", "subject_id": "c_1", "ts": f"{SEP}08T18:00:00.000Z", "properties": {"location": "pier"}},
-    {"event": "member.checked_in", "subject_id": "c_1", "ts": f"{SEP}15T18:00:00.000Z", "properties": {"location": "main"}},
+    {"event": "member.checked_in", "subject_id": "c_1", "ts": f"{SEP}02T06:30:00.000Z", "properties": {"location": "2"}},   # 09-01 in LA
+    {"event": "member.checked_in", "subject_id": "c_1", "ts": f"{SEP}08T18:00:00.000Z", "properties": {"location": "2"}},
+    {"event": "member.checked_in", "subject_id": "c_1", "ts": f"{SEP}15T18:00:00.000Z", "properties": {"location": "1"}},
     {"event": "lead.captured",     "subject_id": "c_2", "ts": f"{SEP}07T15:00:00.000Z", "properties": {"plan": "annual"}},
     {"event": "member.joined",     "subject_id": "c_2", "ts": f"{SEP}08T15:00:00.000Z", "properties": {"plan": "annual"}},
-    {"event": "member.checked_in", "subject_id": "c_2", "ts": f"{SEP}09T18:00:00.000Z", "properties": {"location": "main"}},
+    {"event": "member.checked_in", "subject_id": "c_2", "ts": f"{SEP}09T18:00:00.000Z", "properties": {"location": "1"}},
     {"event": "lead.captured",     "subject_id": "c_3", "ts": f"{SEP}10T15:00:00.000Z", "properties": {"plan": "monthly"}},
     # c_4 checks in before joining: out of order, so the funnel must not count the join step
     {"event": "member.checked_in", "subject_id": "c_4", "ts": f"{SEP}03T18:00:00.000Z"},

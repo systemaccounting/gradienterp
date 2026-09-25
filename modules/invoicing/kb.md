@@ -10,6 +10,10 @@ outside the ledger.
 to take the money and could not, which is the fact a chase attaches to, and `unpaid → paid` is
 permitted so a retry that later wins settles it the ordinary way.
 
+A sale at a branch passes `location` (the ordinal from `manage_locations`) on `create` or
+`from_template`: the invoice id leads with it and issue and paid post to that location. Omitted,
+the sale is at #1, main.
+
 ## automation may use either
 
 A firm's own rules and scripts reference statuses freely. A row on `INVOICE_STATUS#unpaid`, a script

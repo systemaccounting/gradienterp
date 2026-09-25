@@ -61,7 +61,7 @@ depends on accounting. the webhook ingestion layer — translates payment proces
   `configure_webhook`, so requiring one would break card-saving for every firm set up before it
   existed.
 
-- `ingest_stripe` / `ingest_square` / `ingest_paypal` lambdas — receive a provider webhook, verify its signature (no stored verification value → 401, nothing written; a failed or erroring verification → 400), dedup by provider event id, dispatch to accounting's `transform_<provider>_<event>` → `post_journal_entry`.
+- `ingest_stripe` / `ingest_square` / `ingest_paypal` lambdas — receive a provider webhook, verify its signature (no stored verification value → 401, nothing written; a failed or erroring verification → 400), dedup by provider event id, dispatch to accounting's `transform_<provider>_<event>` → `post_journal_entry`. Location is resolved at the boundary: `_helpers.location_map` reads the settings `LOCATION#` rows once per container (provider location id → ordinal, `PROVIDER_ID_ATTRS`), and `ingest_square` stamps the payment's `location_id` through it into `dimensions.location`, "1" when unmapped or unreadable (a failed read is not cached). Stripe and PayPal carry no location signal, so their entries take the "1" backstop.
   Stripe and Square verify against EITHER of two secrets. A signing secret belongs to an endpoint
   (a subscription, on Square) and appears only in the response that created it, so replacing one
   rotates it and both are briefly live; `_helpers.webhook_secrets` keeps the previous one beside the

@@ -25,6 +25,7 @@ Run standalone or via scripts/test.sh.
 import glob
 import re
 import json
+import os
 import sys
 
 CAP = 200
@@ -212,10 +213,34 @@ for bucket, entries in catalogue.items():
                 elif leg.get("event") not in vocabulary or leg.get("measure") not in MEASURES or leg.get("sign", 1) not in (1, -1):
                     bad.append(("modules/schemas/data/metric_definitions.json", f"{where} {side} leg `{leg.get('event')}`: an event in the vocabulary, a measure in {sorted(MEASURES)}, sign 1 or -1"))
 
+# ── 3. a handler that reads a location declares it ──
+# The schema is what the model sees. A `location` the handler accepts but the schema omits is one
+# the agent never sends, so the object lands at "1" (main) with nobody the wiser — which is how
+# manage_invoice and create_po shipped location-blind for months while their code read the field.
+READS_LOCATION = re.compile(r"""body(?:\.get\(\s*["']location["']|\[\s*["']location["']\s*\])""")
+n_location = 0
+for f in sorted(glob.glob("modules/*/lambdas/*/schema.json")):
+    d = os.path.dirname(f)
+    if os.path.basename(d) in NOT_GATEWAY:
+        continue
+    readers = [os.path.basename(p) for p in sorted(glob.glob(os.path.join(d, "*.py")))
+               if not os.path.basename(p).startswith("test_")
+               and READS_LOCATION.search(open(p, encoding="utf-8").read())]
+    if not readers:
+        continue
+    n_location += 1
+    try:
+        props = json.load(open(f)).get("properties") or {}
+    except Exception:  # noqa: BLE001 — reported by the description check above
+        continue
+    if "location" not in props:
+        bad.append((f, f"{', '.join(readers)} reads body location and the schema does not declare it"))
+
 if bad:
     print(f"schema lint: {len(bad)} problem(s)")
     for f, why in bad:
         print(f"  {f}: {why}")
     sys.exit(1)
 print(f"schema lint: {n_tools} gateway descriptions <= {CAP} bytes ✓ · "
-      f"{n_fields} registry fields across {len(registries)} registries ✓ · {n_metric} metric entries ✓")
+      f"{n_fields} registry fields across {len(registries)} registries ✓ · {n_metric} metric entries ✓ · "
+      f"{n_location} location readers declared ✓")
