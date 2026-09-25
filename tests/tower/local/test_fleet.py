@@ -110,7 +110,8 @@ SNAPSHOT = {"modules/x/lambdas/one.zip": ("v-one-2", "SHA-ONE-2"), "modules/x/la
             "prod/tower/lambdas/bill.zip": ("v-bill", "SHA-BILL")}
 
 
-def test_the_pieces_print_their_lines_and_the_join_names_every_state(tmp_path=None):
+def test_the_pieces_print_their_lines_and_the_join_names_every_state():
+    import os
     import tempfile
     s3 = S3(SNAPSHOT)
     lam_a = Lambda({"gerp-x-a-one": "SHA-ONE-1", "gerp-x-a-two": "SHA-TWO-1", "gerp-y-a-odd": "SHA-ODD"})
@@ -122,7 +123,8 @@ def test_the_pieces_print_their_lines_and_the_join_names_every_state(tmp_path=No
         assert _run(fleet.listgerps, Namespace(operator_profile="operator-org")) == [["a", "1", "us-east-1"], ["b", "2", "us-east-1"]]
         conf = _run(fleet.listzipfnsconf, Namespace(gerp="a", profile=None))
         assert conf == [["a", "gerp-x-a-one", "modules/x/lambdas/one", "SHA-ONE-1"], ["a", "gerp-x-a-two", "modules/x/lambdas/two", "SHA-TWO-1"], ["a", "gerp-y-a-odd", "modules/y/lambdas/odd", "SHA-ODD"]]
-        path = tempfile.mktemp()
+        fd, path = tempfile.mkstemp(prefix="fleet-snapshot-")
+        os.close(fd)
         Path(path).write_text("".join("\t".join(r) + "\n" for r in snap))
         rows = _run(fleet.status, Namespace(snapshot=path, dirs=None), stdin="".join("\t".join(r) + "\n" for r in conf))
         assert rows == [["a", "gerp-x-a-one", "behind", "modules/x/lambdas/one.zip", "v-one-2", "SHA-ONE-2"],
