@@ -17,7 +17,9 @@ def _events():
     destructive, so what has already arrived is kept: these tests read the log more than once and
     each read means "everything emitted so far", not "since I last looked"."""
     q = os.environ["_QUEUE_URL"]
-    _SEEN.setdefault(q, []).extend(m["detail"] for m in drain(q, expected=99, tries=2))
+    # a published firm's posting also publishes its `<type>.posted` metrics events here; only the
+    # journal entry's own event is this test's subject
+    _SEEN.setdefault(q, []).extend(m["detail"] for m in drain(q, expected=99, tries=2) if m["detail_type"] == "journal_entry.posted")
     return _SEEN[q]
 
 
