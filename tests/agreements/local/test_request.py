@@ -226,6 +226,22 @@ def test_a_memo_whose_placeholders_dont_correspond_is_refused():
         assert agreements_rows() == [], "nothing lands on a mismatched memo"
 
 
+def test_a_location_lands_on_the_callers_side_only():
+    """A location is per side and private: the buyer's create_po stamps `buyer_location`, the
+    seller's return_quote on the same thread stamps `seller_location`, and neither row carries
+    a bare `location` the other side's settle could misread."""
+    with scratch_env():
+        req = load_lambda("request")
+        _body(req.handler({"kind": "po", "vendor": THEM, "thread": "loc-1", "location": "2",
+                           "lines": [{"description": "beans", "amount": 240}]}, None))
+        [row] = agreements_rows()
+        assert row["buyer_location"] == "2" and "seller_location" not in row and "location" not in row, row
+        _body(req.handler({"kind": "po", "buyer": THEM, "thread": "loc-2", "location": "3",
+                           "lines": [{"description": "beans", "amount": 240}]}, None))
+        row = next(r for r in agreements_rows() if r["thread"] == "loc-2")
+        assert row["seller_location"] == "3" and "buyer_location" not in row and "location" not in row, row
+
+
 if __name__ == "__main__":
     for fn in [n for n in dir() if n.startswith("test_")]:
         globals()[fn]()

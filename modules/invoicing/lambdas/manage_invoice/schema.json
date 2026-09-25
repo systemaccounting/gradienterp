@@ -1,5 +1,5 @@
 {
-  "description": "An invoice's plumbing: create or from_template, complete_line on a draft, transition one item's state, get, and the firm's tags. issue_invoice and record_invoice_paid post the ledger.",
+  "description": "create or from_template a draft, complete_line, transition one item's state, get, tags. issue_invoice and record_invoice_paid post the ledger.",
   "type": "object",
   "required": [
     "op"
@@ -18,15 +18,15 @@
         "tags",
         "find_by_tag"
       ],
-      "description": "create: customer+lines. from_template: customer+ctx. complete_line/transition: invoice_id+item_id. get: id or filters. tag/untag/tags/find_by_tag: labels."
+      "description": "create: customer+lines. from_template: customer+ctx. complete_line/transition: invoice_id+item_id. get: id or filters. tag ops: labels."
     },
     "customer": {
       "type": "string",
-      "description": "contact_id billed; a filter on get."
+      "description": "contact_id billed; get filter."
     },
     "lines": {
       "type": "array",
-      "description": "create: each credits its account at issue.",
+      "description": "each credits its account at issue.",
       "items": {
         "type": "object",
         "required": [
@@ -58,7 +58,7 @@
     },
     "template": {
       "type": "string",
-      "description": "from_template: which template."
+      "description": "from_template: its name."
     },
     "due_date": {
       "type": "string",
@@ -71,6 +71,10 @@
     "job": {
       "type": "string",
       "description": "job tag (per-job P&L)."
+    },
+    "location": {
+      "type": "string",
+      "description": "location ordinal, default '1'; leads the invoice_id."
     },
     "created_by": {
       "type": "string",
@@ -86,7 +90,7 @@
     },
     "state": {
       "type": "string",
-      "description": "transition: paid, earned, refunded, or the owner's own."
+      "description": "transition: paid|earned|refunded|the owner's own."
     },
     "dims": {
       "type": "object",
@@ -131,7 +135,7 @@
     },
     "tag": {
       "type": "string",
-      "description": "a label from the invoice_tags registry."
+      "description": "invoice_tags registry label."
     }
   }
 }

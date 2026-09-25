@@ -100,6 +100,20 @@ def test_direct_settle_drafts_the_invoice_and_writes_nothing_else():
     assert _agreements() == [], "no settled stamp, no stray row — the dispatcher marks its own table"
 
 
+def test_settle_drafts_the_invoice_at_the_sellers_location():
+    """The seller's branch that fulfils, captured at the seller's stamp. The buyer's location on
+    the same row is the buyer's business, and the id stays the shared thread, never prefixed."""
+    _fresh()
+    row = {"thread": "d-2", "terms_hash": "cafe0000cafe0002",
+           "buyer": "cafe", "seller": "seller-gerp",
+           "buyer_stamp": 1, "seller_stamp": 2, "kind": "po",
+           "buyer_location": "4", "seller_location": "2",
+           "terms": {"items": [{"description": "beans", "qty": 25}], "total": 100}}
+    assert SETTLE.handler({"agreement": row}, None)["settled"] == ["d-2"]
+    inv = _inv(GET, {"invoice_id": "d-2"})[1]["invoices"][0]
+    assert inv["invoice_id"] == "d-2" and inv["location"] == "2", inv
+
+
 if __name__ == "__main__":
     for _n in [k for k in dir() if k.startswith("test_")]:
         globals()[_n]()

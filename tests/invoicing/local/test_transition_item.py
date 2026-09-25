@@ -291,12 +291,25 @@ def test_an_invoice_level_entry_is_not_folded_as_an_item():
     assert sorted(s["item_id"] for s in states) == sorted(_IDS), states
 
 
-if __name__ == "__main__":
-    for name in [n for n in dir() if n.startswith("test_")]:
-        globals()[name]()
-        print(f"ok {name}")
+def test_a_line_is_attributed_by_its_catalog_ordinal_and_a_bare_line_by_the_row():
+    # a line's catalog key carries its ordinal (<n>#<sku>) and that is the line's location; a line
+    # with no catalog key (a rule-added tax, a free-text line) belongs to the invoice row's
     _fresh()
-    print("all transition_item tests passed")
+    code, body = _invoke(CREATE, {
+        "customer": "c1",
+        "location": "3",
+        "lines": [
+            {"catalog_item_id": "2#seat", "description": "Seat", "account": "SERVICE_REVENUE", "accountType": "REVENUE", "amount": 100},
+            {"description": "Fee", "account": "SERVICE_REVENUE", "accountType": "REVENUE", "amount": 10},
+        ],
+    })
+    assert code == 200 and body["invoice_id"].startswith("3#"), body
+    inv = body["invoice_id"]
+    seat, fee = [ln["item_id"] for ln in body["lines"]]
+    _invoke(TRANSITION, {"invoice_id": inv, "item_id": seat, "state": "paid"})
+    assert _journal()[-1]["dimensions"]["location"] == "2"
+    _invoke(TRANSITION, {"invoice_id": inv, "item_id": fee, "state": "paid"})
+    assert _journal()[-1]["dimensions"]["location"] == "3"
 
 
 def test_job_rides_invoice_into_dimensions():
@@ -311,6 +324,15 @@ def test_job_rides_invoice_into_dimensions():
     })
     assert code == 200, body
     inv = body["invoice_id"]
-    _invoke(TRANSITION, {"invoice_id": inv, "item_id": _IDS[0], "state": "paid"})
+    labor = body["lines"][0]["item_id"]   # this invoice's line, not another's
+    _invoke(TRANSITION, {"invoice_id": inv, "item_id": labor, "state": "paid"})
     dims = _journal()[-1]["dimensions"]
     assert dims["job"] == "smith-bathroom"
+
+
+if __name__ == "__main__":
+    for name in [n for n in dir() if n.startswith("test_")]:
+        globals()[name]()
+        print(f"ok {name}")
+    _fresh()
+    print("all transition_item tests passed")

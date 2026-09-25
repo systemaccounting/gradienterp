@@ -62,6 +62,10 @@
       "type": "string",
       "description": "Optional job tag \u2014 the PO's receipts/payments carry it into journal dimensions for per-job cost."
     },
+    "location": {
+      "type": "string",
+      "description": "Location ordinal the PO belongs to, default '1'. Receipts and payments carry it into journal dimensions."
+    },
     "private_values": {
       "type": "array",
       "items": {

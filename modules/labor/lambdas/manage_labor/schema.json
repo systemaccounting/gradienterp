@@ -46,6 +46,10 @@
       "type": "string",
       "description": "worker_legal range key, role#type e.g. barista#W-4; required there."
     },
+    "location": {
+      "type": "string",
+      "description": "put: a worker's home ordinal (default '1'); a shift's place, default the worker's."
+    },
     "attributes": {
       "type": "object",
       "description": "put: the entity's non-key fields (top level also works), validated against labor_fields. worker: rate, classification (W-2|1099). time_entry: role, started_at, ended_at (ms-epoch or ISO 8601), status (open|closed). worker_legal: type (W-4, I-9, DE-4, PASSPORT…), value (masked JSON)."

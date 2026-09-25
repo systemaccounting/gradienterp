@@ -14,7 +14,9 @@ and joined to the books. Why in `README.md`.
 - **the event** — `{event, subject_id, at?, properties?}`. `event` is `<resource>.<action_past>`,
   checked against `^[a-z0-9_]+(\.[a-z0-9_]+)+$` and nothing else; `subject_id` a non-empty string;
   `at` ISO 8601 or epoch milliseconds, default now, stored as `ts` (UTC, milliseconds, `Z`, so
-  string order is time order); `properties` flat scalars, stored as strings. The detail on the
+  string order is time order); `properties` flat scalars, stored as strings. A `location`
+  property is the location ordinal (`manage_locations`), the same value the ledger stamps in
+  `dimensions.location`, so a per-location count reads beside a per-location statement. The detail on the
   bus is `{customer_id, zone, subject_id, ts, properties, via}` plus `caller` (the door) or
   `rule_exec_id` (the rule): the firm's id and its clock's zone ride on every record, so the
   platform cuts a period on the firm's calendar without asking it. Contract:
@@ -118,9 +120,9 @@ and joined to the books. Why in `README.md`.
 ## the row, end to end
 
 ```
-POST /metrics  {"event": "member.checked_in", "subject_id": "c_8812", "properties": {"location": "pier"}}
+POST /metrics  {"event": "member.checked_in", "subject_id": "c_8812", "properties": {"location": "2"}}
   → bus: source metrics, detail-type member.checked_in, detail {subject_id, ts, properties, via: door, caller: pos}
-  → Firehose row: {"event": "member.checked_in", "subject_id": "c_8812", "ts": "2026-09-15T21:02:00.000Z", "via": "door", "properties": {"location": "pier"}}
+  → Firehose row: {"event": "member.checked_in", "subject_id": "c_8812", "ts": "2026-09-15T21:02:00.000Z", "via": "door", "properties": {"location": "2"}}
   → s3://<cabinet>/metrics/dt=2026-09-15/<file>.parquet
   → manage_metrics {op: query, name: active, params: {event: member.checked_in, grain: week}, window: this_month}
   → the `active` row's SQL with its `?` markers filled: count(DISTINCT subject_id) per week, cut in the firm's zone

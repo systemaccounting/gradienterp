@@ -36,7 +36,7 @@ def _open_po(row):
         "status":     "open",
         "memo":       row.get("memo") or f"agreed via PO thread {thread} (terms {row['terms_hash']})",
         "created_at": now_ms(),
-        "location":   str(row.get("location") or "1"),
+        "location":   str(row.get("buyer_location") or "1"),   # this side's, captured at the buyer's stamp
         **({"job": str(row["job"])} if row.get("job") else {}),
     }
     put_po(po)

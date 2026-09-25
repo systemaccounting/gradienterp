@@ -377,6 +377,19 @@ def test_no_platform_tables_raises_rather_than_guessing():
             raise AssertionError("expected a raise when the platform rows are missing")
 
 
+def test_withholding_lands_on_the_workers_home_location():
+    # one entry, one location: the worker's home off the worker row (the accruals already split by
+    # where each shift happened)
+    with scratch_env():
+        handler = load_lambda("pay_run")
+        seed_worker("w1", "cook", 20, location="2")
+        seed_ledger_accrual("w1", "2026-06", gross=500)
+        _fica(employer=False)
+
+        _run(handler)
+        assert _journal_rows()[0]["dimensions"]["location"] == "2"
+
+
 if __name__ == "__main__":
     for fn_name in [n for n in dir() if n.startswith("test_")]:
         globals()[fn_name]()

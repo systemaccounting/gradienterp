@@ -97,6 +97,12 @@ against the live pair; the local tests hold each step.
   new row (history kept), and a re-request is a gated no-op.
 - agreement = both `buyer_stamp` and `seller_stamp`. Bid vs ask = which landed first, computed,
   never stored.
+- `buyer_location` / `seller_location` — each firm's own location ordinal for its side (the
+  branch that receives, the branch that fulfils), written at that firm's own stamp (`request`
+  for the proposer, `accept` for the acceptor) from the tool's `location`, private to its row.
+  Each side's settle reads its own: purchasing opens the PO at `buyer_location`, invoicing
+  drafts the invoice at `seller_location`, "1" when absent. A stamp a rule made (`apply_inbound`
+  accepting or countering) or one recorded for an off-platform counterparty carries none.
 - `kind` — stamped by every writer; names the events (`<kind>.accepted`), picks the config row,
   and gates the readers (treasury's `manage_capital (op: offers)`/`manage_capital (op: holdings)` take only `kind == "offer"` —
   a settled PO where this firm is the buyer must not masquerade as a holding).

@@ -100,7 +100,7 @@ def _fold_po(body):
         total += amt
 
     extra = {"account": norm[0]["account"], "accountType": norm[0]["accountType"], "lines": norm}
-    for k in ("memo", "job", "location"):
+    for k in ("memo", "job"):
         if body.get(k):
             extra[k] = str(body[k])
     # the memo is the one free-form field on a row that CROSSES A FIRM BOUNDARY, so it splits the
@@ -175,8 +175,13 @@ def handler(event, context):
         refused = unknown_recipient(seller if side == "buyer" else buyer)
         if refused:
             return refused
-    th, row = request(thread, folded["terms"], side=side, buyer=buyer, seller=seller,
-                      extra={"kind": kind, **folded["extra"]})
+    extra = {"kind": kind, **folded["extra"]}
+    # a location is per SIDE: the buyer's branch receives, the seller's branch fulfils, and each
+    # is private to its firm. It lands as `<side>_location` at this firm's own stamp (here, or in
+    # `accept` for the answering side), so each side's settle reads its own and never the other's
+    if body.get("location"):
+        extra[f"{side}_location"] = str(body["location"])
+    th, row = request(thread, folded["terms"], side=side, buyer=buyer, seller=seller, extra=extra)
 
     if body.get("approved"):
         # self-approval, any kind — the caller records a deal already agreed off-platform. Both

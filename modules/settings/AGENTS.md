@@ -9,12 +9,12 @@ token, which the authorizer validates → `tenant_settings` reads the caller's `
 ## current features
 
 - `tenant_settings` lambda — reads/writes the config table; derives email verify status live from SES; owner-authed via the gerp API's JWT authorizer (caller `account_id` = JWT `sub`), and answers only the gerp's owner: `aws.refuse_non_owner` compares the `sub` to the `owner_sub` parameter `OWNER_SUB_PARAM` names, 403 otherwise.
-- `GET /settings` → `{openly_operated, timezone, notification_email, notification_email_verified, agent_email, agent_email_verified, verify_recipient, instructions}`.
-- `PUT /settings` (also accepts `POST`) `{openly_operated?, timezone?, notification_email?, instruction?, remove_instruction?}` → the updated view; a new/changed `notification_email` fires SES `verify-email-identity`.
+- `GET /settings` → `{openly_operated, timezone, notification_email, notification_email_verified, agent_email, agent_email_verified, verify_recipient, instructions, locations}`.
+- `PUT /settings` (also accepts `POST`) `{openly_operated?, timezone?, notification_email?, instruction?, remove_instruction?, location?}` → the updated view; a new/changed `notification_email` fires SES `verify-email-identity`; `location` without an ordinal adds one, with an ordinal rewrites that one.
 - `gerp-settings-<gerp_id>` DDB config table (`pk = gerp_id`, `sk`): `GERP#<key>` instance-wide rows + `USER#<account_id>` per-user rows + `LOCATION#<n>#<city>#<name>` location rows + `INSTRUCTION#<ms>#<hash>` standing-instruction rows (the ordinal is the identifier stamped everywhere — item ids, journal dims; label/city are renamable description; provider ids like `square_location_id` live on the row, captured at connect).
 - `manage_locations` — agent gateway tool over the LOCATION rows: `list` / `add` (allocates the next ordinal) / `update` (rename description or set a provider id; the ordinal persists). #1 is seeded `LOCATION#1##main` at provisioning and IS the default by doctrine — no default flag exists, and posting paths stamp the constant "1" without reading here.
 - **standing instructions** — one single-line directive per row under attribute `text`, written from the gerp screen's Instructions list and by the agent's in-container `instruct` tool, read by the agent container every turn as a system-prompt section. See §standing instructions.
-- seed (create-only, `ignore_changes = all`): `GERP#openly_operated` from the tenant blob + the owner's `USER#<sub>` row defaulted to `owner_email`.
+- seed (create-only, `ignore_changes = all`): `GERP#openly_operated` from the tenant blob + the owner's `USER#<sub>` row defaulted to `owner_email` + `LOCATION#1##main`.
 - outputs: `tenant_settings_fn_name`, `settings_table_name`, `settings_table_arn`.
 
 ## the two scopes
@@ -44,6 +44,39 @@ token, which the authorizer validates → `tenant_settings` reads the caller's `
 Access is readable-not-optimal (it's config): send-side reads = `GetItem` the caller's `USER` row;
 the screen = the `GERP#*` rows + the caller's `USER` row. The owner's `USER` row is seeded at
 provisioning (defaulted to the account email).
+
+## locations
+
+`LOCATION#<n>#<city>#<name>` — one row per place the business runs. The **ordinal** `n` is the
+identifier; city and name are description. A rename rewrites the sk (the old row is deleted, the
+new one put), so the sk is never a handle: everything else holds the ordinal.
+
+Every gerp is born with `LOCATION#1##main` (`infra/main.tf`, create-only). #1 is the default by
+doctrine — no default flag exists, and a single-location business never sees any of this.
+
+The row also carries the provider ids captured at connect: `square_location_id`,
+`stripe_account_suffix`, `paypal_merchant_id` (`PROVIDER_ID_ATTRS` in `lambdas/_locations.py`).
+Two writers share that file: `manage_locations` (the agent) and `tenant_settings` (the owner's
+screen). One reader outside this module: payments' `location_map`, provider location id →
+ordinal, once per container. Nothing else reads here — a posting path never resolves a location
+at post time.
+
+The contract every emitting module holds, stated once:
+
+- a placeful id leads with the ordinal: `<n>#<sku>` (items), `<n>#<slug>` (assets),
+  `<n>#s-<hex>` (shipments), `<n>#<id>` (invoices), `<ts>#<n>#<uuid>` (shifts). A PO id and a
+  cross-firm thread are never prefixed — both firms compute them — so a PO row carries `location`
+  as an attribute, and an agreement row carries `buyer_location` / `seller_location`, each
+  written at that firm's own stamp
+- a posting path copies its own row's `location` into `dimensions.location`, never inferred and
+  never re-read from here. `post_journal_entry` stamps `"1"` when the key is absent, so every
+  entry is in some slice
+- a provider boundary resolves the provider's location id to the ordinal (`location_map`), `"1"`
+  when unmapped
+- a tool declares `location` in its schema wherever its handler reads it; the schema is what the
+  model sees (`scripts/lint_schemas.py` holds this)
+- a `location` on a metrics event is the ordinal too, so a per-location count reads beside a
+  per-location statement
 
 ## standing instructions
 
