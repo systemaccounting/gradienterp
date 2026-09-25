@@ -177,6 +177,7 @@ jobs:
             | tee "$RUNNER_TEMP/fleet.tsv" \
             | python3 scripts/fleet.py update \
             || rc=$?
+          cat "$RUNNER_TEMP/fleet.tsv"   # the report in the log group as well as the summary
           echo "::endgroup::"
           { echo "### fleet"; echo '```'; cat "$RUNNER_TEMP/fleet.tsv"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
           exit "$rc"
