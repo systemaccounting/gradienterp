@@ -3,7 +3,8 @@
 The buy side: intent → structured request → accepted exchange. Emitter module:
 `modules/purchasing`. The agreement keys (`thread`, `terms_hash`) are peer-shared — both firms
 must compute them identically — so they are NEVER location-prefixed (the id-generating exception
-class); a PO's location is a row attr on each side privately.
+class); a location is per side and private — `buyer_location` / `seller_location` on the agreement
+row, each written at that firm's own stamp, and `location` on the PO or invoice row it settles into.
 
 ## po.proposed.v1 / po.accepted.v1 / po.declined.v1 — LIVE RAIL
 - **emitters**: the shared agreements services (`create_po` and `return_quote` → `request`,

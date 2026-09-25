@@ -17,7 +17,8 @@
       }
     },
     "total": {"type": "number", "description": "The agreed total (must match the proposal)."},
-    "terms_hash": {"type": "string", "description": "Optional fingerprint from the proposal; recomputed from items+total if omitted."}
+    "terms_hash": {"type": "string", "description": "Optional fingerprint from the proposal; recomputed from items+total if omitted."},
+    "location": {"type": "string", "description": "This firm's location ordinal that fulfils the order, default '1'. The drafted invoice carries it."}
   },
   "required": ["buyer", "thread", "items", "total"]
 }

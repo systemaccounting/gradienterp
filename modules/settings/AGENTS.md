@@ -66,7 +66,8 @@ The contract every emitting module holds, stated once:
 - a placeful id leads with the ordinal: `<n>#<sku>` (items), `<n>#<slug>` (assets),
   `<n>#s-<hex>` (shipments), `<n>#<id>` (invoices), `<ts>#<n>#<uuid>` (shifts). A PO id and a
   cross-firm thread are never prefixed — both firms compute them — so a PO row carries `location`
-  as an attribute
+  as an attribute, and an agreement row carries `buyer_location` / `seller_location`, each
+  written at that firm's own stamp
 - a posting path copies its own row's `location` into `dimensions.location`, never inferred and
   never re-read from here. `post_journal_entry` stamps `"1"` when the key is absent, so every
   entry is in some slice

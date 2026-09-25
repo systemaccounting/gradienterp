@@ -24,7 +24,7 @@ def _draft_invoice(row):
     total = terms.get("total")
     invoice = {
         "invoice_id": thread,   # peer-shared agreement key — never location-prefixed
-        "location":   "1",      # default (main) until capture-at-accept lands (request extra)
+        "location":   str(row.get("seller_location") or "1"),   # this side's, captured at the seller's stamp
         "customer":   row.get("buyer"),
         "lines": [{
             "description": f"from PO {thread}",

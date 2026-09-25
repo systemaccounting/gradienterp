@@ -19,6 +19,10 @@ your own side) — you just name both accounts:
 Bid vs offer is just who created the request first; it's computed, never a flag you set. The
 counterparty **accepts** the same terms, and both stamps = agreed.
 
+A branch's deal names its branch: pass `location` (the ordinal) on `create_po`, `return_quote`
+or `accept_po` and this firm's side of the row carries it, so the PO or the invoice that settles
+opens at that branch. The other firm never sees it.
+
 ## settlement is not a second decision
 
 **Once both sides have stamped, paying for it is not a new decision — it is the deal.** The owner

@@ -340,12 +340,13 @@ def test_a_branch_po_carries_its_location_into_receipt_and_payment():
     assert _journal(f"po-{po_id}-payment")["dimensions"]["location"] == "2"
 
 
-def test_settle_opens_the_po_at_the_rows_location():
-    # the buyer's create carried `location` into the agreement row's extra; the settle copies it
+def test_settle_opens_the_po_at_the_buyers_location():
+    # the buyer's stamp carried `buyer_location`; the seller's `seller_location` is theirs alone
     _fresh()
     row = {"thread": "d-2", "terms_hash": "cafe0000cafe0002",
            "buyer": "test-buyer", "seller": "roaster",
-           "buyer_stamp": 1, "seller_stamp": 2, "kind": "po", "location": "2",
+           "buyer_stamp": 1, "seller_stamp": 2, "kind": "po",
+           "buyer_location": "2", "seller_location": "5",
            "terms": {"items": [{"description": "beans", "amount": 100}], "total": 100},
            "lines": [{"description": "beans", "amount": 100, "account": "INVENTORY", "accountType": "ASSET"}]}
     assert SETTLE.handler({"agreement": row}, None)["settled"] == ["d-2"]

@@ -106,6 +106,25 @@ def test_an_unknown_agreement_is_a_404():
         assert resp["statusCode"] == 404
 
 
+def test_accept_captures_this_firms_location_on_its_own_side():
+    """The answering side's location lands with its stamp, beside the proposer's, and a stamp
+    recorded for an off-platform counterparty carries none."""
+    with scratch_env():
+        acc = load_lambda("accept")
+        from agreements import request
+        th, _ = request("t-loc", TERMS, side="buyer", buyer=THEM, seller=US,
+                        extra={"kind": "po", "buyer_location": "4"})
+        b = _body(acc.handler({"thread": "t-loc", "terms_hash": th, "location": "2"}, None))
+        assert b["agreed"] is True
+        [row] = agreements_rows()
+        assert row["seller_location"] == "2" and row["buyer_location"] == "4", row
+        # recording the counterparty's off-platform stamp: their branch is not ours to know
+        th2, _ = request("t-off", TERMS, side="seller", buyer=THEM, seller=US, extra={"kind": "po"})
+        acc.handler({"thread": "t-off", "terms_hash": th2, "side": "buyer", "location": "9"}, None)
+        row = next(r for r in agreements_rows() if r["thread"] == "t-off")
+        assert "buyer_location" not in row and "seller_location" not in row, row
+
+
 if __name__ == "__main__":
     for fn in [n for n in dir() if n.startswith("test_")]:
         globals()[fn]()

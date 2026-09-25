@@ -4,7 +4,7 @@ depends on inventory, accounting, contacts, and invoicing (its sell-side mirror)
 
 ## current features
 
-- `create_po` — agent tool: record a PO against a known vendor (`{vendor, lines:[{description, account, accountType, amount}], memo?, location?, job?}`); status `open`. The PO row carries `location` (default "1"), never the `po_id`, which both firms compute; `manage_po` receive and pay copy it into `dimensions.location`. On the agreements path the buyer's `location` rides the row's extra and the buyer-side settle opens the PO at it.
+- `create_po` — agent tool: record a PO against a known vendor (`{vendor, lines:[{description, account, accountType, amount}], memo?, location?, job?}`); status `open`. The PO row carries `location` (default "1"), never the `po_id`, which both firms compute; `manage_po` receive and pay copy it into `dimensions.location`. On the agreements path it lands as `buyer_location` at the buyer's stamp (`create_po` or `accept_po` as buyer) and the buyer-side settle opens the PO at it.
 - `manage_po` op `receive` — `{po_id}` → post DR <each line's account> / CR ACCOUNTS_PAYABLE; `open → received`.
 - `manage_po` op `pay` — `{po_id}` → post DR ACCOUNTS_PAYABLE / CR CASH for the total; `received → paid`.
 - `manage_po` op `get` — list/read POs by `po_id` / `status` / `vendor`.

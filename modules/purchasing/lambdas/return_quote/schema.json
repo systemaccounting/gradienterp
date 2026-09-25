@@ -19,7 +19,8 @@
         "required": ["description", "amount"]
       }
     },
-    "memo": {"type": "string", "description": "Optional note carried on the row."}
+    "memo": {"type": "string", "description": "Optional note carried on the row."},
+    "location": {"type": "string", "description": "This firm's location ordinal that fulfils the order, default '1'. Private to this firm; the invoice drafted on agreement carries it."}
   },
   "required": ["buyer", "thread", "lines"]
 }

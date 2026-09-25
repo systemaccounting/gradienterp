@@ -55,7 +55,13 @@ def handler(event, context):
                        "explicitly only to record a stamp agreed off-platform")
         side = mine[0]
 
-    row = accept(thread, terms_hash, side=side, buyer=buyer, seller=seller)
+    # this firm's location for its side of the deal — the branch that receives (buyer) or fulfils
+    # (seller) — lands with its stamp as `<side>_location`, private to this firm's row, so its
+    # settle reads its own. A stamp recorded for an off-platform counterparty carries none.
+    extra = None
+    if body.get("location") and row.get(side) == GERP_ID:
+        extra = {f"{side}_location": str(body["location"])}
+    row = accept(thread, terms_hash, side=side, buyer=buyer, seller=seller, extra=extra)
     agreed = bool(row.get("buyer_stamp") and row.get("seller_stamp"))
 
     kind = row.get("kind") or "agreement"
