@@ -64,14 +64,37 @@ def test_every_step_read_names_an_earlier_step_of_the_same_job():
     assert not problems, "\n".join(problems)
 
 
-def test_the_deploy_matrices_fan_out_over_the_resolved_gerps_and_the_image_builds_on_arm():
+def test_the_lambdas_job_is_the_fleet_pipe_the_runtimes_fan_out_and_the_image_builds_on_arm():
+    """deploy.yaml (issue #59): `lambdas` is one job over the fleet, the pipe `deploy.sh fleet` runs on
+    a laptop with GNU parallel in the xargs slot; `runtimes` still fans out per gerp, since a runtime
+    waits minutes for READY and the image × runtime loop is not yet a piece."""
     jobs = _load(REPO / ".github" / "workflows" / "deploy.yaml")["jobs"]
-    for name in ("lambdas", "runtimes"):
-        assert jobs[name]["strategy"]["matrix"]["gerp"] == "${{ fromJSON(needs.gerps.outputs.list) }}", name
-        assert jobs[name]["strategy"]["fail-fast"] is False, f"{name}: one gerp's failure stops no other"
+    assert "strategy" not in jobs["lambdas"], "one job over the fleet"
+    fleet_step = next(st for st in jobs["lambdas"]["steps"] if st.get("name") == "fleet")["run"]
+    for needle in ("fleet.py listzipversions", "parallel -k -j 10 --halt never", "fleet.py listzipfnsconf --gerp {}", "fleet.py status", "fleet.py update", "::group::fleet", "GITHUB_STEP_SUMMARY"):
+        assert needle in fleet_step, needle
+    push_step = next(st for st in jobs["lambdas"]["steps"] if st.get("name") == "push")["run"]
+    assert "fleet.py push" in push_step and "npm ci" in push_step, "the artifacts once, before the pipe"
+    assert jobs["lambdas"]["timeout-minutes"] == "${{ fromJSON(needs.gerps.outputs.lambdas_timeout) }}", "a minute a gerp"
+    assert jobs["runtimes"]["strategy"]["matrix"]["gerp"] == "${{ fromJSON(needs.gerps.outputs.list) }}"
+    assert jobs["runtimes"]["strategy"]["fail-fast"] is False, "one gerp's failure stops no other"
     assert jobs["build"]["runs-on"] == "ubuntu-24.04-arm"
     assert "needs" not in jobs["build"] or jobs["build"]["needs"] == "gerps", "the build waits on no deploy"
     assert "lambdas" not in (jobs["runtimes"]["needs"] or []), "the image and the lambdas run at once"
+
+
+def test_the_two_fleet_compositions_are_the_same_pieces_in_the_same_order():
+    """modules/terraform AGENTS: the laptop's pipe (deploy.sh fleet) and the runner's (deploy.yaml
+    lambdas) are identical in logic; a runner thing is written in the yaml, never in a script."""
+    sh = (REPO / "scripts" / "deploy.sh").read_text()
+    laptop = re.findall(r"fleet\.py (\w+)", sh[sh.index("fleet.py listzipversions"):sh.index("fleet.py update") + len("fleet.py update")])
+    jobs = _load(REPO / ".github" / "workflows" / "deploy.yaml")["jobs"]
+    fleet_step = next(st for st in jobs["lambdas"]["steps"] if st.get("name") == "fleet")["run"]
+    runner = re.findall(r"fleet\.py (\w+)", fleet_step)
+    assert laptop == runner == ["listzipversions", "listgerps", "listzipfnsconf", "status", "update"], (laptop, runner)
+    assert "-P 10" in sh and "-j 10" in fleet_step, "ten at a time on both"
+    for f in sorted((REPO / "scripts").glob("*.py")) + sorted((REPO / "scripts").glob("*.sh")):
+        assert "GITHUB_ACTIONS" not in f.read_text(), f"{f.name} branches on the runner"
 
 
 def test_playbooks_runs_on_a_kb_change_by_dispatch_or_by_call_and_finds_the_knowledge_base_by_name():
@@ -83,11 +106,16 @@ def test_playbooks_runs_on_a_kb_change_by_dispatch_or_by_call_and_finds_the_know
     assert on["push"] == {"branches": ["main"], "paths": ["modules/**/kb.md"]}
     assert "gerp" in on["workflow_dispatch"]["inputs"] and "gerp" in on["workflow_call"]["inputs"]
     assert all(job["environment"] == "prod" for job in wf["jobs"].values())
-    sync = next(st for st in wf["jobs"]["sync"]["steps"] if st.get("name") == "sync")["run"]
+    # the per-gerp step is a script a laptop runs the same; the yaml runs the list through GNU parallel
+    script = (REPO / "scripts" / "sync_gerp_playbooks.sh").read_text()
     for needle in ("list-knowledge-bases", 'playbooks-${GERP//_/-}', "list-data-sources", '"repo-playbooks"'):
+        assert needle in script, needle
+    assert 'bash scripts/sync_playbooks.sh "$GERP" "$kb" "$ds" "gerp-$GERP" "$region"' in script
+    assert "strategy" not in wf["jobs"]["sync"], "one job over the fleet"
+    sync = next(st for st in wf["jobs"]["sync"]["steps"] if st.get("name") == "sync")["run"]
+    for needle in ("parallel -k -j 10 --halt never --joblog", "bash scripts/sync_gerp_playbooks.sh {}", "::group::{}", "GITHUB_STEP_SUMMARY", "exit 1"):
         assert needle in sync, needle
-    assert 'bash scripts/sync_playbooks.sh "$GERP" "$kb" "$ds" "gerp-$GERP" "$region"' in sync
-    assert wf["jobs"]["sync"]["strategy"]["matrix"]["gerp"] == "${{ fromJSON(needs.gerps.outputs.list) }}"
+    assert wf["jobs"]["sync"]["timeout-minutes"] == "${{ fromJSON(needs.gerps.outputs.timeout) }}", "a minute a gerp"
 
 
 def test_deploy_composes_playbooks_only_when_asked():

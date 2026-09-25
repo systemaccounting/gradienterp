@@ -6,14 +6,15 @@
 #
 #   gerps     the gerp list and the source's dirs, for the jobs after it
 #   bff       the BFF, once: it lives in the operator account, and a push per gerp would race
-#   lambdas   one job per gerp: deploy.sh push --gerp <g> --dirs <the fleet dirs>
+#   lambdas   one job over the fleet: fleet.py push the dirs once, then the fleet pipe (scripts/fleet.py, the same
+#             pipe `deploy.sh fleet` runs on a laptop), ten gerps at a time through GNU parallel
 #   playbooks playbooks.yaml, the same gerps, after the pushes — with -f playbooks=true
 #   integ     the deployed modules' integ tests, once the pushes are done
 #   build     the agent image, on an arm64 runner (native, no emulation): docker.sh --build, upload.sh image
 #   runtimes  one job per gerp: its runtime onto the tag build pushed (or the top of ECR, image: no-build)
 #
-# A gerp's lambdas stay in one job, where push runs 8 at a time in seconds each; the fan-out is per gerp,
-# where a runtime waits minutes for READY. Runners cost nothing on this public repo; a job's price is its
+# The fleet's lambdas are one job: the pipe moves every gerp's functions in about a minute. The fan-out is per
+# gerp only where a runtime waits minutes for READY. Runners cost nothing on this public repo; a job's price is its
 # minute of setup.
 name: deploy
 
@@ -59,6 +60,7 @@ jobs:
     timeout-minutes: 10
     outputs:
       list: ${{ steps.gerps.outputs.list }}
+      lambdas_timeout: ${{ steps.gerps.outputs.lambdas_timeout }}
       version: ${{ steps.source.outputs.version }}
       fleet_dirs: ${{ steps.dirs.outputs.fleet }}
       bff: ${{ steps.dirs.outputs.bff }}
@@ -85,6 +87,7 @@ jobs:
             list="$(jq -Rc 'split(",") | map(gsub("^ +| +$"; "")) | map(select(length > 0))' <<< "$GERP")"
           fi
           echo "list=$list" >> "$GITHUB_OUTPUT"
+          echo "lambdas_timeout=$(( 30 + $(jq length <<< "$list") ))" >> "$GITHUB_OUTPUT"   # a minute a gerp, ten at a time
           echo "gerps: $(jq -r 'join(", ")' <<< "$list")" >> "$GITHUB_STEP_SUMMARY"
       - id: dirs
         working-directory: ${{ steps.source.outputs.tree }}
@@ -122,11 +125,7 @@ jobs:
     if: needs.gerps.outputs.fleet_dirs != '[]'
     runs-on: ubuntu-latest
     environment: prod
-    timeout-minutes: 30
-    strategy:
-      fail-fast: false
-      matrix:
-        gerp: ${{ fromJSON(needs.gerps.outputs.list) }}
+    timeout-minutes: ${{ fromJSON(needs.gerps.outputs.lambdas_timeout) }}
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v7
@@ -149,7 +148,6 @@ jobs:
       - name: push
         working-directory: ${{ steps.source.outputs.tree }}
         env:
-          GERP: ${{ matrix.gerp }}
           DIRS: ${{ needs.gerps.outputs.fleet_dirs }}
         run: |
           mapfile -t dirs < <(jq -r '.[]' <<< "$DIRS")
@@ -157,9 +155,31 @@ jobs:
           for d in "${dirs[@]}"; do
             if [ -f "$d/package-lock.json" ]; then (cd "$d" && npm ci --no-audit --no-fund); fi
           done
-          bash scripts/deploy.sh push --gerp "$GERP" --dirs "${dirs[@]}" --notes "$(jq -r .commit source.json)" \
-            | tee "$RUNNER_TEMP/push.out"
-          { echo "### $GERP"; echo '```'; cat "$RUNNER_TEMP/push.out"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+          # the artifacts once, with provenance; the fleet pipe then moves every gerp's functions onto them
+          { echo "### pushed"; echo '```'; python3 scripts/fleet.py push "${dirs[@]}" --notes "$(jq -r .commit source.json)"; echo '```'; } | tee -a "$GITHUB_STEP_SUMMARY"
+      - name: fleet
+        working-directory: ${{ steps.source.outputs.tree }}
+        env:
+          LIST: ${{ needs.gerps.outputs.list }}
+          DIRS: ${{ needs.gerps.outputs.fleet_dirs }}
+        run: |
+          # the fleet pipe, the runner's composition: identical in logic to `deploy.sh fleet` (modules/terraform
+          # AGENTS), the same pieces in the same order; GNU parallel in the xargs slot, the log group and the
+          # summary are the runner's
+          mapfile -t dirs < <(jq -r '.[]' <<< "$DIRS")
+          snapshot="$RUNNER_TEMP/fleet-snapshot.tsv"
+          python3 scripts/fleet.py listzipversions > "$snapshot"
+          echo "::group::fleet"
+          rc=0
+          python3 scripts/fleet.py listgerps | cut -f1 | grep -Fx -f <(jq -r '.[]' <<< "$LIST") \
+            | parallel -k -j 10 --halt never 'python3 scripts/fleet.py listzipfnsconf --gerp {}' \
+            | python3 scripts/fleet.py status "$snapshot" --dirs "${dirs[@]}" \
+            | tee "$RUNNER_TEMP/fleet.tsv" \
+            | python3 scripts/fleet.py update \
+            || rc=$?
+          echo "::endgroup::"
+          { echo "### fleet"; echo '```'; cat "$RUNNER_TEMP/fleet.tsv"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+          exit "$rc"
 
   playbooks:
     # playbooks.yaml composed: the same gerps, after their pushes; only when the dispatch asks, since a
