@@ -137,12 +137,14 @@ def books(stem: str) -> dict:
     schema = make_table("schema")
     seed_registry(schema, "chart_of_accounts")
     bus, queue = make_bus(stem + "-books")
+    internal, _ = make_bus(stem + "-internal")   # a posting records a metrics event here (modules/metrics)
     return {
         "LEDGER_TABLE": ledger,
         "PENDING_TABLE": pending,
         "SETTINGS_TABLE": settings,
         "SCHEMA_TABLE": schema,
         "OP_EVENT_BUS_ARN": bus,
+        "INTERNAL_BUS_NAME": internal,
         "POST_JOURNAL_ENTRY_FN": "gerp-accounting-local-post_journal_entry",
         "_QUEUE_URL": queue,
     }
