@@ -29,9 +29,10 @@ def _canonical(current, values):
 
 CANONICAL_STATUS = [
     _canonical("draft",  ["issued"]),
-    _canonical("issued", ["unpaid", "paid"]),
-    # a charge that failed is chased, and paying ends the chase
-    _canonical("unpaid", ["paid"]),
+    # an invoice issued in error is voided: its receivable reversed, where it stops
+    _canonical("issued", ["unpaid", "paid", "void"]),
+    # a charge that failed is chased, and paying ends the chase; so does voiding
+    _canonical("unpaid", ["paid", "void"]),
 ]
 
 # Every status an invoice can be in, for messages and for the "is this even a status" check. Derived

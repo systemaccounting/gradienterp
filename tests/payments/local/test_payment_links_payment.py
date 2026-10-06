@@ -125,6 +125,14 @@ def test_no_landing_and_no_return_url_refuses_before_calling_stripe():
     assert posts == [], "nothing should reach stripe"
 
 
+def test_an_unpaid_invoice_gets_a_link():
+    """A charge that failed is exactly the invoice a person needs a link for: the chase notice
+    carries it, and the console's pay-link for a closing invoice is the same call."""
+    status, body, posts = run({"invoice_id": "INV-7"}, invoice={**INVOICE, "status": "unpaid"})
+    assert status == 200, body
+    assert body["url"] == SESSION["url"] and len(posts) == 1
+
+
 def test_a_paid_invoice_gets_no_link():
     status, body, posts = run({"invoice_id": "INV-7"}, invoice={**INVOICE, "status": "paid"})
     assert status == 409

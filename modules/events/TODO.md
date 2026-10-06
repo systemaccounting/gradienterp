@@ -15,6 +15,7 @@ built yet:
       the same per-invoke settings read); `payments/collection_rules` is the internal bus's only
       emitter, and the bus's envelope stays an implementation detail of `charge_saved_card` until it
       has a second.
+- [ ] **`invoice.void` to the buyer.** A cross-firm invoice is a payable in the customer's own gerp; `manage_invoice` op `void` reverses the seller's side and sends nothing yet. The addressed event and the buyer's apply are built when a cross-firm invoice is voided.
 - [ ] **`tasks/escalate` has no `try`** around its `put_events`. On the shared bus that is a
       visibility event able to fail the escalation it was only reporting — the contract says
       otherwise. Fixed for free by moving it onto `events.py`.

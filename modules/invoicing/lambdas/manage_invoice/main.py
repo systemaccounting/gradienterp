@@ -6,8 +6,10 @@
         transition    move ONE item to a new state (money posts by the rules attached to it)
         get           one invoice by id (its items folded to current state), or a filtered list
         tag / untag   the firm's own labels on an invoice; tags lists them; find_by_tag finds by one
+        void          issued in error: the mirror of the issue entry, issued | unpaid -> void
 
-`issue_invoice` and `record_invoice_paid` stay their own tools: they post to the ledger.
+`issue_invoice` and `record_invoice_paid` stay their own tools: they post to the ledger. `void`
+posts too and is an op the way `transition` is: a verb on an invoice the owner already manages.
 
 Each op's body is the tool it absorbed, moved in unchanged as a sibling file and loaded by path,
 so the handler sees the same event it always took — minus `op`. The POS read route
@@ -35,6 +37,7 @@ OPS = {
     "untag": "invoice_tags",
     "tags": "invoice_tags",
     "find_by_tag": "invoice_tags",
+    "void": "void_invoice",
 }
 # the tags body keeps its own verb; this tool's op names are flat so there is one discriminator
 TAG_VERB = {"tag": "apply", "untag": "remove", "tags": "list", "find_by_tag": "find"}
