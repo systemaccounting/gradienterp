@@ -43,7 +43,7 @@ GET_INVOICES_FN = os.environ.get("GET_INVOICES_FN", "")
 # where a payer lands after paying when the caller names nowhere: a page that says the payment went
 # through. Never the firm's portal — its url carries the slug, the portal's only credential.
 PAYER_LANDING_URL = os.environ.get("PAYER_LANDING_URL", "https://gradienterp.cloud/paid")
-PAYABLE = ("issued", "overdue", "partial")
+PAYABLE = ("issued", "unpaid", "overdue", "partial")   # unpaid: a charge failed, and the link is how it gets paid
 
 
 def _err(message, status=400):

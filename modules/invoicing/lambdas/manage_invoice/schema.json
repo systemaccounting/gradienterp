@@ -1,5 +1,5 @@
 {
-  "description": "create or from_template a draft, complete_line, transition one item's state, get, tags. issue_invoice and record_invoice_paid post the ledger.",
+  "description": "create/from_template a draft, complete_line, transition an item, get, tags, void one issued in error. issue_invoice and record_invoice_paid post the ledger.",
   "type": "object",
   "required": [
     "op"
@@ -16,17 +16,22 @@
         "tag",
         "untag",
         "tags",
-        "find_by_tag"
+        "find_by_tag",
+        "void"
       ],
-      "description": "create: customer+lines. from_template: customer+ctx. complete_line/transition: invoice_id+item_id. get: id or filters. tag ops: labels."
+      "description": "create: customer+lines. from_template: customer+ctx. complete_line/transition: invoice_id+item_id. get: id or filters. tags: labels. void: invoice_id+reason."
     },
     "customer": {
       "type": "string",
       "description": "contact_id billed; get filter."
     },
+    "reason": {
+      "type": "string",
+      "description": "void: why."
+    },
     "lines": {
       "type": "array",
-      "description": "each credits its account at issue.",
+      "description": "credit at issue.",
       "items": {
         "type": "object",
         "required": [
@@ -54,7 +59,7 @@
     "ctx": {
       "type": "object",
       "additionalProperties": true,
-      "description": "from_template: quantities, e.g. {nights: 2}."
+      "description": "from_template: quantities."
     },
     "template": {
       "type": "string",
@@ -66,7 +71,7 @@
     },
     "memo": {
       "type": "string",
-      "description": "on the invoice or the transition."
+      "description": "on the invoice or transition."
     },
     "job": {
       "type": "string",
@@ -74,11 +79,11 @@
     },
     "location": {
       "type": "string",
-      "description": "location ordinal, default '1'; leads the invoice_id."
+      "description": "ordinal, default '1'."
     },
     "created_by": {
       "type": "string",
-      "description": "account_id the sale is attributed to."
+      "description": "account_id attributed."
     },
     "invoice_id": {
       "type": "string",
@@ -86,16 +91,16 @@
     },
     "item_id": {
       "type": "string",
-      "description": "the line ('i0'…); transition may omit it."
+      "description": "the line, 'i0'…; transition may omit."
     },
     "state": {
       "type": "string",
-      "description": "transition: paid|earned|refunded|the owner's own."
+      "description": "transition: paid|earned|refunded|own."
     },
     "dims": {
       "type": "object",
       "additionalProperties": true,
-      "description": "transition: extra journal dimensions."
+      "description": "transition: journal dims."
     },
     "transition_id": {
       "type": "string",
@@ -127,15 +132,15 @@
     },
     "status": {
       "type": "string",
-      "description": "get: draft|issued|unpaid|paid."
+      "description": "get: draft|issued|unpaid|paid|void."
     },
     "incomplete": {
       "type": "boolean",
-      "description": "get: drafts missing values only."
+      "description": "get: incomplete drafts."
     },
     "tag": {
       "type": "string",
-      "description": "invoice_tags registry label."
+      "description": "a label."
     }
   }
 }

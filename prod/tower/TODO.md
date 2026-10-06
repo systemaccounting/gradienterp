@@ -102,4 +102,8 @@ Outbound-auth matrix confirmed: `api_key` IS supported for `mcp_server` targets 
       (suspended for 90 days at AWS) is unverified — settle it with the first customer that
       leaves, which is the only way to find out.
 - [ ] **`bill_customer`'s day.** A daily poll from early in the month is a guess at when AWS
-      finalizes; watch what it does for a month before fixing a schedule.
+      finalizes; watch what it does for a month before fixing a schedule. September 2026: both
+      invoices (AWS, AWS_MARKETPLACE) issued on the 1st, the run on the 2nd saw them.
+- [ ] **A legal-entity split.** An EU billing address is invoiced by AWS EMEA SARL beside AWS,
+      Inc.; `bill_customer` expects one invoice per billing entity and would issue the fee on the
+      first legal entity's. It shows as `underbilled` on the next run. Model it when a gerp has one.

@@ -61,6 +61,7 @@ ISSUE = _load("issue_invoice")
 PAYMENT = _load("record_invoice_paid")
 GET = _op(_load("manage_invoice"), "get")
 UNPAID = _load("mark_unpaid")
+VOID = _op(_load("manage_invoice"), "void")
 
 
 def _fresh():
@@ -329,11 +330,12 @@ def test_an_unknown_status_is_refused_by_name():
 def test_the_statuses_are_derived_from_the_rows():
     """So the set an invoice may be in cannot drift from the moves that reach them."""
     from _helpers import STATUSES, next_statuses
-    assert STATUSES == ["draft", "issued", "paid", "unpaid"]
+    assert STATUSES == ["draft", "issued", "paid", "unpaid", "void"]
     assert next_statuses("draft") == ["issued"]
-    assert next_statuses("issued") == ["unpaid", "paid"]
-    assert next_statuses("unpaid") == ["paid"]
+    assert next_statuses("issued") == ["unpaid", "paid", "void"]
+    assert next_statuses("unpaid") == ["paid", "void"]
     assert next_statuses("paid") == [], "paid is where an invoice stops"
+    assert next_statuses("void") == [], "so is void"
 
 
 def test_a_failed_charge_can_reach_paid_later():
@@ -519,6 +521,63 @@ def test_a_branch_sale_leads_the_id_and_posts_to_its_location():
     assert _inv(ISSUE, {"invoice_id": main})[0] == 200
     posted = [e for e in _journal() if main in e["entryId"]]
     assert len(posted) == 1 and posted[0]["dimensions"]["location"] == "1", posted
+
+
+
+# ── void: issued in error ──
+
+def _entry(entry_id):
+    return next(e for e in _journal() if e["entryId"] == entry_id)
+
+
+def test_an_issued_invoice_is_voided_with_the_mirror_of_its_issue_entry():
+    inv_id = _issued_invoice()
+    code, body = _inv(VOID, {"invoice_id": inv_id, "reason": "issued on one of two AWS invoices"})
+    assert code == 200, body
+    assert body["status"] == "void" and body["journal_entry_id"]
+    void = _entry(f"inv-{inv_id}-void")
+    assert _by_account(void, "DEBIT") == {"REVENUE_PENDING": 10}, "the held revenue comes back"
+    assert _by_account(void, "CREDIT") == {"ACCOUNTS_RECEIVABLE": 10}, "the receivable is gone"
+    _, got = _inv(GET, {"invoice_id": inv_id})
+    row = got["invoices"][0]
+    assert row["status"] == "void" and row["void_reason"] == "issued on one of two AWS invoices"
+    assert row["void_entry_id"] == f"inv-{inv_id}-void" and row["void_at"]
+
+
+def test_an_unpaid_invoice_is_voided_the_same_way():
+    inv_id = _issued_invoice()
+    _inv(UNPAID, {"invoice_id": inv_id, "reason": "amount_too_small"})
+    code, body = _inv(VOID, {"invoice_id": inv_id})
+    assert code == 200 and body["status"] == "void", body
+    assert _by_account(_entry(f"inv-{inv_id}-void"), "CREDIT") == {"ACCOUNTS_RECEIVABLE": 10}
+
+
+def test_a_paid_invoice_is_not_voided_and_nothing_is_posted():
+    inv_id = _issued_invoice()
+    _inv(PAYMENT, {"invoice_id": inv_id})
+    before = len(_journal())
+    code, body = _inv(VOID, {"invoice_id": inv_id})
+    assert code == 409 and "paid" in body["error"], body
+    assert len(_journal()) == before
+
+
+def test_a_draft_is_not_voided():
+    _fresh()
+    code, inv = _inv(CREATE, {"customer": "cafe", "lines": [
+        {"description": "x", "account": "SERVICE_REVENUE", "accountType": "REVENUE", "amount": 10}]})
+    before = len(_journal())
+    code, body = _inv(VOID, {"invoice_id": inv["invoice_id"]})
+    assert code == 409 and "draft" in body["error"], body
+    assert len(_journal()) == before
+
+
+def test_a_second_void_answers_already_and_posts_nothing():
+    inv_id = _issued_invoice()
+    _inv(VOID, {"invoice_id": inv_id})
+    before = len(_journal())
+    code, body = _inv(VOID, {"invoice_id": inv_id})
+    assert code == 200 and body["already"] is True and "rules" not in body
+    assert len(_journal()) == before
 
 
 if __name__ == "__main__":

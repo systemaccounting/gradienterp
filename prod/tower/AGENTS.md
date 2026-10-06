@@ -121,8 +121,8 @@ AWS meters per-sub-account natively (Cost & Usage Report, Cost Explorer API, cos
 
 `bill_customer` is a daily poll from early in the month, and it books BOTH legs:
 
-- **cost** — `invoicing list-invoice-summaries` → the unit's `TotalAmount` → DR `COST_OF_GOODS_SOLD` / CR `ACCOUNTS_PAYABLE`, with `get-invoice-pdf` stored to S3 as evidence and never parsed.
-- **revenue** — that amount × 1.2 → `manage_invoice (op: create)` in gradienterp's own gerp → `issue_invoice`.
+- **cost** — `invoicing list-invoice-summaries` → each invoice's `TotalAmount` (AWS issues one per billing entity with cost: the services under `AWS`, the model under `AWS_MARKETPLACE`) → DR `COST_OF_GOODS_SOLD` / CR `ACCOUNTS_PAYABLE` per invoice, with `get-invoice-pdf` stored to S3 as evidence, one key per invoice, never parsed.
+- **revenue** — one fee per gerp and month, a line per AWS invoice at × 1.2 → `manage_invoice (op: create)` in gradienterp's own gerp → `issue_invoice`, once a summary is present for every entity Cost Explorer says had cost (`ce:GetCostAndUsage` on the management session). A fee already issued under that sum is reported as `underbilled`, not rebilled.
 
 Collection is not tower's concern and not a branch here: it is the payer's business, and it runs on the same rails every other invoice does.
 
@@ -130,7 +130,7 @@ Collection is not tower's concern and not a branch here: it is the payer's busin
 `INVOICE_STATUS#issued` runs `charge_saved_card`, and `charge_saved_method` calls `mark_unpaid` when
 the card fails. Two rows on `INVOICE_STATUS#unpaid` schedule the chase (`collections/notice.py`,
 every 3 days for 15) and the deadline (`closure/begin.py` at 15 days, named by the customer);
-`stop_chasing` on `INVOICE_STATUS#paid` runs `collections/cancel.py`. The closure scripts are the
+`stop_chasing` on `INVOICE_STATUS#paid`, and its twin on `INVOICE_STATUS#void`, runs `collections/cancel.py`. The closure scripts are the
 same ones `POST /api/gerps/close` hands a customer's own request to — one sequence from the backup
 on, described in `modules/automation/AGENTS.md`. `collections/audit.py` sweeps daily. The scripts are
 gradienterp's own, approved into its cabinet; the reusable half is `modules/automation` and
@@ -143,10 +143,14 @@ closes on D" is gradienterp's own collections state and lives on `gerp-customers
 `bill_customer`: at issue it stamps `billing` — a list of the hosting invoices still open,
 `{invoice_id, total, period, issued_at, unpaid_at?}`; every daily run first re-reads each entry
 from the seller (`manage_invoice {op: get}`) on every row carrying `billing`, whatever the gerp's
-status — `unpaid` stamps `unpaid_at`, `paid` drops the entry, and a row with nothing left open has
+status — `unpaid` stamps `unpaid_at`, `paid` or `void` drops the entry, and a row with nothing left open has
 `balance_owed` set to 0 on it and on every `gerp-priors` row whose endings name the gerp. A closed
 gerp with a balance is read until it pays. `dry_run` reads and writes nothing. The gerp-cloud BFF
-reads the row for the owner console; nothing pushes from the seller's rules.
+reads the row for the owner console; nothing pushes from the seller's rules. `expensed` on a row
+(set by hand: gradienterp, the staging pairs) is the operator's own gerp — its cost books to
+`UTILITIES_EXPENSE` and no hosting invoice is raised. `carried` is a fee under Stripe's $0.50
+minimum that was not issued: its lines, each named by period and AWS invoice, wait on the row and
+open the next period's invoice, which clears them.
 
 ## a failure reaches a person
 

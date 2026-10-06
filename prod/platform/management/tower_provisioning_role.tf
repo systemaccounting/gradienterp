@@ -73,6 +73,10 @@ resource "aws_iam_role_policy" "tower_provisioning" {
           # TotalAmount the fee is computed from, the pdf is kept as evidence.
           "invoicing:ListInvoiceSummaries",
           "invoicing:GetInvoicePDF",
+          # which invoices to expect: AWS issues one per billing entity with cost
+          # (the services under AWS, the model under AWS Marketplace), and the fee
+          # waits until each is issued. One call a run, grouped by linked account.
+          "ce:GetCostAndUsage",
         ]
         Resource = "*"
       },
