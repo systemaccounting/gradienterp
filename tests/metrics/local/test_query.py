@@ -213,6 +213,27 @@ def test_sum_adds_the_amount_per_period_and_cumulative_is_the_stock_at_start_and
         assert body["rows"] == [{"period": "2026-09-01", "at_start": 0.0, "at_end": 100.0}], "a balance: the posted sum to date"
 
 
+def test_cumulative_reports_every_period_in_the_window_and_carries_the_level_across_an_empty_one():
+    """A stock is a level, not an event: a month nobody joined still has the members it had. The
+    window's periods all report, an empty one with the level before it as both at_start and
+    at_end — the page that read `at_end` off the last row went blank the first month with no
+    signup (gradienterp, 2026-10-01)."""
+    with scratch_env():
+        seed_store(MONEY)
+        tool = load_lambda("manage_metrics")
+        october = {"start": "2026-10-01", "end": "2026-11-01"}
+        code, body = _q(tool, "cumulative", params={"in_event": "member.joined", "out_event": "member.cancelled", "measure": "count", "grain": "month"}, **october)
+        assert code == 200, body
+        assert body["rows"] == [{"period": "2026-10-01", "at_start": 1.0, "at_end": 1.0}], "no event in october; the one member carried"
+        code, body = _q(tool, "cumulative", params={"in_event": "member.joined", "out_event": "member.cancelled", "measure": "count", "grain": "day"}, start="2026-09-19", end="2026-09-22")
+        assert code == 200, body
+        assert body["rows"] == [{"period": "2026-09-19", "at_start": 2.0, "at_end": 2.0}, {"period": "2026-09-20", "at_start": 2.0, "at_end": 1.0},
+                                {"period": "2026-09-21", "at_start": 1.0, "at_end": 1.0}], "every day of the window, the cancellation on the 20th"
+        code, body = _q(tool, "cumulative", params={"in_event": "revenue.posted", "out_event": "", "measure": "sum", "grain": "month"}, **october)
+        assert code == 200, body
+        assert body["rows"] == [{"period": "2026-10-01", "at_start": 100.0, "at_end": 100.0}], "a balance carries too"
+
+
 if __name__ == "__main__":
     import inspect
     tests = [(n, f) for n, f in sorted(globals().items()) if n.startswith("test_") and inspect.isfunction(f)]
