@@ -94,6 +94,11 @@ variable "canonical_bucket" {
   default     = "gerp-canonical-185369506315"
 }
 
+variable "rule_instances_table_name" {
+  description = "modules/rules instance table. The door runs the firm's rows on METRIC#<event> after the write (the metric_posted callsite)."
+  type        = string
+}
+
 variable "register_with_agent" {
   description = "Register manage_metrics as a tool on the customer's agent gateway."
   type        = bool
@@ -439,6 +444,12 @@ resource "aws_iam_role_policy" "record" {
         Resource = "arn:aws:dynamodb:${local.region}:${local.account_id}:table/${local.settings_table}"
       },
       {
+        # the firm's rows on `METRIC#<event>`: what its own script does with a posted event (modules/rules)
+        Effect   = "Allow"
+        Action   = "dynamodb:Query"
+        Resource = "arn:aws:dynamodb:${local.region}:${local.account_id}:table/${var.rule_instances_table_name}"
+      },
+      {
         Effect   = "Allow"
         Action   = ["logs:CreateLogGroup", "logs:CreateLogStream", "logs:PutLogEvents"]
         Resource = "arn:aws:logs:${local.region}:${local.account_id}:*"
@@ -556,21 +567,22 @@ resource "aws_iam_role_policy" "manage" {
 
 locals {
   env = {
-    CUSTOMER_ID       = var.gerp_id
-    INTERNAL_BUS_NAME = var.internal_bus_name
-    METRICS_ENV_PATH  = local.env_path
-    METRICS_BASE_URL  = var.server_api_endpoint
-    STORE_BUCKET      = var.storage_bucket
-    STORE_PREFIX      = local.store_prefix
-    USAGE_TABLE       = aws_dynamodb_table.usage.name
-    ATHENA_WORKGROUP  = aws_athena_workgroup.metrics.name
-    GLUE_DATABASE     = aws_glue_catalog_database.metrics.name
-    GLUE_TABLE        = aws_glue_catalog_table.metrics.name
-    GERP_TIMEZONE     = var.timezone
-    SETTINGS_TABLE    = local.settings_table
-    OP_EVENT_BUS_ARN  = var.op_event_bus_arn
-    SCHEMA_TABLE      = local.schema_table
-    CANONICAL_BUCKET  = var.canonical_bucket
+    CUSTOMER_ID          = var.gerp_id
+    INTERNAL_BUS_NAME    = var.internal_bus_name
+    METRICS_ENV_PATH     = local.env_path
+    METRICS_BASE_URL     = var.server_api_endpoint
+    STORE_BUCKET         = var.storage_bucket
+    STORE_PREFIX         = local.store_prefix
+    USAGE_TABLE          = aws_dynamodb_table.usage.name
+    ATHENA_WORKGROUP     = aws_athena_workgroup.metrics.name
+    GLUE_DATABASE        = aws_glue_catalog_database.metrics.name
+    GLUE_TABLE           = aws_glue_catalog_table.metrics.name
+    GERP_TIMEZONE        = var.timezone
+    SETTINGS_TABLE       = local.settings_table
+    OP_EVENT_BUS_ARN     = var.op_event_bus_arn
+    SCHEMA_TABLE         = local.schema_table
+    CANONICAL_BUCKET     = var.canonical_bucket
+    RULE_INSTANCES_TABLE = var.rule_instances_table_name # the door: METRIC#<event> rows (modules/rules)
   }
   functions = {
     record         = { role = aws_iam_role.record.arn, timeout = 30 }

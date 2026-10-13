@@ -43,9 +43,9 @@ rule: a rule does not know its key (`multiply_item_value` has no idea invoicing 
 `spec()` exists to hold.
 
 What it buys: `rule_params op=get catalog=true` takes a `callsite` and returns that site's menu, and
-`manage_rules` op=add can tell that a row will never run — no callsite reads its key kind, or none that do
-resolve its library. That check LOGS rather than refuses today
-(`rule_attached_where_it_cannot_run`); flip it once the log is quiet across the fleet.
+`manage_rules` op=add refuses a row that would never run — no callsite reads its key kind, or none that do
+resolve its library — naming the sites that read the key (`add_rule.py`). A new callsite is a
+`Callsite(...)` in `callsites.py` and a push of `manage_rules`, or its rows are refused.
 
 **The catalog is a contract, twice over.** To the firm: sales tax works, FICA works, wage accrual
 works, and nobody rewrites them — so a rule a firm has attached is an API whose name and params

@@ -176,6 +176,9 @@ same two calls through `ctx.call`, the window named relative so each run reads i
 page put at a time-indexed key under one prefix and `latest.html` beside it, rewritten each run.
 The key set is the history and the portal's prefix listing (`/s3?prefix=pages/reports/<slug>/`) is
 its index; `latest.html` is the one link that always opens the current run.
+Mailed too, when the owner wants it in the inbox: the script takes `to` and, when it is set, sends the
+same lines as plain text through `send_email` with the page's url; the address rides in the schedule's
+`params`, so one script serves the page every day and the mail on the day the owner picks.
 
 ```python
 def run(ctx, name, params, window, slug, title):

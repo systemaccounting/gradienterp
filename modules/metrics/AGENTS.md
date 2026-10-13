@@ -26,7 +26,12 @@ and joined to the books. Why in `README.md`.
   path (`/gradienterp/customers/<gerp>/metrics/env`). Tokens are cached `TOKEN_CACHE_S` seconds
   (30) and re-read on a miss: a new token admits at once, a rotated-out one stops within the
   cache's life. One event or a list; every event is checked before any is sent; 202 `{accepted,
-  source}`, 401 `{error: unauthorized}` naming nothing, 400 `event <i>: <field>: …`
+  source}`, 401 `{error: unauthorized}` naming nothing, 400 `event <i>: <field>: …`. After the
+  write, the door runs the firm's rows on `METRIC#<event>` (the `metric_posted` callsite,
+  `modules/rules/callsites.py`; `dispatch_rules` the one library there), the event as the ctx:
+  `run_automation` on `METRIC#account.signed_up` hands a signup to the firm's own script, and
+  `manage_rules op=delete` on the row ends it, no deploy either way. A rule that fails is one
+  log line (`metric rule failed`) and the post still answers 202; the record is not the effect
 - **`manage_metrics`** (the gateway tool) — `publish_source {caller}` writes the token (256 bits
   from the OS, SecureString) and returns it once with the url; the same caller again rotates.
   `unpublish_source` deletes it. `list_sources` names callers (DescribeParameters, no values).

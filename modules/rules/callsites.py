@@ -115,7 +115,12 @@ CALLSITES = [
              "a counterparty's proposal landing — what this firm answers without a turn. `PROPOSAL#<kind>`"),
     Callsite("distribution", instances.DISTRIBUTION, ["treasury_rules"],
              "an instrument's period — what it pays its holder"),
-    # A firm's own script, not a lambda handler like the twelve above. Declared here for the same
+    # An app's post landing at the metrics door (`POST /metrics`), the event written and on the bus.
+    # The only library is dispatch: a posted event is a moment a firm hands to its own script, and
+    # a row that recorded a metric here would record the one just recorded.
+    Callsite("metric_posted", instances.METRIC, ["dispatch_rules"],
+             "an event posted at the metrics door — the firm's own script on it. `METRIC#<event>`"),
+    # A firm's own script, not a lambda handler like the thirteen above. Declared here for the same
     # two reasons: `get_rule_param catalog=true callsite=automation` lists what can attach, and
     # `add_rule` refuses a row whose library does not load here. `general_rules` is listed because a
     # script may use it too.

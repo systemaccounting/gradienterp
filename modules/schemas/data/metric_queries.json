@@ -185,7 +185,7 @@
       "sql": "SELECT date_format(date_trunc(?, at_timezone(from_iso8601_timestamp(ts), ?)), '%Y-%m-%d') AS period, sum(CAST(element_at(properties, 'amount') AS double)) AS total FROM metrics WHERE event = ? AND ts >= ? AND ts < ? GROUP BY 1 ORDER BY 1"
     },
     "cumulative": {
-      "description": "A stock: the running total of an in-event minus an out-event, per period, over the firm's whole history to the window's end; `at_start` is the level before the period, `at_end` after it. `measure` is count or sum (of the amount property); an empty out_event subtracts nothing. Accounts = signed_up - closed; a balance = a type's posted sum.",
+      "description": "A stock: the running total of an in-event minus an out-event, per period, over the firm's whole history to the window's end, every period in the window reported, an empty one carrying the level before it; `at_start` is the level before the period, `at_end` after it. `measure` is count or sum (of the amount property); an empty out_event subtracts nothing. Accounts = signed_up - closed; a balance = a type's posted sum.",
       "params": [
         {
           "name": "grain",
@@ -242,9 +242,29 @@
         {
           "name": "zone",
           "type": "string"
+        },
+        {
+          "name": "end",
+          "type": "timestamp"
+        },
+        {
+          "name": "zone",
+          "type": "string"
+        },
+        {
+          "name": "grain",
+          "type": "string"
+        },
+        {
+          "name": "start",
+          "type": "timestamp"
+        },
+        {
+          "name": "zone",
+          "type": "string"
         }
       ],
-      "sql": "WITH per AS (SELECT date_format(date_trunc(?, at_timezone(from_iso8601_timestamp(ts), ?)), '%Y-%m-%d') AS period, CASE WHEN ? = 'sum' THEN sum(CASE WHEN event = ? THEN CAST(element_at(properties, 'amount') AS double) END) ELSE CAST(count(CASE WHEN event = ? THEN 1 END) AS double) END AS n_in, CASE WHEN ? = 'sum' THEN sum(CASE WHEN event = ? THEN CAST(element_at(properties, 'amount') AS double) END) ELSE CAST(count(CASE WHEN event = ? THEN 1 END) AS double) END AS n_out FROM metrics WHERE event IN (?, ?) AND ts < ? GROUP BY 1), run AS (SELECT period, coalesce(sum(coalesce(n_in, 0) - coalesce(n_out, 0)) OVER (ORDER BY period ROWS BETWEEN UNBOUNDED PRECEDING AND 1 PRECEDING), 0) AS at_start, sum(coalesce(n_in, 0) - coalesce(n_out, 0)) OVER (ORDER BY period ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS at_end FROM per) SELECT period, at_start, at_end FROM run WHERE period >= date_format(date_trunc(?, at_timezone(from_iso8601_timestamp(?), ?)), '%Y-%m-%d') ORDER BY 1"
+      "sql": "WITH ev AS (SELECT date_format(date_trunc(?, at_timezone(from_iso8601_timestamp(ts), ?)), '%Y-%m-%d') AS period, CASE WHEN ? = 'sum' THEN sum(CASE WHEN event = ? THEN CAST(element_at(properties, 'amount') AS double) END) ELSE CAST(count(CASE WHEN event = ? THEN 1 END) AS double) END AS n_in, CASE WHEN ? = 'sum' THEN sum(CASE WHEN event = ? THEN CAST(element_at(properties, 'amount') AS double) END) ELSE CAST(count(CASE WHEN event = ? THEN 1 END) AS double) END AS n_out FROM metrics WHERE event IN (?, ?) AND ts < ? GROUP BY 1), win AS (SELECT DISTINCT date_format(date_trunc(?, d), '%Y-%m-%d') AS period, CAST(0 AS double) AS n_in, CAST(0 AS double) AS n_out FROM UNNEST(sequence(CAST(date_trunc('day', at_timezone(from_iso8601_timestamp(?), ?)) AS timestamp), CAST(at_timezone(from_iso8601_timestamp(?), ?) AS timestamp) - interval '1' day, interval '1' day)) AS t(d)), per AS (SELECT period, sum(n_in) AS n_in, sum(n_out) AS n_out FROM (SELECT * FROM ev UNION ALL SELECT * FROM win) u GROUP BY 1), run AS (SELECT period, coalesce(sum(coalesce(n_in, 0) - coalesce(n_out, 0)) OVER (ORDER BY period ROWS BETWEEN UNBOUNDED PRECEDING AND 1 PRECEDING), 0) AS at_start, sum(coalesce(n_in, 0) - coalesce(n_out, 0)) OVER (ORDER BY period ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS at_end FROM per) SELECT period, at_start, at_end FROM run WHERE period >= date_format(date_trunc(?, at_timezone(from_iso8601_timestamp(?), ?)), '%Y-%m-%d') ORDER BY 1"
     }
   }
 }
