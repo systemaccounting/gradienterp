@@ -84,6 +84,7 @@ def scratch_env():
         "STORE_BUCKET":      make_bucket(name),
         "STORE_PREFIX":      "metrics/",
         "USAGE_TABLE":       _usage_table(),
+        "RULE_INSTANCES_TABLE": make_table("rules-instances"),   # the door's METRIC#<event> rows
         "METRICS_ENV_PATH":  ENV_PATH,
         "METRICS_BASE_URL":  "https://abc123.execute-api.us-east-1.amazonaws.com",
         "GERP_TIMEZONE":     "America/Los_Angeles",

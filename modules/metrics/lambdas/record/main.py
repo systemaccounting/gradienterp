@@ -18,7 +18,10 @@ import os
 import time
 
 from aws import client as _aws, log as alog
+import callsites
+import dispatch_rules
 import metrics
+import rules
 
 log = logging.getLogger()
 log.setLevel(logging.INFO)
@@ -82,6 +85,25 @@ def _body(event):
     return json.loads(raw)
 
 
+def _dispatch(d: dict, caller: str) -> None:
+    """The firm's rows on `METRIC#<event>`, run with the event in hand (the `metric_posted` callsite,
+    `modules/rules/callsites.py`). `run_automation` there hands the event to the firm's own script.
+    The write is durable and on the bus by now, so a rule that fails is one log line and the post
+    answers 202 as before: the effect is the firm's, the record is not."""
+    if not os.environ.get("RULE_INSTANCES_TABLE"):
+        return   # no table wired (a stack applied before this callsite), nothing to read
+    ctx = {"event": d["event"], "subject_id": d["subject_id"], "ts": d["ts"],
+           "properties": d["properties"], "via": "door", "caller": caller}
+    try:
+        effects = rules.run_instances(ctx, callsites.BY_NAME["metric_posted"].instances(d["event"]),
+                                      modules=[dispatch_rules])
+    except Exception as e:  # noqa: BLE001
+        alog.error("metric rule failed", event=d["event"], error=str(e))
+        return
+    if effects:
+        alog.info("metric rules ran", event=d["event"], count=len(effects))
+
+
 def handler(event, context):
     caller = _admit(event)
     if caller is None:
@@ -102,5 +124,6 @@ def handler(event, context):
     for d in normalized:
         metrics.record({"event": d["event"], "subject_id": d["subject_id"], "at": d["ts"],
                         "properties": d["properties"]}, via="door", caller=caller)
+        _dispatch(d, caller)
     alog.info("metrics recorded", name=caller, count=len(normalized))
     return _resp(202, {"accepted": len(normalized), "source": caller})

@@ -76,7 +76,7 @@ def test_it_is_resolvable_only_where_a_callsite_ignores_returns():
         if c.name in consumes:
             assert "dispatch_rules" not in c.libs, f"{c.name} folds returns into postings"
     listed = {c.name for c in C.CALLSITES if "dispatch_rules" in c.libs}
-    assert listed == {"invoice_status", "invoice_tag"}, listed
+    assert listed == {"invoice_status", "invoice_tag", "metric_posted"}, listed
 
 
 

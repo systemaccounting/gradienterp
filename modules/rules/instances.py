@@ -69,6 +69,7 @@ DISTRIBUTION = "DISTRIBUTION"           # an instrument's period — `DISTRIBUTI
 NEXT_VALUES = "NEXT_VALUES"             # what a value may become — `NEXT_VALUES#invoice_status#issued`
 AUTOMATION = "AUTOMATION"               # a firm's own script asking — `AUTOMATION#<the script's own subject>`
 PROPOSAL = "PROPOSAL"                   # a counterparty's proposal landing — `PROPOSAL#<kind>`
+METRIC = "METRIC"                       # an event posted at the metrics door — `METRIC#<event>`
 
 
 # Resolved at call time so a harness can point at a scratch table between cases.

@@ -835,21 +835,22 @@ module "automation" {
 module "metrics" {
   source = "../../modules/metrics/infra"
 
-  log_retention_days       = local.log_retention_days
-  gerp_id                  = var.gerp_id
-  stack_prefix             = local.stack_prefix
-  timezone                 = var.timezone
-  internal_bus_name        = module.events.internal_bus_name
-  op_event_bus_arn         = local.op_event_bus_arn # `publish`: the platform copy of a metrics event
-  internal_bus_arn         = module.events.internal_bus_arn
-  server_api_id            = module.server.api_id
-  server_api_execution_arn = module.server.api_execution_arn
-  server_api_endpoint      = module.server.api_endpoint
-  storage_bucket           = data.aws_s3_bucket.uploads.bucket
-  storage_kms_key_arn      = data.aws_kms_key.uploads.arn
-  register_with_agent      = true
-  gateway_id               = module.agent.gateway_id # the graph, not an SSM read: a fresh account has no parameter yet
-  gateway_role_arn         = module.agent.gateway_role_arn
+  log_retention_days        = local.log_retention_days
+  gerp_id                   = var.gerp_id
+  stack_prefix              = local.stack_prefix
+  timezone                  = var.timezone
+  internal_bus_name         = module.events.internal_bus_name
+  op_event_bus_arn          = local.op_event_bus_arn # `publish`: the platform copy of a metrics event
+  internal_bus_arn          = module.events.internal_bus_arn
+  server_api_id             = module.server.api_id
+  server_api_execution_arn  = module.server.api_execution_arn
+  server_api_endpoint       = module.server.api_endpoint
+  storage_bucket            = data.aws_s3_bucket.uploads.bucket
+  storage_kms_key_arn       = data.aws_kms_key.uploads.arn
+  register_with_agent       = true
+  gateway_id                = module.agent.gateway_id # the graph, not an SSM read: a fresh account has no parameter yet
+  gateway_role_arn          = module.agent.gateway_role_arn
+  rule_instances_table_name = module.rules.rule_instances_table_name # METRIC#<event>: the firm's script on a posted event (run_automation)
 
   depends_on = [module.agent]
 }
