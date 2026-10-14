@@ -16,7 +16,11 @@
 
 # gradientERP
 
-one bedrock agent, one set of serverless ERP modules. openly operated by default, and one event bus and api away from all the others to supply the gradient r&d and capital need through business transparency
+an agent administered ERP application to lower the cost of entrepreneurship and running a business
+
+users receive the option to publish their accounting and operational data on [openlyoperated.biz](https://openlyoperated.biz) to attract capital from investors and r&d from engineers
+
+one bedrock agent, one set of serverless ERP modules, one event bus and api away from every other business on it
 
 each business runs its own instance: a gerp, short for ∇ERP
 

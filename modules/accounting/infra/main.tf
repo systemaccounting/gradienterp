@@ -543,9 +543,12 @@ resource "aws_cloudwatch_event_target" "generate_report" {
   target_id = "generate_report"
   arn       = module.fn["get_statement"].arn
 
-  input = jsonencode({
-    periodEnd = "$$.scheduledTime"
-  })
+  # EventBridge hands `input` over as written, so the period end comes through the transformer:
+  # the scheduled event's own `time` is the fire time.
+  input_transformer {
+    input_paths    = { t = "$.time" }
+    input_template = "{\"periodEnd\": <t>}"
+  }
 }
 
 resource "aws_lambda_permission" "generate_report_cron" {
