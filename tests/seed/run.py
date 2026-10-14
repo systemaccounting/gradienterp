@@ -5,7 +5,7 @@ cascades to the ledger + the economic counter (→ LIVE GDP) with no bespoke wir
 tagged `source=seed` so `--teardown` removes exactly the seed and nothing else — build the undo with the do.
 
   python tests/seed/run.py                    # seed gradienterp (default 90-day window)
-  python tests/seed/run.py --teardown         # remove everything the seed created (ledger rows + counters)
+  python tests/seed/run.py --teardown         # remove everything the seed created (ledger rows + inventory items)
   python tests/seed/run.py --window 30 --rng-seed 7 --scale 1.0
 
 Distinct from helpers/seed.py (offline, random, jsonl). This is deployed + coherent. See tests/TODO.md.
@@ -22,7 +22,6 @@ import boto3
 
 REGION = "us-east-1"
 CUSTOMER_PROFILE = "gerp-gradienterp"  # the gerp's own account (post_journal_entry + ledger)
-OPERATOR_PROFILE = "operator-org"                   # operator account (the economic counters)
 SEED_SOURCE = "seed"                                # the teardown tag, on the ledger row's `source`
 
 _sessions = {}
@@ -179,7 +178,7 @@ def seed(gerp_id, window_days, scale, rng_seed):
     seed_inventory(gerp_id)
 
 
-def teardown(gerp_id, window_days):
+def teardown(gerp_id):
     ddb = _client(CUSTOMER_PROFILE, "dynamodb")
     table = _ledger_table(gerp_id)
     # 1) delete every ledger row tagged source=seed
@@ -196,17 +195,12 @@ def teardown(gerp_id, window_days):
         start_key = page.get("LastEvalKey") or page.get("LastEvaluatedKey")
         if not start_key:
             break
-    # 2) reset the economic counters the seed touched (revenue#<month>) — gradienterp is the sole contributor
-    counters = _client(OPERATOR_PROFILE, "dynamodb")
-    today = datetime.now(timezone.utc)
-    reset = 0
-    for k in {(today - timedelta(days=n)).strftime("%Y-%m") for n in range(window_days)}:
-        counters.delete_item(TableName="gerp-counters", Key={"counter": {"S": f"revenue#{k}"}})
-        reset += 1
-    # 3) drop the seeded inventory items (their RECEIVED journal rows were already caught in step 1)
+    # 2) drop the seeded inventory items (their RECEIVED journal rows were already caught in step 1).
+    # The operator's counters are left alone: a counter only ever adds, under `platform` for the
+    # economic signals and under the gerp for its product events, so a seed posted to a published
+    # gerp stays counted. Seed a gerp before it publishes.
     dropped = teardown_inventory(gerp_id)
-    print(f"teardown: deleted {deleted} seeded ledger rows, reset {reset} revenue counters, "
-          f"dropped {dropped} inventory SKUs — gerp back to pre-seed")
+    print(f"teardown: deleted {deleted} seeded ledger rows, dropped {dropped} inventory SKUs — gerp back to pre-seed")
 
 
 def main():
@@ -218,7 +212,7 @@ def main():
     ap.add_argument("--teardown", action="store_true", help="remove everything the seed created")
     a = ap.parse_args()
     if a.teardown:
-        teardown(a.gerp_id, a.window)
+        teardown(a.gerp_id)
     else:
         seed(a.gerp_id, a.window, a.scale, a.rng_seed)
 

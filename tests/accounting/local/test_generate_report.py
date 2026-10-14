@@ -94,9 +94,23 @@ def test_owners_equity_totals():
         assert "total_equity,1300.00" in text
 
 
+def test_the_reporting_cron_hands_the_writer_the_scheduled_time():
+    """EventBridge delivers a target's `input` as written, so a period end there is a literal: on
+    2026-10-01 the cron sent "$$.scheduledTime" and the writer filed the suite under
+    statements/$$.schedul/. The target reads the fire time off the event through its transformer."""
+    import re
+    from pathlib import Path
+    tf = (Path(__file__).resolve().parents[3] / "modules/accounting/infra/main.tf").read_text()
+    target = re.search(r'resource "aws_cloudwatch_event_target" "generate_report" \{(.*?)\n\}', tf, flags=re.S).group(1)
+    assert "input_transformer" in target and '"$.time"' in target, "the period end is the scheduled event's own time"
+    assert re.search(r'input_template\s*=\s*"\{\\"periodEnd\\": <t>\}"', target), "the payload the writer reads: {periodEnd: <time>}"
+    assert "scheduledTime" not in target and "\n  input " not in target, "no literal input beside it"
+
+
 if __name__ == "__main__":
     test_emits_five_csvs()
     test_returns_presigned_statement_links()
     test_cash_flow_math()
     test_owners_equity_totals()
+    test_the_reporting_cron_hands_the_writer_the_scheduled_time()
     print("ok")
