@@ -1,4 +1,5 @@
 import json
+from decimal import Decimal
 import os
 import sys
 from pathlib import Path
@@ -21,6 +22,20 @@ def _entry(classified=True, amount=10.00, entry_id="e1", timestamp="170000000000
     return {
         "entryId": entry_id, "timestamp": timestamp,
         "source": "test", "memo": "m", "lineItems": li,
+    }
+
+
+def _taxed_sale(entry_id="e-tax", timestamp="1700000000000"):
+    """A sale with sales tax collected: 3 legs, one debit against two credits. The ledger stores
+    N-1 pair rows, so this one lands as two."""
+    return {
+        "entryId": entry_id, "timestamp": timestamp,
+        "source": "test", "memo": "taxed sale",
+        "lineItems": [
+            {"account": "CASH",              "accountType": "ASSET",     "side": "DEBIT",  "amount": 108.00},
+            {"account": "SALES_REVENUE",     "accountType": "REVENUE",   "side": "CREDIT", "amount": 100.00},
+            {"account": "SALES_TAX_PAYABLE", "accountType": "LIABILITY", "side": "CREDIT", "amount": 8.00},
+        ],
     }
 
 
@@ -257,6 +272,25 @@ def test_a_posting_records_one_metrics_event_per_line_signed_by_normal_balance()
         amounts = sorted(e["detail"]["properties"]["amount"] for e in drain(q, expected=2))
         assert amounts == ["-100", "-100"], "off the normal side, negative: the pair nets to zero"
         assert mod._record_postings("je-3", 1700000000000, [{"account": "X", "accountType": "", "side": "DEBIT", "amount": 1}]) == 0
+
+
+def test_a_three_leg_entry_writes_two_pair_rows():
+    with scratch_env() as (tmp, _):
+        pje = load_lambda("post_journal_entry")
+        r = pje.handler(_taxed_sale(), None)
+        assert r["statusCode"] == 200
+        body = json.loads(r["body"])
+        assert body["entryId"] == "e-tax" and body["timestamp"] == 1700000000000
+        assert [li["account"] for li in body["lineItems"]] == ["CASH", "SALES_REVENUE", "SALES_TAX_PAYABLE"]
+        rows = ledger_rows()
+        assert len(rows) == 2
+        assert [r["sk"] for r in rows] == ["00000001700000000000#e-tax#0", "00000001700000000000#e-tax#1"]
+        assert all(r["entry_id"] == "e-tax" and r["pk"] == "2023-11" and r["memo"] == "taxed sale" for r in rows)
+        got = [(r["debit_account"], r["credit_account"], r["credit_account_type"], r["amount"]) for r in rows]
+        assert got == [("CASH", "SALES_REVENUE", "REVENUE", Decimal("100")),
+                       ("CASH", "SALES_TAX_PAYABLE", "LIABILITY", Decimal("8"))]
+        assert sum(r["amount"] for r in rows) == Decimal("108"), "the pair rows carry the whole debit"
+        assert pending_rows() == []
 
 
 if __name__ == "__main__":
