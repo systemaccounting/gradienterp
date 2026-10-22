@@ -28,6 +28,8 @@ sys.path.insert(0, str(REPO / "tests"))
 sys.path.insert(0, str(REPO / "modules" / "aws"))
 os.environ.pop("AWS_LAMBDA_FUNCTION_NAME", None)
 from helpers.localaws import make_table  # noqa: E402
+sys.path.insert(0, str(REPO / "tests" / "server" / "cognito"))
+import standin  # noqa: E402
 
 OWNER = "owner-sub-0001"
 ARN = "arn:aws:bedrock-agentcore:us-east-1:000000000000:runtime/r1/runtime-endpoint/ep1"
@@ -91,13 +93,7 @@ def test_the_chat_door_runs_locally_against_the_stand_in_and_an_agent_process():
     threading.Thread(target=stub.serve_forever, daemon=True).start()
     agent_url = f"http://127.0.0.1:{stub.server_port}"
 
-    py = sys.executable
-    cog_port = _free_port()
-    cog_url = f"http://127.0.0.1:{cog_port}"
-    cognito = subprocess.Popen([py, "-m", "uvicorn", "server:app", "--app-dir", str(REPO / "tests/server/cognito"),
-                                "--host", "127.0.0.1", "--port", str(cog_port), "--log-level", "warning"],
-                               env={**os.environ, "LOCAL_COGNITO_URL": cog_url, "PYTHONPATH": str(REPO / "tests/server")},
-                               stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+    cognito, cog_url = standin.start()
     chat_port = _free_port()
     chat_url = f"http://127.0.0.1:{chat_port}"
     node_env = {
@@ -112,7 +108,6 @@ def test_the_chat_door_runs_locally_against_the_stand_in_and_an_agent_process():
                              "--front", "modules/agent/lambdas/chat"],
                             env={**os.environ, **node_env}, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
     try:
-        _wait(cog_url + "/", cognito)
         _wait(chat_url + "/", node)
         token = lambda sub: json.loads(_http("GET", f"{cog_url}/token?sub={sub}&email={sub}@localhost")[1])["IdToken"]  # noqa: E731
 

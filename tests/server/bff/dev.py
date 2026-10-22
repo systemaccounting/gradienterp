@@ -70,7 +70,12 @@ def index(request: Request):
 
 @verb("GET", "/login", "?sub=<sub> — a page that signs the browser in as <sub> and goes to /")
 def login(sub: str, email: str = ""):  # every verb is sync on purpose: the self-calls need the loop free
-    tok = _token(sub, email or f"{sub}@localhost")
+    try:
+        tok = _token(sub, email or f"{sub}@localhost")
+    except OSError as e:
+        base = os.environ.get("LOCAL_COGNITO_URL", "http://127.0.0.1:4243")
+        return Response(f"the Cognito stand-in at {base} is not answering ({type(e).__name__}) — "
+                        "it signs every local token. bash scripts/local-dev.sh --start\n", status_code=503, media_type="text/plain")
     return HTMLResponse(f"<script>sessionStorage.setItem('id_token', {json.dumps(tok)}); location.replace('/');</script>")
 
 
