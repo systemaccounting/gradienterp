@@ -30,14 +30,14 @@ Two independent axes, composed into npm scripts. **Depth** = how much / does it 
    changes nothing in production.
 
    Two things have no local form, and each says so at the point of use:
-   **Cognito's hosted login** — there is no local authorizer, so `login()` seeds the session the
-   PKCE callback would (`helpers/login.mjs`); and **SES mail**, which is why `signup.spec` skips
-   itself under `E2E_ENV=local`. Everything downstream of the login gate runs locally.
+   **Cognito's hosted login** — `login()` takes a token from the Cognito stand-in (:4243) and seeds
+   the session the PKCE callback would (`helpers/login.mjs`); and **SES mail**, which is why
+   `signup.spec` skips itself under `E2E_ENV=local`. Everything downstream of the login gate runs
+   locally.
 
-   The session is a generated, unsigned JWT (`localIdToken()`), and the client treats it as an
-   identity envelope everywhere except one place: the chat card opens `chat_url#id_token=…`, and
-   that Function URL validates the signature for real. So the chat hand-off is the one screen a
-   local token cannot pass — which is moot while the chat lambda is outside the local stack.
+   The session is a token the stand-in signed (`localIdToken()`, `GET /token` on the stand-in), and
+   everything that reads a bearer verifies it against the stand-in's jwks — the bff image, and the
+   chat door the chat card opens with `chat_url#id_token=…`, which runs locally on :8082.
 
 ## tags
 

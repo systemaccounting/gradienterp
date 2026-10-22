@@ -14,7 +14,8 @@ exist yet.
 ## current features
 
 - **three stacks as plain processes**, started together by `bash scripts/local-dev.sh --start`:
-  `bff` :3000 · `per_customer` :8080 · `openlyoperated_biz` :3001, over moto on :5000. `--stop`
+  `bff` :3000 · `per_customer` :8080 · `openlyoperated_biz` :3001, over moto on :5000, with the
+  agent on :8090, the web chat on :8082 and the storage portal on :8083 (below). `--stop`
   ends every running copy of each surface, found by the module it runs (`pgrep -f`) rather than by
   pidfile or port, so a copy another session started by hand goes too; `--start` does the same
   first and starts fresh. A non-surface process on a surface's port is reported and left alone.
@@ -30,6 +31,21 @@ exist yet.
 - **`image.overlay.json`** for a route you are still designing, before it exists in AWS at all
 - **events are delivered**, not just accepted: `pump.py` runs the bus's real rules and hands each
   match to its target handler, so an emit reaches its consumer — and every emit is logged
+- **the Node lambdas run too.** `node_lambda.mjs` is `_image.py` for an `index.mjs`: the snapshot's
+  env applied, the handler imported from source and re-imported on edit, the Function URL event
+  built from the request. One process per Function URL — the web chat (`modules/agent/lambdas/chat`)
+  on :8082, the storage portal (`modules/storage/lambdas/ui`) on :8083 — and `POST /invoke/<fn>` on
+  either for a Node tool (`manage_storage`, `inspect_document`), which `dev/tools.py` and the
+  image's `/fn/<name>` mount call. The SDK inside is pointed by env: `AWS_ENDPOINT_URL` at moto,
+  `AWS_ENDPOINT_URL_BEDROCK_AGENTCORE` at the agent process. No handler carries a local branch
+- **the agent is a process**, :8090 — the container's `entrypoint.py` under uvicorn, its
+  `AnthropicEngine` on `ANTHROPIC_API_KEY`, tools dispatched in-process to the real handlers against
+  this stack. It answers `POST /runtimes/<arn>/invocations`, the path the SDK sends
+  `InvokeAgentRuntime` to, so the chat lambda's call lands on it unchanged. The stack starts without
+  the key; a turn then answers with the error
+- **every local token is signed.** The Cognito stand-in (:4243) signs RS256 with a key it makes at
+  start and lists at `/.well-known/jwks.json`; the bff image and the chat lambda verify every bearer
+  against it. `/dev/login`, the e2e login helper and `GET /token?sub=&email=` all hand out its tokens
 
 ## the pieces
 
@@ -37,7 +53,11 @@ exist yet.
 tests/server/
   snapshot.py            # <stack> → tests/server/<stack>/image.json, by asking AWS
   _image.py              # the shared runner: state, routes, dispatch, $default
+  node_lambda.mjs        # the same for a Node lambda: a Function URL on its port, /invoke/<fn>
+  _jwt.py                # RS256 sign/verify — the stand-in signs, the image verifies
   pump.py                # the bus's lambda targets, delivered (no port)
+  cognito/               # the Cognito stand-in                   :4243
+  stripe/                # the Stripe stand-in                    :4242
   bff/                   # server.py + image.json   :3000
   per_customer/          # server.py + image.json   :8080
   openlyoperated_biz/    # server.py + image.json   :3001
@@ -61,19 +81,30 @@ consequence is that a local failure is a real failure: a query naming an index t
 fails here, a rule pattern that matches nothing delivers nothing here, and a handler that reads an
 env var the deployment does not set raises here.
 
-Three things are deliberately NOT reproduced, because reproducing them would only be reproducing
-AWS: the JWT authorizer (claims are decoded, not verified), IAM (every call is allowed), and the
-model behind the agent — a real network call either way, and the one thing no emulator should fake.
+Two things are deliberately NOT reproduced, because reproducing them would only be reproducing
+AWS: IAM (every call is allowed), and the model behind the agent — a real network call either way,
+and the one thing no emulator should fake. The JWT authorizer's check IS here: claims come from a
+bearer the Cognito stand-in signed, verified against its jwks, or from `x-debug-sub`.
 
-**The agent, locally.** `modules/agent/dev` runs the turn loop in-process, with the 83 tools
-DISCOVERED from their `schema.json` (the same declarations the AgentCore Gateway registers) and
-each call dispatched to the real handler against this stack. It defaults to the Anthropic API
-(`ANTHROPIC_API_KEY`); `AGENT_PROVIDER=bedrock` switches to production's transport and model id
+**The agent, locally.** The container's `entrypoint.py` runs as a process on :8090 — its
+`AnthropicEngine` calls `modules/agent/dev/agent.py`'s turn, with the tools DISCOVERED from their
+`schema.json` (the same declarations the AgentCore Gateway registers) and each call dispatched to
+the real handler against this stack, a Node tool through `node_lambda.mjs`. It runs on the Anthropic
+API (`ANTHROPIC_API_KEY`); `AGENT_PROVIDER=bedrock` switches to production's transport and model id
 (`us.anthropic.claude-sonnet-4-6`) using your AWS creds — same messages/tool_use shape either way,
 so only the credentials change. What stays absent is the MCP hop: production reaches a tool through
 the Gateway, and locally the dispatch is in-process, so gateway-level failures (a target that will
 not sync, a description over 200 chars, a name collision in the shared namespace) do not appear
 here.
+
+**The web chat, locally.** `modules/agent/lambdas/chat/index.mjs` runs on :8082 under
+`node_lambda.mjs`, its SDK pointed at moto and at the agent process, its issuer the stand-in
+(`COGNITO_ISSUER`), its Memory mirror off (`MEMORY_ID` empty — moto has no Memory data plane, so
+the transcript lives in the agent process until it stops). The gerp row's `chat_url` is this door
+(`LOCAL_CHAT_URL`), so the owner app's chat link works: `localhost:3000/dev/login?sub=<sub>`, open
+the gerp, its chat. A turn goes browser → :8082 → `InvokeAgentRuntime` → :8090 → the reply, buffered
+(the Anthropic engine does not stream), as one text chunk. `tests/agent/local/test_local_chat.py`
+runs that chain against a stub agent.
 
 ### what a request actually does
 
@@ -211,12 +242,13 @@ metadata as any other field.
 Same seam, client side: `cognito()` in the SPA posts to `CFG.COGNITO_IDP`, which on localhost is
 `tests/server/cognito/server.py` on :4243. It models signup, confirmation, the login-email change
 (`UpdateUserAttributes` → `VerifyUserAttribute`, the old address staying the login until the code
-lands) and `REFRESH_TOKEN_AUTH`, accepts `000000` as every code, and mints unsigned tokens whose
-`email` claim moves on verify — so `GET /api/account` writing the row from the claim runs for real.
-A session that never signed up through it — the e2e helper's token, one typed into a console — is
-admitted on its first call, created from the token's own `sub` and `email`; a refresh token
-`rt_<sub>` names that user. The Hosted-UI sign-in itself is still real Cognito or the unsigned
-JWT; the stand-in does not serve `/oauth2/*`.
+lands) and `REFRESH_TOKEN_AUTH`, accepts `000000` as every code, and signs RS256 tokens (issuer
+its own address, `LOCAL_COGNITO_URL`; audience `local`; the key made at start and listed at
+`/.well-known/jwks.json`) whose `email` claim moves on verify — so `GET /api/account` writing the
+row from the claim runs for real. `GET /token?sub=&email=` issues tokens for any sub, creating the
+user on sight: `/dev/login` and the e2e login helper take theirs there. A session that never
+signed up through it — a token typed into a console — is admitted on its first call the same way;
+a refresh token `rt_<sub>` names that user. The stand-in does not serve `/oauth2/*`.
 
 The seller's card lambdas run in the BFF's process because `bff` depends on `per_customer`
 (`scripts/tags.json`) — the BFF invokes them by ARN in production, and `depends_on` is where a
@@ -225,9 +257,10 @@ cross-stack call is declared. Both `image.json`s have to carry them: a stale sna
 
 ### auth
 
-There is no authorizer here — production's APIGW validates the token before a handler sees it, and
-reproducing that locally would only be reproducing AWS. Claims come from `x-debug-sub`, or from an
-unverified decode of a real bearer, so a real Hosted-UI login against :3000 works.
+Production's APIGW authorizer validates the token before a handler sees it. Here `_image.py` does
+the same against the Cognito stand-in: a bearer's claims are read only when the stand-in signed it
+(`_claims_from_bearer`, `LOCAL_COGNITO_URL` naming the issuer), and an unsigned or foreign token
+carries none, so the handler answers 401. `x-debug-sub` is the header for a curl.
 
 ```
 curl localhost:3000/api/gerps -H 'x-debug-sub: <cognito-sub>'

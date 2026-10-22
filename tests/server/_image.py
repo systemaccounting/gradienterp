@@ -20,6 +20,8 @@ import os
 import pathlib
 import sys
 
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))   # _jwt, beside this file
+
 from fastapi import FastAPI, Request, Response
 from fastapi.responses import FileResponse
 
@@ -131,23 +133,67 @@ def make_bus(env: dict) -> str | None:
     return name
 
 
+_JWKS: dict = {}
+
+
+def _claims_from_bearer(token: str) -> dict:
+    """The bearer's claims when the Cognito stand-in at `LOCAL_COGNITO_URL` signed it, else none. A
+    token nothing here can check carries no claims, so the handler answers as it does behind the
+    gateway's authorizer, 401. The stand-in issues tokens at `/token`; `/dev/login` and the e2e
+    login helper take theirs there."""
+    issuer = os.environ.get("LOCAL_COGNITO_URL", "").rstrip("/")
+    if not issuer:
+        return {}
+    import urllib.request
+    import _jwt
+
+    def jwks(refresh: bool) -> dict:
+        if refresh or not _JWKS:
+            with urllib.request.urlopen(f"{issuer}/.well-known/jwks.json", timeout=2) as r:
+                _JWKS.clear()
+                _JWKS.update({k["kid"]: k for k in json.loads(r.read()).get("keys", [])})
+        return _JWKS
+
+    try:
+        try:
+            return _jwt.verify(token, jwks(False), issuer)
+        except ValueError:
+            return _jwt.verify(token, jwks(True), issuer)   # the stand-in restarted with a new key
+    except Exception:  # noqa: BLE001 — unsigned, forged, expired, malformed, or no stand-in up
+        return {}
+
+
+def _node_handler(fn_name: str):
+    """A Node function's handler: the event goes to the local Node process (`node_lambda.mjs`,
+    started by scripts/local-dev.sh at `LOCAL_NODE_URL`), the answer is what the handler returned
+    or, for a streaming handler, what it wrote."""
+    import urllib.request
+    base = os.environ.get("LOCAL_NODE_URL", "http://127.0.0.1:8082").rstrip("/")
+
+    def handler(event, _context):
+        req = urllib.request.Request(f"{base}/invoke/{fn_name}", data=json.dumps(event).encode(),
+                                     headers={"content-type": "application/json"}, method="POST")
+        try:
+            with urllib.request.urlopen(req, timeout=120) as r:
+                return json.loads(r.read() or b"null")
+        except OSError as e:
+            print(f"[image] {fn_name}: the local Node process at {base} did not answer: {e}")
+            return {"statusCode": 502, "body": json.dumps({"error": f"the local Node process at {base} did not answer"})}
+    return handler
+
+
 def _event(request: Request, body: bytes, route: dict) -> dict:
     """The API Gateway v2 payload-format-2.0 event the deployed function receives.
 
-    Claims come from `x-debug-sub`, or from an UNVERIFIED decode of a real bearer token — the local
-    runner is not an authorizer, and a route the gateway protects still has to be reachable in a dev
-    loop. In production these arrive from the APIGW JWT authorizer and no handler ever builds them.
+    Claims come from a bearer the local Cognito stand-in signed (`_claims_from_bearer`), or from
+    `x-debug-sub`, the header for a curl. In production they arrive from the APIGW JWT authorizer and
+    no handler ever builds them.
     """
-    import base64
     headers = {k.lower(): v for k, v in request.headers.items()}
     claims = {}
     if auth := headers.get("authorization", ""):
         if auth.lower().startswith("bearer "):
-            try:
-                payload = auth.split(" ", 1)[1].split(".")[1]
-                claims = json.loads(base64.urlsafe_b64decode(payload + "=" * (-len(payload) % 4)))
-            except Exception:  # noqa: BLE001 — a malformed token is simply no claims
-                claims = {}
+            claims = _claims_from_bearer(auth.split(" ", 1)[1].strip())
     if sub := headers.get("x-debug-sub"):
         claims = {"sub": sub, "email": headers.get("x-debug-email", ""), **claims}
 
@@ -225,6 +271,8 @@ def build(image_path: pathlib.Path, *, tables, seed=None, static: pathlib.Path |
         if not src:
             return _local_handler(fn_name)
         path = REPO / src / "main.py"
+        if not path.exists() and (REPO / src / "index.mjs").exists():
+            return _node_handler(fn_name)
         key = (fn_name, path.stat().st_mtime_ns)
         if key in modules:
             return modules[key]

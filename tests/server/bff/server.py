@@ -102,6 +102,9 @@ def _seed_gerps(image):
             # unset LOCAL_GATEWAY_URL to exercise the live gateway with a real Hosted-UI login.
             if os.environ.get("LOCAL_GATEWAY_URL"):
                 row["gateway_url"] = os.environ["LOCAL_GATEWAY_URL"]
+            # the chat door the same way: the Node process serving modules/agent/lambdas/chat
+            if os.environ.get("LOCAL_CHAT_URL"):
+                row["chat_url"] = os.environ["LOCAL_CHAT_URL"]
             # The event dispatcher resolves a recipient gerp_id to its aws_account_id and then
             # invokes cross-account. Locally "another account" is the same process, but the row
             # still has to CARRY the field or the dispatcher drops the event as unroutable — which

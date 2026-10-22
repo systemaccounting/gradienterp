@@ -244,8 +244,11 @@ tests/
 
 ## the local dev stack
 
-`bash scripts/local-dev.sh --start` brings up moto plus the three stacks as plain processes;
-`--restart` cycles them, `--install` does the one-time pip step.
+`bash scripts/local-dev.sh --start` brings up moto plus the three stacks as plain processes, and
+with them the agent (:8090, the container entrypoint on `ANTHROPIC_API_KEY`), the web chat (:8082)
+and the storage portal (:8083), the Node lambdas run by `tests/server/node_lambda.mjs`; `--restart`
+cycles them, `--install` does the one-time pip step. Sign in at
+`localhost:3000/dev/login?sub=<sub>`, open the gerp, and its chat link reaches the agent.
 
 ```
 curl -X POST localhost:8080/webhooks/stripe -d @tests/testdata/stripe/charge.succeeded.json
@@ -359,7 +362,9 @@ top-to-bottom as "what the ingestion pipeline does" — that is its job.
   Secrets Manager, STS, Lambda, Cognito, Scheduler and Textract. It answers AgentCore's CONTROL
   plane but not its data plane (`invoke_agent_runtime` 404s), and it has no `location`. For
   AgentCore that matters less than it sounds: every fault there has been in the ARGUMENTS, which a
-  fake captures better than a live runtime would — see `test_poke_arn_split.py`.
+  fake captures better than a live runtime would — see `test_poke_arn_split.py`. The web chat's
+  invoke is the exception: the local agent process answers the SDK's path, and
+  `tests/agent/local/test_local_chat.py` runs the chat lambda against it.
 - **The third parties on the other side of an outbound HTTP call** — Plaid, and Stripe / Square /
   PayPal's own APIs. Each is stubbed with a hand-written lambda per test, so what is pinned is OUR
   side of the conversation and nothing else. `tests/TODO.md` § 1 has the seam-by-seam list and what

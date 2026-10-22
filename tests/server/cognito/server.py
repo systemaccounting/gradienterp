@@ -6,33 +6,42 @@ The SPA's `cognito(action, body)` posts to `CFG.COGNITO_IDP` with an `x-amz-targ
 localhost that is this. It models signup, confirmation, the login-email change, and a token
 refresh, and nothing else — an action it lacks is a 400 that names itself.
 
-Tokens are unsigned JWTs (`header.payload.local`), the shape the e2e login helper mints and the
-local BFF decodes without verifying. A session that never signed up here — the e2e helper's token,
-a `sessionStorage` one typed into a console — is admitted on its first attribute call: the user is
-created from the token's own `sub` and `email`. Every verification code is `000000`.
+Tokens are RS256 JWTs this process signs with a key it makes at start, issuer `LOCAL_COGNITO_URL`
+(its own address), audience `local`. `/.well-known/jwks.json` lists the key, and that is what the
+bff image (`_image.py`) and the chat lambda verify every bearer against. `GET /token?sub=&email=`
+issues a token for any sub, creating the user on sight: the bff's `/dev/login` and the e2e login
+helper take theirs there. A session that never signed up here — a token typed into a console — is
+admitted on its first attribute call the same way: the user is created from the token's own `sub`
+and `email`. Every verification code is `000000`.
 """
 
 import base64
 import json
+import os
 import secrets as _secrets
+import sys
 import time
+from pathlib import Path
 
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+import _jwt  # noqa: E402
+
 app = FastAPI(title="cognito · local stand-in")
 # the SPA on :3000 calls this cross-origin, the way it calls the real regional endpoint, which
 # answers preflights itself
-from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.cors import CORSMiddleware  # noqa: E402
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 USERS: dict = {}          # sub → {email, pending_email, confirmed}
 BY_EMAIL: dict = {}       # email → sub
 REFRESH: dict = {}        # refresh token → sub
 CODE = "000000"
-
-
-def _b64(o):
-    return base64.urlsafe_b64encode(json.dumps(o).encode()).decode().rstrip("=")
+ISSUER = os.environ.get("LOCAL_COGNITO_URL", "http://127.0.0.1:4243").rstrip("/")
+CLIENT_ID = "local"
+KEY = _jwt.new_key()
+KID = "local-" + _secrets.token_hex(4)
 
 
 def _decode(tok: str) -> dict:
@@ -46,9 +55,9 @@ def _decode(tok: str) -> dict:
 def _tokens(sub: str) -> dict:
     u = USERS[sub]
     now = int(time.time())
-    base = {"sub": sub, "email": u["email"], "iat": now, "exp": now + 3600}
-    return {"IdToken": f"{_b64({'alg': 'none', 'typ': 'JWT'})}.{_b64({**base, 'token_use': 'id'})}.local",
-            "AccessToken": f"{_b64({'alg': 'none', 'typ': 'JWT'})}.{_b64({**base, 'token_use': 'access'})}.local",
+    base = {"sub": sub, "email": u["email"], "iat": now, "exp": now + 3600, "iss": ISSUER}
+    return {"IdToken": _jwt.sign({**base, "token_use": "id", "aud": CLIENT_ID}, KEY, KID),
+            "AccessToken": _jwt.sign({**base, "token_use": "access", "client_id": CLIENT_ID}, KEY, KID),
             "TokenType": "Bearer", "ExpiresIn": 3600}
 
 
@@ -56,17 +65,20 @@ def _err(kind: str, message: str, status: int = 400):
     return JSONResponse({"__type": kind, "message": message}, status)
 
 
+def _admit(sub: str, email: str) -> str:
+    """A user this stand-in has not seen, created on sight."""
+    if sub not in USERS:
+        USERS[sub] = {"email": email, "pending_email": "", "confirmed": True}
+        if email:
+            BY_EMAIL[email] = sub
+    return sub
+
+
 def _user_from_access(token: str):
     """The caller. A token this stand-in never issued still identifies one — created on sight."""
     c = _decode(token or "")
     sub = c.get("sub")
-    if not sub:
-        return None
-    if sub not in USERS:
-        USERS[sub] = {"email": c.get("email", ""), "pending_email": "", "confirmed": True}
-        if c.get("email"):
-            BY_EMAIL[c["email"]] = sub
-    return sub
+    return _admit(sub, c.get("email", "")) if sub else None
 
 
 @app.post("/")
@@ -145,6 +157,19 @@ async def idp(request: Request):
                                              "(tests/server/cognito/server.py)")
 
 
+@app.get("/token")
+def token(sub: str, email: str = ""):
+    """Signed tokens for `sub`, the user created on sight. The bff's `/dev/login` and the e2e login
+    helper sign in with these."""
+    _admit(sub, email or f"{sub}@localhost")
+    return {**_tokens(sub), "RefreshToken": f"rt_{sub}"}
+
+
+@app.get("/.well-known/jwks.json")
+def jwks():
+    return {"keys": [_jwt.jwk(KEY, KID)]}
+
+
 @app.get("/")
 def root():
-    return {"stand_in": "cognito", "users": len(USERS), "code": CODE}
+    return {"stand_in": "cognito", "issuer": ISSUER, "client_id": CLIENT_ID, "kid": KID, "users": len(USERS), "code": CODE}

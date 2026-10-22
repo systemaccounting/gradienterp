@@ -43,7 +43,8 @@ const MEMORY_ACTOR_ID = process.env.MEMORY_ACTOR_ID || "agent-session"; // must 
 const SESSIONS_BUCKET = process.env.SESSIONS_BUCKET || "";      // S3SessionManager bucket — the agent's authoritative session + checkpoint
 const SESSIONS_PREFIX = process.env.SESSIONS_PREFIX || "agent-sessions/"; // must match the container's SESSIONS_PREFIX default
 const BUSINESS_NAME = process.env.BUSINESS_NAME || "";          // the gerp's business name — header shows it instead of the login email
-const ISSUER = POOL ? `https://cognito-idp.${REGION}.amazonaws.com/${POOL}` : "";
+// the pool's issuer; COGNITO_ISSUER names another (the local stand-in, tests/server/cognito)
+const ISSUER = process.env.COGNITO_ISSUER || (POOL ? `https://cognito-idp.${REGION}.amazonaws.com/${POOL}` : "");
 const CLOCK_LEEWAY = 60;
 
 // invoke_agent_runtime wants the RUNTIME arn + the endpoint name as `qualifier`, not

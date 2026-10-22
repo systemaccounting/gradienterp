@@ -67,7 +67,7 @@ def _discover():
     out = {}
     for schema in sorted(REPO_ROOT.glob("modules/*/lambdas/*/schema.json")):
         src = schema.parent
-        if not (src / "main.py").exists():
+        if not ((src / "main.py").exists() or (src / "index.mjs").exists()):
             continue
         out[src.name] = (schema, src)
     return out
@@ -95,6 +95,8 @@ def invoke(name, tool_input):
     if not entry:
         return {"error": f"unknown tool '{name}'", "known": sorted(_CATALOG)[:20]}
     _, src = entry
+    if not (src / "main.py").exists():
+        return _invoke_node(src.name, tool_input)
     from aws import _bundle_dirs
     import importlib.util
     main = src / "main.py"
@@ -106,10 +108,28 @@ def invoke(name, tool_input):
     module_spec.loader.exec_module(mod)
 
     response = mod.handler(tool_input, None)
+    return _unwrap(response)
+
+
+def _unwrap(response):
     if isinstance(response, dict) and "body" in response:
         body = response["body"]
         return json.loads(body) if isinstance(body, str) else body
     return response
+
+
+def _invoke_node(name, tool_input):
+    """A Node tool (an `index.mjs`) runs in the local Node process, tests/server/node_lambda.mjs,
+    started by scripts/local-dev.sh at LOCAL_NODE_URL: the event in, the handler's return out."""
+    import urllib.request
+    base = os.environ.get("LOCAL_NODE_URL", "http://127.0.0.1:8082").rstrip("/")
+    req = urllib.request.Request(f"{base}/invoke/{name}", data=json.dumps(tool_input).encode(),
+                                 headers={"content-type": "application/json"}, method="POST")
+    try:
+        with urllib.request.urlopen(req, timeout=120) as r:
+            return _unwrap(json.loads(r.read() or b"null"))
+    except OSError as e:
+        return {"error": f"the local Node process at {base} did not answer: {e}"}
 
 
 if __name__ == "__main__":

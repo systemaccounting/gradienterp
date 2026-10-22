@@ -87,7 +87,7 @@ Triggers / key outputs:
 
 ## layout
 
-- `dev/` — local dev harness (no bedrock, no aws): stdin/stdout chat loop + importlib tool dispatch into sibling lambdas; `run.sh` wires `LOCAL_*` env under `out/agent-dev/`.
+- `dev/` — the agent's turn, locally (no bedrock, no aws): `agent.py` (`run_turn`, Claude through the Anthropic SDK) + `tools.py` (the tools discovered from every `schema.json`, each call dispatched to the real handler — a Python one in-process, a Node one through `tests/server/node_lambda.mjs`). The container's `AnthropicEngine`, the local agent process and the tests import them.
 - `prompts/` — `bookkeeper.md` (the owner-facing persona; a new gerp's first conversation is the onboarding walk, a guide it retrieves — `onboarding/kb.md`), `broker.md` (the hub), `_shared/integrations.md` (the guides directive — setup AND workflow mechanics — composed into owner-facing modes at boot).
 - `docker/` — the AgentCore Runtime container (arm64; FastAPI `entrypoint.py` with the pluggable InferenceEngine + in-process tools; `registries/` bundles field registries for offline validation).
 - `lambdas/` — `chat/` (Node web-chat lambda + SPA) and `email/` (SES-inbound Python lambda).
@@ -97,16 +97,26 @@ Tests live under `tests/agent/local/` and `tests/agent/integ/` — same conventi
 
 ## developing locally
 
-No AWS needed. Three surfaces, same anthropic SDK + importlib tool dispatch under the hood.
+No AWS needed. Three ways in, the same anthropic SDK + importlib tool dispatch under the hood.
 
-**Interactive dev harness** — stdin/stdout loop, fastest iteration:
+**The local stack** — the agent as a process, and the web chat in front of it:
 
 ```
 export ANTHROPIC_API_KEY=sk-ant-...
-bash modules/agent/dev/run.sh
+bash scripts/local-dev.sh --start
 ```
 
-First run creates `.venv/` at the repo root and installs `anthropic` into it; subsequent runs skip bootstrap.
+`entrypoint.py` runs under uvicorn on :8090 (`AnthropicEngine`, tools against moto), the chat lambda
+on :8082 under `tests/server/node_lambda.mjs` with its SDK pointed at both. Sign in at
+`localhost:3000/dev/login?sub=<sub>`, open the gerp, its chat link. Or curl the agent:
+
+```
+curl -sS -X POST localhost:8090/invocations -H 'content-type: application/json' \
+  -H 'x-amzn-bedrock-agentcore-runtime-session-id: dev1' -d '{"prompt": "I sold a latte for $5.50 via Stripe"}'
+```
+
+Without the key the stack still starts; a turn answers with the error. `tests/server/AGENTS.md` has
+the wiring.
 
 **Scripted smoke catalog**:
 
@@ -145,7 +155,8 @@ The **engine owns the agent's authoritative session** — full message history p
 
 Local-only shortcuts:
 
-- **`-v $(pwd):/repo`** — required by `AnthropicEngine`; entrypoint imports `dev/agent.py` and `dev/tools.py` from the mount so the prod image stays small. `StrandsEngine` doesn't need it.
+- **`-v $(pwd):/repo`** — what `AnthropicEngine` reads `dev/agent.py` and `dev/tools.py` from inside the container, so the prod image stays small; outside it (the local stack) the entrypoint finds `dev/` beside itself. `StrandsEngine` needs neither.
+- **`POST /runtimes/<arn>/invocations`** — the path the SDK sends `InvokeAgentRuntime` to, answered the same as `/invocations`, so the local stack can point the chat lambda's SDK at this process (`AWS_ENDPOINT_URL_BEDROCK_AGENTCORE`).
 - **No Bedrock / no real Gateway** during local smoke — the Strands path constructs cleanly but the first MCP `list_tools_sync()` would fail without a deployed Gateway. The local bar is "engine selector flips and construction succeeds."
 
 ## deploying
