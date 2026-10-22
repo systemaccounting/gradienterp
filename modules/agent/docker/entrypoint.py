@@ -327,27 +327,45 @@ class AnthropicEngine(InferenceEngine):
     """
 
     def __init__(self) -> None:
-        dev_path = Path("/repo/modules/agent/dev")
+        dev_path = Path("/repo/modules/agent/dev")                       # the container, the repo mounted (scripts/docker.sh --run)
+        if not dev_path.is_dir():
+            dev_path = Path(__file__).resolve().parents[1] / "dev"      # a process in the repo (scripts/local-dev.sh)
         if not dev_path.is_dir():
             raise RuntimeError(
-                f"AnthropicEngine expects the dev harness mounted at {dev_path}. "
+                f"AnthropicEngine expects the dev harness at {dev_path}. "
                 "run with `bash scripts/docker.sh --run` (mounts $PWD:/repo) — "
                 "or set BEDROCK_MODEL_ID + GATEWAY_URL to select StrandsEngine instead."
             )
         sys.path.insert(0, str(dev_path))
-        from anthropic import Anthropic
         from agent import run_turn as _dev_run_turn  # dev/agent.py
-        self._client = Anthropic()
+        self._client = None     # made on the first turn: the process starts without ANTHROPIC_API_KEY, a turn needs it
         self._dev_run_turn = _dev_run_turn
         # local smoke has no Strands SessionManager, so the engine keeps its own
         # volatile restore store (per-container; matches the dev harness lifetime).
         self._store = InMemoryStore()
 
+    @staticmethod
+    def _system(blocks):
+        """`_system_blocks` is in Bedrock's shape. The Anthropic API wants `{"type": "text", ...}`
+        blocks, and a cache point is `cache_control` on the block before it."""
+        if isinstance(blocks, str):
+            return blocks
+        out = []
+        for b in blocks:
+            if "text" in b:
+                out.append({"type": "text", "text": b["text"]})
+            elif "cachePoint" in b and out:
+                out[-1]["cache_control"] = {"type": "ephemeral"}
+        return out
+
     def run_turn(self, system, session_id, user_message):
+        if self._client is None:
+            from anthropic import Anthropic
+            self._client = Anthropic()
         prior = self._store.load(session_id)
         messages = list(prior)
         messages.append({"role": "user", "content": user_message})
-        reply = self._dev_run_turn(self._client, system, messages)
+        reply = self._dev_run_turn(self._client, self._system(system), messages)
         new_messages = messages[len(prior):]
         self._store.append(session_id, new_messages)
         return reply, new_messages
@@ -2611,6 +2629,14 @@ async def invoke(payload: dict, request: Request):
     except Exception as e:
         import traceback
         return {"error": f"{type(e).__name__}: {e}", "tb": traceback.format_exc().splitlines()[-10:]}
+
+
+@app.post("/runtimes/{arn:path}/invocations")
+async def invoke_runtime(arn: str, payload: dict, request: Request):
+    """The path the SDK sends InvokeAgentRuntime to. The local stack points the web chat lambda's
+    SDK at this process (AWS_ENDPOINT_URL_BEDROCK_AGENTCORE), so its call lands here unchanged;
+    the arn and the qualifier are not read."""
+    return await invoke(payload, request)
 
 
 async def _invoke_inner(payload: dict, request: Request) -> dict:

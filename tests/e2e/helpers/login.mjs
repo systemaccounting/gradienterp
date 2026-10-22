@@ -1,12 +1,13 @@
 import { expect, test } from "@playwright/test";
-import { isLocal } from "./env.mjs";
+import { isLocal, resolveEnv } from "./env.mjs";
 
-// An unsigned JWT. Nothing local verifies one: the SPA decodes the payload for display, and the bff
-// image decodes the bearer's claims because production's APIGW authorizer — the thing that DOES
-// verify — has no local equivalent. Reproducing a signature would only be reproducing AWS.
-export function localIdToken({ sub, email }) {
-  const b64 = (o) => Buffer.from(JSON.stringify(o)).toString("base64url");
-  return `${b64({ alg: "none", typ: "JWT" })}.${b64({ sub, email, token_use: "id" })}.local`;
+// An id token the local Cognito stand-in (tests/server/cognito) signed for `sub`. The bff image and
+// the chat lambda verify every bearer against the stand-in's jwks, so this is the one token that gets in.
+export async function localIdToken({ sub, email }) {
+  const q = new URLSearchParams({ sub, email });
+  const r = await fetch(`${resolveEnv().cognito}/token?${q}`);
+  if (!r.ok) throw new Error(`the Cognito stand-in did not issue a token (${r.status}) — is the local stack up?`);
+  return (await r.json()).IdToken;
 }
 
 // Drive the Cognito login. The SPA's "Log in" → Cognito Managed Login (email+password) →
@@ -18,7 +19,7 @@ export async function login(page, { email, password, sub }) {
     // The SPA holds its session in sessionStorage and the PKCE callback is what puts it there.
     // Seed it before first paint and the app boots logged in, exercising every screen after the
     // login gate — which is the half a local run is for.
-    const token = localIdToken({ sub: sub || process.env.E2E_LOCAL_SUB || email, email });
+    const token = await localIdToken({ sub: sub || process.env.E2E_LOCAL_SUB || email, email });
     await page.addInitScript((t) => sessionStorage.setItem("id_token", t), token);
     await page.goto("/");
     await expect(page.locator('[data-view="homeScreen"]')).toBeVisible({ timeout: 15_000 });

@@ -1,17 +1,12 @@
-"""Local dev harness for the gradientERP bookkeeper agent.
+"""The agent's turn, locally: Claude through the Anthropic SDK, each tool call dispatched to the
+real lambda handler (tools.py) — same data stores, same validation, no AWS.
 
-Runs a stdin/stdout conversation loop backed by Claude via the Anthropic SDK.
-Each tool call dispatches to a real accounting lambda handler via importlib —
-same data stores, same validation, no AWS. Use this to iterate on the prompt,
-tool schemas, and conversation flow before deploying to Bedrock AgentCore.
+`run_turn` is what runs it. The container entrypoint's AnthropicEngine calls it for every turn of
+the local agent process (`bash scripts/local-dev.sh --start`, :8090), and so do
+tests/agent/local/smoke.py and test_bookkeeper_flow.py.
 
-Prerequisites:
     export ANTHROPIC_API_KEY=sk-ant-...        # the default
     # or: AGENT_PROVIDER=bedrock, which uses your AWS creds and production's model id
-
-Usage:
-    bash modules/agent/dev/run.sh
-    (handles the .venv bootstrap; then type; Ctrl-D or Ctrl-C to exit)
 """
 
 import json
@@ -93,35 +88,3 @@ def make_client():
         raise SystemExit(f"unknown AGENT_PROVIDER={PROVIDER!r} — expected anthropic | bedrock")
     from anthropic import Anthropic
     return Anthropic()
-
-
-def main():
-    try:
-        client = make_client()
-    except ImportError:
-        sys.stderr.write("requires: pip3 install anthropic (or python3 -m pip install anthropic)\n")
-        sys.exit(1)
-    system = load_system_prompt()
-    messages = []
-
-    sys.stderr.write(f"agent ready — {PROVIDER}/{MODEL}, {len(TOOLS)} tools, business={BUSINESS_NAME}\n")
-    sys.stderr.write("type a message, Ctrl-D to exit\n\n")
-
-    while True:
-        try:
-            user_input = input("> ")
-        except (EOFError, KeyboardInterrupt):
-            print()
-            return
-
-        if not user_input.strip():
-            continue
-
-        messages.append({"role": "user", "content": user_input})
-        reply = run_turn(client, system, messages)
-        print(reply)
-        print()
-
-
-if __name__ == "__main__":
-    main()

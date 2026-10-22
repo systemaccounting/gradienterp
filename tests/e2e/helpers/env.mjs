@@ -5,13 +5,14 @@
 //
 // `local` is a REAL end-to-end: the browser drives the real SPA, the BFF runs the real handler, and
 // the assertions read the same table names production uses — they just live on the emulator. Two
-// things genuinely cannot be local and each spec says so: Cognito's hosted login (there is no local
-// authorizer, so `login()` injects a token the way the SPA's own callback would) and SES mail.
+// things genuinely cannot be local and each spec says so: Cognito's hosted login (`login()` takes a
+// token from the Cognito stand-in and seeds it the way the SPA's own callback would) and SES mail.
 const PRESETS = {
   local: {
     baseURL: "http://localhost:3000",
     aws: { endpoint: process.env.LOCAL_AWS_ENDPOINT || "http://localhost:5000",
            credentials: { accessKeyId: "local", secretAccessKey: "local" } },
+    cognito: process.env.LOCAL_COGNITO_URL || "http://127.0.0.1:4243",   // the stand-in that signs local tokens
   },
   prod: {
     baseURL: "https://gradienterp.cloud",
@@ -25,7 +26,7 @@ export function resolveEnv() {
   if (!preset) {
     throw new Error(`unknown E2E_ENV="${name}" (expected ${Object.keys(PRESETS).join(" | ")})`);
   }
-  return { name, baseURL: process.env.E2E_BASE_URL || preset.baseURL, aws: preset.aws };
+  return { name, baseURL: process.env.E2E_BASE_URL || preset.baseURL, aws: preset.aws, cognito: preset.cognito };
 }
 
 export const isLocal = () => (process.env.E2E_ENV || "prod") === "local";

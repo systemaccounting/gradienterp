@@ -5,9 +5,10 @@ A spec, a person and an agent use the same verbs (the e2e helpers' local branche
 there is one implementation of "an account with a card" rather than three.
 """
 
-import base64
 import json
 import time
+import os
+import urllib.parse
 import urllib.request
 import uuid
 
@@ -48,8 +49,10 @@ def _self(request: Request, sub: str, method: str, path: str, body=None):
 
 
 def _token(sub: str, email: str) -> str:
-    b64 = lambda o: base64.urlsafe_b64encode(json.dumps(o).encode()).decode().rstrip("=")  # noqa: E731
-    return f"{b64({'alg': 'none', 'typ': 'JWT'})}.{b64({'sub': sub, 'email': email, 'token_use': 'id', 'exp': int(time.time()) + 86400})}.local"
+    """An id token the Cognito stand-in signed — the only kind the bff image and the chat lambda accept."""
+    base = os.environ.get("LOCAL_COGNITO_URL", "http://127.0.0.1:4243").rstrip("/")
+    with urllib.request.urlopen(f"{base}/token?{urllib.parse.urlencode({'sub': sub, 'email': email})}", timeout=3) as r:
+        return json.loads(r.read())["IdToken"]
 
 
 @router.get("")

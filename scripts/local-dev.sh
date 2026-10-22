@@ -16,6 +16,9 @@
 #   :4243  cognito       tests/server/cognito/server.py — signup, the login-email change, refresh; no Cognito
 #   :3001  oob.biz       prod/openlyoperated_biz/web — the public dashboard, reading the live api
 #   pump                 tests/server/pump.py — the streams and queues moto doesn't deliver; no port
+#   :8090  agent         modules/agent/docker/entrypoint.py — the agent on ANTHROPIC_API_KEY, its tools in-process; no Bedrock
+#   :8082  chat          tests/server/node_lambda.mjs — the web chat Function URL (modules/agent/lambdas/chat); /invoke for the Node tools
+#   :8083  portal        tests/server/node_lambda.mjs — the storage portal Function URL (modules/storage/lambdas/ui)
 #
 # Plain processes, not containers: all three are Python, so on macOS a container would put a VM and
 # a filesystem layer inside the edit→see-it loop, and mounting /repo to get live edits back only
@@ -29,7 +32,8 @@
 #                        Against a gerp's live gateway with a real login (LOCAL_GATEWAY_URL unset), the seed
 #                        is the dogfood's: the SecureString /gradienterp/customers/gradienterp/local_dev/LOCAL_GERPS
 #                        in the gradienterp gerp's account, also the LOCAL_GERPS repo secret for a cloud run
-#   MOTO_PORT / BFF_PORT / GW_PORT   to move a surface off a busy port
+#   ANTHROPIC_API_KEY    the agent's model key. Without it the stack starts and a chat turn answers with the error
+#   MOTO_PORT / BFF_PORT / GW_PORT / AGENT_PORT / CHAT_PORT / PORTAL_PORT   to move a surface off a busy port
 
 set -euo pipefail
 
@@ -47,6 +51,9 @@ GW_PORT="${GW_PORT:-8080}"
 STRIPE_PORT="${STRIPE_PORT:-4242}"
 COGNITO_PORT="${COGNITO_PORT:-4243}"
 BIZ_PORT="${BIZ_PORT:-3001}"
+AGENT_PORT="${AGENT_PORT:-8090}"
+CHAT_PORT="${CHAT_PORT:-8082}"
+PORTAL_PORT="${PORTAL_PORT:-8083}"
 # the bff forwards a gerp-scoped request to its gateway; locally that is the per_customer image.
 # Unset to forward at the real deployed gateway instead (needs a real Hosted-UI token).
 export LOCAL_GATEWAY_URL="${LOCAL_GATEWAY_URL-http://localhost:$GW_PORT}"
@@ -66,6 +73,15 @@ export PYTHONPATH="$REPO_ROOT/modules:$REPO_ROOT/modules/clock:$REPO_ROOT/module
 # event-emitting lambdas would start putting to the PRODUCTION bus.
 unset AWS_LAMBDA_FUNCTION_NAME
 export LOCAL_AWS_ENDPOINT="${LOCAL_AWS_ENDPOINT:-http://localhost:$MOTO_PORT}"
+# the Cognito stand-in signs every local token; the bff image and the chat lambda verify against its jwks
+export LOCAL_COGNITO_URL="${LOCAL_COGNITO_URL-http://127.0.0.1:$COGNITO_PORT}"
+# the gerp row's chat_url: the chat Function URL, served by the Node process below
+export LOCAL_CHAT_URL="${LOCAL_CHAT_URL-http://localhost:$CHAT_PORT/}"
+# where dev/tools.py and the image send a Node function's event
+export LOCAL_NODE_URL="http://127.0.0.1:$CHAT_PORT"
+# the Node lambdas' SDK clients: moto, and the agent process for InvokeAgentRuntime. The chat
+# lambda's issuer is the stand-in and its Memory mirror is off — moto has no Memory data plane
+NODE_ENV="env AWS_REGION=us-east-1 AWS_ACCESS_KEY_ID=local AWS_SECRET_ACCESS_KEY=local AWS_ENDPOINT_URL=$LOCAL_AWS_ENDPOINT AWS_ENDPOINT_URL_BEDROCK_AGENTCORE=http://127.0.0.1:$AGENT_PORT COGNITO_ISSUER=$LOCAL_COGNITO_URL COGNITO_CLIENT_ID=local COGNITO_DOMAIN_PREFIX= MEMORY_ID="
 
 # name|port|signature|start-command. The signature is what `pgrep -f` finds a running copy by,
 # however it was started: the module or script the surface runs.
@@ -78,6 +94,9 @@ biz|$BIZ_PORT|tests.server.openlyoperated_biz.server:app|$PY -m uvicorn tests.se
 stripe|$STRIPE_PORT|tests.server.stripe.server:app|$PY -m uvicorn tests.server.stripe.server:app --host 127.0.0.1 --port $STRIPE_PORT
 cognito|$COGNITO_PORT|tests.server.cognito.server:app|$PY -m uvicorn tests.server.cognito.server:app --host 127.0.0.1 --port $COGNITO_PORT
 pump|-|tests/server/pump.py|$PY $REPO_ROOT/tests/server/pump.py
+agent|$AGENT_PORT|modules/agent/docker|$PY -m uvicorn entrypoint:app --app-dir $REPO_ROOT/modules/agent/docker --host 127.0.0.1 --port $AGENT_PORT
+chat|$CHAT_PORT|node_lambda.mjs --port $CHAT_PORT|$NODE_ENV node $REPO_ROOT/tests/server/node_lambda.mjs --port $CHAT_PORT --front modules/agent/lambdas/chat
+portal|$PORTAL_PORT|node_lambda.mjs --port $PORTAL_PORT|$NODE_ENV node $REPO_ROOT/tests/server/node_lambda.mjs --port $PORTAL_PORT --front modules/storage/lambdas/ui
 EOF
 }
 
@@ -209,7 +228,9 @@ case "${1:---status}" in
     echo "  local AWS  http://localhost:$MOTO_PORT"
     echo "  owner app  http://localhost:$BFF_PORT   (a registered Cognito callback origin)"
     echo "  gateway    http://localhost:$GW_PORT    /webhooks/<provider>
-  oob.biz    http://localhost:$BIZ_PORT   the public dashboard, on the live api"
+  oob.biz    http://localhost:$BIZ_PORT   the public dashboard, on the live api
+  agent      http://localhost:$AGENT_PORT   POST /invocations {\"prompt\": …}, on ANTHROPIC_API_KEY$([[ -n "${ANTHROPIC_API_KEY:-}" ]] || echo " (unset)")
+  chat       http://localhost:$CHAT_PORT   the web chat: sign in at the owner app, open a gerp, its chat link"
     ;;
 
 --stop)
