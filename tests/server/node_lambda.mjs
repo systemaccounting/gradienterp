@@ -132,7 +132,8 @@ function sendResult(res, r) {
 const server = http.createServer(async (req, res) => {
   const body = await readBody(req);
   const t0 = Date.now();
-  const log = (fn, status) => console.log(`[node] ${fn ? fn.name : "-"} ${req.method} ${req.url} ${status} ${Date.now() - t0}ms`);
+  // a constant format string: the url is a request's own text and is printed as a value
+  const log = (fn, status) => console.log("[node] %s %s %s %d %dms", fn ? fn.name : "-", req.method, req.url, status, Date.now() - t0);
   let fn = null;
   try {
     const m = req.url.match(/^\/invoke\/([^/?]+)/);
@@ -152,7 +153,7 @@ const server = http.createServer(async (req, res) => {
     if (!out.started) sendResult(res, r);
     return log(fn, res.statusCode);
   } catch (e) {
-    console.error(`[node] ${fn ? fn.name : "-"} ${req.method} ${req.url} failed:`, e);
+    console.error("[node] %s %s %s failed:", fn ? fn.name : "-", req.method, req.url, e);
     if (!res.headersSent) sendJson(res, 500, { error: `${e?.name || "Error"}: ${e?.message || e}` });
     else res.end();
     return log(fn, 500);

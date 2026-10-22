@@ -177,7 +177,8 @@ def _node_handler(fn_name: str):
             with urllib.request.urlopen(req, timeout=120) as r:
                 return json.loads(r.read() or b"null")
         except OSError as e:
-            return {"statusCode": 502, "body": json.dumps({"error": f"the local Node process at {base} did not answer: {e}"})}
+            print(f"[image] {fn_name}: the local Node process at {base} did not answer: {e}")
+            return {"statusCode": 502, "body": json.dumps({"error": f"the local Node process at {base} did not answer"})}
     return handler
 
 
