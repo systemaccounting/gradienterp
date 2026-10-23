@@ -165,7 +165,7 @@ for openly-operated customers the spec forces visible margins, so theres no poin
 
 ### contributing
 
-code is a [commodity](https://en.wikipedia.org/wiki/Commodity) now. the platform earns its keep from its design & data. to contribute, request a developer license in an issue comment before cloning. estimate the work in hours and offer a price for non trivial changes. then task an agent with your feature or fix
+code is a [commodity](https://en.wikipedia.org/wiki/Commodity) now. the platform earns its keep from its design & data. to contribute, `git clone https://github.com/systemaccounting/gradienterp.git && cd gradienterp`. cloning assumes a development license only. start up [claude code](https://claude.com/product/claude-code) in the `gradienterp` directory and pass it a link to the https://raw.githubusercontent.com/systemaccounting/gradienterp/refs/heads/main/docs/localdev.md prompt file to set up your local dev environment. estimate the work in hours and offer a price for non trivial changes in github issues. then task an agent with your feature or fix
 
 ### funding & compensation
 

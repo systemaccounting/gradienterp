@@ -1,0 +1,28 @@
+name: Starter issue
+description: One test or one doc line a novice finishes in a sitting.
+labels: ["starter issue"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Issues here are public. Set up first: clone, start claude code in the directory, and hand it https://raw.githubusercontent.com/systemaccounting/gradienterp/refs/heads/main/docs/localdev.md
+  - type: input
+    id: file
+    attributes:
+      label: The file to open
+      placeholder: tests/accounting/local/test_post_journal_entry.py
+    validations:
+      required: true
+  - type: input
+    id: command
+    attributes:
+      label: The command that goes green
+      placeholder: bash scripts/test.sh --name post_journal_entry
+    validations:
+      required: true
+  - type: input
+    id: neighbor
+    attributes:
+      label: Start from
+      description: The test or function beside it to copy the shape of.
+      placeholder: _taxed_sale
