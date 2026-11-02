@@ -18,7 +18,7 @@ anthropic
 # for streamablehttp_client that SigV4-signs requests, matching the Gateway's
 # authorizer_type = AWS_IAM config. Container auth is its own agent_execution
 # IAM role; no Cognito/JWT plumbing in the container.
-strands-agents==1.45.0          # pinned: interrupt → pause → cross-session resume verified on 1.45.0 (render_form elicitation loop)
+strands-agents==1.48.0          # pinned: interrupt → pause → cross-session resume verified on 1.45.0 (render_form elicitation loop)
 mcp-proxy-for-aws
 
 playwright                       # CDP client for the browse_* tools — connects to the MANAGED AgentCore Browser (no local chromium; the pip package alone suffices for connect_over_cdp)
