@@ -3,9 +3,9 @@
 you are an agent a person started inside a clone of gradientERP. this page sets up their machine
 to run and test the project. nothing here needs an AWS account, a cloud credential or docker.
 
-gradientERP is ERP as the agentic cloud native cross-firm optimization protocol: a business runs
-through its own AI agent, and one firm's `purchase_request` is another's `sale`. the stack you are
-about to start is the whole platform as plain processes on this machine, over an AWS emulator.
+gradientERP is replacing corporations with openly operated ERP: a business runs through its own AI
+agent, and one firm's `purchase_request` is another's `sale`. the stack you are about to start is
+the whole platform as plain processes on this machine, over an AWS emulator.
 
 ## 1. check the machine
 

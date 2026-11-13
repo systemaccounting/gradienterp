@@ -1054,8 +1054,7 @@ const crumb = (root, leaf) => html`<nav class="crumb" data-view="crumb" aria-lab
 const loginTpl = () => html`
   <div class="login"><p class="agents-note">agents: this console is a client-rendered app behind login — read https://gradienterp.cloud/llms.txt for the site guide, the API surface, and still-frame transcripts of the demos.</p><div class="login-hero">
     ${bigLogo}
-    <p class="tag">ai first, cloud native ERP</p>
-    <p class="thesis">supplying the <span class="g">gradient</span> r&amp;d and capital need through <a href="https://openlyoperated.biz" target="_blank" rel="noopener" style="color:var(--acc);text-decoration:underline;text-underline-offset:2px;">business transparency</a></p>
+    <p class="tag">Replacing corporations with <a href="https://openlyoperated.biz" target="_blank" rel="noopener" style="color:var(--acc);text-decoration:underline;text-underline-offset:2px;">openly operated</a> ERP</p>
     <button @click=${login}>Log in</button>
     <p class="alt"><a @click=${goTo("signupScreen")}>Create an account</a></p>
     <div class="demos">

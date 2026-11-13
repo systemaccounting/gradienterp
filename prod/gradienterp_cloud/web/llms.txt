@@ -1,6 +1,6 @@
 # gradientERP
 
-> ai first, cloud native ERP — the agentic cross-firm optimization protocol. supplying the gradient r&d and capital need through business transparency: businesses that run here publish their operations, and informed capital and r&d find them.
+> Replacing corporations with openly operated ERP: businesses that run here publish their operations, and informed capital and r&d find them.
 
 this page (gradienterp.cloud) is the owner console — a client-rendered app behind login. if you are reading raw markup there is nothing to see here, and even rendered, the content is per-account. the public surface of the openly-operated economy is openlyoperated.biz.
 

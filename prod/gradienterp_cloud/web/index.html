@@ -14,7 +14,7 @@
 <head>
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>gradientERP</title>
-  <meta name="description" content="ai first, cloud native ERP — the agentic cross-firm optimization protocol, supplying the gradient r&d and capital need through business transparency" />
+  <meta name="description" content="Replacing corporations with openly operated ERP — an ai administered ERP app on aws that lowers the cost of starting, running and funding a business" />
   <link rel="alternate" type="text/markdown" href="/llms.txt" title="llms.txt" />
   <style>
     :root{
@@ -181,6 +181,7 @@
     .login{min-height:calc(100vh - 4rem); display:flex; flex-direction:column; justify-content:flex-start; align-items:center; text-align:center; padding-top:4rem;
       --bw:clamp(2rem, 12.5vw, 4.14rem);}  /* banner tracks viewport so it fills the column on phones (~90%) and keeps the ∇/g lockup tucked; caps at desktop 4.14rem (≥530px), floor never overflows */
     /* demo-gif column: one row per ERP module, headed by the exec role the agent now fills */
+    .login-hero{max-width:100%;}
     .demos{display:flex; flex-direction:column; gap:.55rem; width:25rem; max-width:100%; margin:1.7rem auto 0;}
     .demo-row{display:flex; align-items:center; gap:.85rem; padding:.7rem .85rem; text-align:left;
       background:var(--panel); border:1px dashed var(--line2); border-radius:12px;}
@@ -243,8 +244,7 @@
     .login .logo{margin-bottom:-2rem;}
     .login .nabla{font-size:calc(var(--bw) * 2.585); line-height:.78; transform:translateY(-.04em); margin-right:-.28em;}
     .login .brand{font-size:var(--bw); position:relative; z-index:1; transform:translateY(-.1em) translateX(.04em);}
-    .login .tag{color:var(--mut); margin:0;}
-    .login .thesis{color:var(--mut); opacity:.72; font-size:.9rem; line-height:1.55; max-width:24rem; margin:.95rem auto 1.9rem;}
+    .login .tag{color:var(--mut); font-size:calc(var(--bw) * .226); text-align:left; white-space:nowrap; width:calc(var(--bw) * 6.4); max-width:100%; margin:calc(var(--bw) * -.33) auto 1.74rem; padding-left:calc(var(--bw) * .9255); box-sizing:border-box;}
     .login button{width:25rem; max-width:100%; margin-top:0;}
     .alt{margin:1rem 0 0; color:var(--mut); font-size:.9rem; text-align:center;}
     /* auth forms (signup / confirm) — centered, compact */
@@ -314,8 +314,7 @@
 <div id="root"><div class="wrap" data-view="landingScreen">
   <div class="login"><div class="login-hero">
     <span class="wm-big" role="img" aria-label="gradientERP"></span>
-    <p class="tag">ai first, cloud native ERP</p>
-    <p class="thesis">supplying the <span class="g">gradient</span> r&amp;d and capital need through <a href="https://openlyoperated.biz" target="_blank" rel="noopener" style="color:var(--acc);text-decoration:underline;text-underline-offset:2px;">business transparency</a></p>
+    <p class="tag">Replacing corporations with <a href="https://openlyoperated.biz" target="_blank" rel="noopener" style="color:var(--acc);text-decoration:underline;text-underline-offset:2px;">openly operated</a> ERP</p>
     <button>Log in</button>
     <p class="alt"><a>Create an account</a></p>
     <div class="demos">
