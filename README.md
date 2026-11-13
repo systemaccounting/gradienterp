@@ -2,7 +2,7 @@
   <br>
   <img src="docs/images/art/gradientERP-nabla.svg" alt="∇" width="176">
   <br><br>
-  ERP as the agentic cloud native cross-firm optimization protocol
+  Replacing corporations with openly operated ERP
   <br><br>
   <i>one firm's <code>purchase_request</code> is another's <code>sale</code></i>:
   <br>
@@ -16,39 +16,21 @@
 
 # gradientERP
 
-an agent administered ERP application to lower the cost of entrepreneurship and running a business
+an ai administered enterprise resource planning (erp) app on aws that lets cloud devs openly collaborate on helping people use the cloud to lower the cost of starting, running and funding a business
 
-users receive the option to publish their accounting and operational data on [openlyoperated.biz](https://openlyoperated.biz) to attract capital from investors and r&d from engineers
+the app publishes a live dashboard of each business so investors can quickly locate the gradient for capital with Δrevenue ÷ Δexpense and invest: https://openlyoperated.biz/#b/gradienterp
 
-one bedrock agent, one set of serverless ERP modules, one event bus and api away from every other business on it
+businesses are connected over an event bus so they can automate their purchasing, scheduling etc between one another
 
-each business runs its own instance: a gerp, short for ∇ERP
+to protect against fraud, you can only create an account from the aws org
 
-it works as a complete ERP for one business. tell the agent you deposited a check against an invoice and it closes the invoice. when the business on the other side is here too, their purchase request becomes your sale on its own
+you dont need much dev experience. erp code is trivial. novices interested in starting a business or even an erp consultancy are welcome to contribute
 
-a single starting user may pay \~$13-31/mo (~$150-370/year)
+think of it like a business guild raiding corporate market share from the cloud, automating everything in its path, c-suite & corporate boardroom included, until transparent competition has its day
 
-but as the business scales, a 10-person business typically pays:
-- ~$115/mo to intuit.com for accounting
-- ~$1,750/mo to salesforce.com for contacts
-- ~$119/mo to adp.com for payroll
+if youre tired of paying rising prices to be stuck inside a political economy, take heart tomorrows data economy is only a dashboard deployment away
 
-~$24k/year before add-ons, implementation fees, or seat growth
-
-the same accounting, contacts, payroll, etc workload on gradientERP:
-- ~$43-110/mo aws passthrough (lambdas + ddb + bedrock)
-- \+ 20% operator margin
-- ~$52-132/mo total
-
-~$600-1,600/year. ~15-40x cheaper.
-
-gradientERP enables users to skip the conventional fees and the billion dollar businesses maintaining their human user interfaces
-
-the accounting module is a handful of cheap lambdas and a dynamodb table—the contacts, payroll, purchasing and invoicing modules are similar
-
-and the billion dollar ui c-suite executives depend on is replaced with a bedrock agent
-
-<p align="center"><img width="600" alt="dual" src="docs/images/arch-agent.png"></p>
+consumer wealth <3 transparent competition
 
 ### invert the firm
 
@@ -58,9 +40,7 @@ prices are rising while jobs and investments are disappearing
 
 capital needs a potential to flow
 
-we need a new kind of business
-
-one that **eliminates** rather than survives on impedance
+humans need a new kind of business that **eliminates** rather than survives on impedance
 
 capital follows a gradient. r&d follows a gradient. openly operated business supplies them
 
@@ -106,6 +86,44 @@ theres no reason for engineers to be out of work when theres so much to improve 
 
 **standardized productivity reporting** — a gradientERP public profile is built from the books of the businesses a person works with: the shifts they covered, the tasks they closed, the hours each took. every firm records work the same way, so the profile is one performance record across employers, measured in public rather than in an internal performance review. the person publishes only a name, their occupation, where they are and how to reach them. it depends on two consents: the firm is openly operated and the person published a profile. pay, rates and legal documents stay private
 
+### basics
+
+one bedrock agent, one set of serverless ERP modules, one event bus and api away from every other business on gradientERP
+
+each business runs its own instance: a gerp, short for ∇ERP
+
+it works as a complete ERP for one business. tell the agent you deposited a check against an invoice and it closes the invoice. when the business on the other side is here too, their purchase request becomes your sale on its own
+
+### price
+
+a single starting user may pay \~$13-31/mo (~$150-370/year)
+
+but as the business scales, a 10-person business typically pays:
+- ~$115/mo to intuit.com for accounting
+- ~$1,750/mo to salesforce.com for contacts
+- ~$119/mo to adp.com for payroll
+
+~$24k/year before add-ons, implementation fees, or seat growth
+
+the same accounting, contacts, payroll, etc workload on gradientERP:
+- ~$43-110/mo aws passthrough (lambdas + ddb + bedrock)
+- \+ 20% operator margin
+- ~$52-132/mo total
+
+~$600-1,600/year. ~15-40x cheaper.
+
+gradientERP enables users to skip the conventional fees and the billion dollar businesses maintaining their human user interfaces
+
+the accounting module is a handful of cheap lambdas and a dynamodb table—the contacts, payroll, purchasing and invoicing modules are similar
+
+and the billion dollar ui c-suite executives depend on is replaced with a bedrock agent
+
+<p align="center"><img width="600" alt="dual" src="docs/images/arch-agent.png"></p>
+
+aws cost x 1.2. aws passthrough is metered per customer; the platform margin is a 20% markup on top, so the bill scales with what the business actually used rather than a flat fee.
+
+for openly-operated customers the spec forces visible margins, so theres no point charging more than the floor — someone will undercut you and it'll show up in the public ledger
+
 ### architecture
 
 every gradientERP customer is a single sub-account in the shared AWS organization. a per-tenant Agent — a Bedrock AgentCore deployment configured with the owner's prompt, tool bindings and memory — sits at the center and orchestrates the ERP modules. modules are lambdas; the agent calls them
@@ -146,12 +164,6 @@ the journal is immutable and append only. balances and statements are materializ
 every other accounting system's audit story reduces to "trust our internal controls." an openly-operated customer's audit story reduces to: recompute from the journal, diff against the cache, any divergence is a bug. there is no interpretive layer between the events and the numbers
 
 this is the property a regulator examining a filing wants. it is the property an investor browsing the public feed wants. it is the property an owner wants the first time someone challenges a balance. and it is what makes the public stream meaningful — published numbers that cannot be reconstructed from published events are not numbers, they are claims. private customers get the same property internally; only the *publication* is gated by the openly-operated flag.
-
-### price
-
-aws cost x 1.2. aws passthrough is metered per customer; the platform margin is a 20% markup on top, so the bill scales with what the business actually used rather than a flat fee.
-
-for openly-operated customers the spec forces visible margins, so theres no point charging more than the floor — someone will undercut you and it'll show up in the public ledger
 
 ### getting started
 
